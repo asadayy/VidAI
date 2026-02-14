@@ -1,0 +1,347 @@
+import Booking from '../models/Booking.model.js';
+import Vendor from '../models/Vendor.model.js';
+import Notification from '../models/Notification.model.js';
+import ActivityLog from '../models/ActivityLog.model.js';
+import { asyncHandler } from '../middleware/error.middleware.js';
+import { sendEmail } from '../config/email.js';
+
+/**
+ * @route   POST /api/v1/bookings
+ * @desc    Create a new booking request
+ * @access  Private (User only)
+ */
+export const createBooking = asyncHandler(async (req, res) => {
+  const {
+    vendorId, packageId, eventType, eventDate, eventEndDate,
+    eventLocation, guestCount, notes,
+  } = req.body;
+
+  // Verify vendor exists and is approved
+  const vendor = await Vendor.findById(vendorId).populate('user', 'email name');
+  if (!vendor) {
+    const error = new Error('Vendor not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (vendor.verificationStatus !== 'approved') {
+    const error = new Error('This vendor is not yet verified.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // Check for booking conflicts (same vendor, overlapping dates)
+  // Convert to start/end of day to handle timezone and multi-day events properly
+  const eventStart = new Date(eventDate);
+  eventStart.setHours(0, 0, 0, 0);
+  const eventEnd = new Date(eventDate);
+  eventEnd.setHours(23, 59, 59, 999);
+
+  const conflictingBooking = await Booking.findOne({
+    vendor: vendorId,
+    eventDate: {
+      $gte: eventStart,
+      $lte: eventEnd,
+    },
+    status: { $in: ['pending', 'approved'] },
+  });
+
+  if (conflictingBooking) {
+    const error = new Error('This vendor already has a booking on the selected date.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  // Find package details if packageId provided
+  let packageName = '';
+  let agreedPrice = 0;
+  if (packageId && vendor.packages) {
+    const pkg = vendor.packages.id(packageId);
+    if (pkg) {
+      packageName = pkg.name;
+      agreedPrice = pkg.price;
+    }
+  }
+
+  const booking = await Booking.create({
+    user: req.user._id,
+    vendor: vendorId,
+    packageId,
+    packageName,
+    eventType,
+    eventDate,
+    eventEndDate,
+    eventLocation,
+    guestCount,
+    notes,
+    agreedPrice,
+  });
+
+  // Notify vendor
+  await Notification.create({
+    recipient: vendor.user._id,
+    type: 'booking_created',
+    title: 'New Booking Request',
+    message: `You have a new booking request for ${eventType} on ${new Date(eventDate).toLocaleDateString('en-PK')}.`,
+    relatedModel: 'Booking',
+    relatedId: booking._id,
+    channels: { inApp: true, email: true },
+  });
+
+  // Send vendor email
+  await sendEmail({
+    to: vendor.email || vendor.user.email,
+    subject: 'VidAI - New Booking Request',
+    text: `You have a new booking request for ${eventType} on ${new Date(eventDate).toLocaleDateString('en-PK')}. Log in to your dashboard to respond.`,
+  });
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'create_booking',
+    resourceType: 'Booking',
+    resourceId: booking._id,
+    details: `Booking created for vendor ${vendor.businessName}`,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: 'Booking request sent to vendor.',
+    data: { booking },
+  });
+});
+
+/**
+ * @route   GET /api/v1/bookings/my-bookings
+ * @desc    Get current user's bookings
+ * @access  Private (User)
+ */
+export const getUserBookings = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const filter = { user: req.user._id };
+  if (req.query.status) filter.status = req.query.status;
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate({
+        path: 'vendor',
+        select: 'businessName category city coverImage',
+        populate: { path: 'user', select: 'name avatar' },
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      bookings,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    },
+  });
+});
+
+/**
+ * @route   GET /api/v1/bookings/vendor-bookings
+ * @desc    Get bookings for current vendor
+ * @access  Private (Vendor)
+ */
+export const getVendorBookings = asyncHandler(async (req, res) => {
+  const vendor = await Vendor.findOne({ user: req.user._id });
+  if (!vendor) {
+    const error = new Error('Vendor profile not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  const filter = { vendor: vendor._id };
+  if (req.query.status) filter.status = req.query.status;
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate('user', 'name email phone avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      bookings,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    },
+  });
+});
+
+/**
+ * @route   GET /api/v1/bookings/:id
+ * @desc    Get booking by ID
+ * @access  Private
+ */
+export const getBookingById = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id)
+    .populate('user', 'name email phone avatar')
+    .populate({
+      path: 'vendor',
+      select: 'businessName category city coverImage user',
+      populate: { path: 'user', select: 'name email' },
+    });
+
+  if (!booking) {
+    const error = new Error('Booking not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Only allow booking owner, vendor owner, or admin to view
+  const isOwner = booking.user._id.toString() === req.user._id.toString();
+  const isVendorOwner = booking.vendor.user._id.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isOwner && !isVendorOwner && !isAdmin) {
+    const error = new Error('Not authorized to view this booking.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { booking },
+  });
+});
+
+/**
+ * @route   PATCH /api/v1/bookings/:id/status
+ * @desc    Vendor approves or rejects a booking
+ * @access  Private (Vendor)
+ */
+export const updateBookingStatus = asyncHandler(async (req, res) => {
+  const { status, message: responseMessage } = req.body;
+
+  if (!['approved', 'rejected'].includes(status)) {
+    const error = new Error('Status must be "approved" or "rejected".');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const vendor = await Vendor.findOne({ user: req.user._id });
+  if (!vendor) {
+    const error = new Error('Vendor profile not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    vendor: vendor._id,
+  }).populate('user', 'name email');
+
+  if (!booking) {
+    const error = new Error('Booking not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (booking.status !== 'pending') {
+    const error = new Error(`Cannot change status of a booking that is already ${booking.status}.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  booking.status = status;
+  booking.vendorResponse = {
+    message: responseMessage || '',
+    respondedAt: new Date(),
+  };
+  await booking.save();
+
+  // Update vendor stats
+  if (status === 'approved') {
+    vendor.totalBookings += 1;
+    await vendor.save({ validateBeforeSave: false });
+  }
+
+  // Notify user
+  const notifType = status === 'approved' ? 'booking_approved' : 'booking_rejected';
+  await Notification.create({
+    recipient: booking.user._id,
+    type: notifType,
+    title: `Booking ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+    message: `Your booking with ${vendor.businessName} has been ${status}.${responseMessage ? ' Message: ' + responseMessage : ''}`,
+    relatedModel: 'Booking',
+    relatedId: booking._id,
+    channels: { inApp: true, email: true },
+  });
+
+  await sendEmail({
+    to: booking.user.email,
+    subject: `VidAI - Booking ${status === 'approved' ? 'Approved' : 'Rejected'}`,
+    text: `Your booking with ${vendor.businessName} has been ${status}.`,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Booking ${status}.`,
+    data: { booking },
+  });
+});
+
+/**
+ * @route   PATCH /api/v1/bookings/:id/cancel
+ * @desc    Cancel a booking (by user or vendor)
+ * @access  Private
+ */
+export const cancelBooking = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id)
+    .populate('vendor', 'user businessName');
+
+  if (!booking) {
+    const error = new Error('Booking not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const isUser = booking.user.toString() === req.user._id.toString();
+  const isVendor = booking.vendor.user.toString() === req.user._id.toString();
+  const isAdmin = req.user.role === 'admin';
+
+  if (!isUser && !isVendor && !isAdmin) {
+    const error = new Error('Not authorized to cancel this booking.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (['cancelled', 'completed'].includes(booking.status)) {
+    const error = new Error(`Cannot cancel a booking that is already ${booking.status}.`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  booking.status = 'cancelled';
+  booking.cancelledBy = isAdmin ? 'admin' : (isUser ? 'user' : 'vendor');
+  booking.cancellationReason = req.body.reason || '';
+  booking.cancelledAt = new Date();
+  await booking.save();
+
+  // Decrement vendor's totalBookings counter
+  await Vendor.findByIdAndUpdate(booking.vendor._id, { $inc: { totalBookings: -1 } });
+
+  res.status(200).json({
+    success: true,
+    message: 'Booking cancelled.',
+    data: { booking },
+  });
+});

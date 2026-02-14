@@ -1,0 +1,109 @@
+/* ── Admin System Health ── */
+
+/* Service cards */
+.health-services {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .health-services {
+    grid-template-columns: 1fr;
+  }
+}
+
+.health-service-card {
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.health-service-header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--gray-700);
+  font-weight: 500;
+  font-size: 0.92rem;
+  margin-bottom: 0.85rem;
+}
+
+.health-service-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.health-status-text {
+  font-weight: 600;
+  font-size: 0.88rem;
+  text-transform: capitalize;
+}
+
+.health-ok {
+  color: #16a34a;
+}
+
+.health-err {
+  color: #dc2626;
+}
+
+.health-icon-ok {
+  color: #22c55e;
+}
+
+.health-icon-err {
+  color: #ef4444;
+}
+
+/* Info grid */
+.health-details {
+  margin-bottom: 1.5rem;
+}
+
+.health-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.health-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: var(--gray-500);
+}
+
+.health-info-item > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-info-label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.health-info-value {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-top: 0.1rem;
+}
+
+/* Spin animation for refresh */
+@keyframes health-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.health-spin {
+  animation: health-rotate 0.8s linear infinite;
+}

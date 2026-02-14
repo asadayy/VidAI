@@ -1,0 +1,50 @@
+/* ── Admin Users ── */
+.admin-user-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.admin-search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.admin-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.admin-search-icon {
+  position: absolute;
+  left: 0.65rem;
+  color: var(--gray-400);
+  pointer-events: none;
+}
+
+.admin-search-input {
+  padding-left: 2.1rem;
+  min-width: 220px;
+}
+
+/* Disabled user row */
+.admin-user-disabled {
+  opacity: 0.55;
+}
+
+@media (max-width: 768px) {
+  .admin-search-form {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .admin-search-input {
+    flex: 1;
+    min-width: 0;
+  }
+}

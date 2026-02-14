@@ -1,0 +1,23 @@
+{
+  "id": "user-facing-pages-06",
+  "seq": "06",
+  "title": "Create AI Chat Interface",
+  "status": "pending",
+  "depends_on": ["user-facing-pages-01"],
+  "parallel": true,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/api/client.js"
+  ],
+  "acceptance_criteria": [
+    "AIChat.jsx interface created.",
+    "Sends messages to API and displays responses.",
+    "Scrolls to bottom on new message.",
+    "Responsive chat bubble layout."
+  ],
+  "deliverables": [
+    "src/pages/AIChat.jsx",
+    "src/pages/AIChat.css"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "user-facing-pages",
+  "name": "User-Facing Pages",
+  "status": "active",
+  "objective": "Build the user-facing (couples) portal including Home, Vendor Discovery, Budget Planner, AI Chat, and Dashboard.",
+  "context_files": [],
+  "reference_files": [
+    "src/context/AuthContext.jsx",
+    "src/api/client.js",
+    "src/pages/VendorLanding.jsx",
+    "src/components/vendor/VendorLayout.jsx",
+    "src/App.jsx",
+    "src/api/vendors.js",
+    "src/api/budget.js"
+  ],
+  "exit_criteria": [
+    "User can sign up/login as a couple ('user' role).",
+    "User can search and filter vendors.",
+    "User can view vendor details and book packages.",
+    "User can use the AI Budget Planner.",
+    "User can chat with the AI assistant.",
+    "User can manage bookings."
+  ],
+  "subtask_count": 8,
+  "completed_count": 0,
+  "created_at": "2026-02-13T10:20:00Z"
+}

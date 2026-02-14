@@ -1,0 +1,41 @@
+.admin-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #e5e7eb 0, #f9fafb 40%, #e5e7eb 100%);
+}
+
+.admin-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: #ffffff;
+  border-radius: 1.1rem;
+  padding: 1.8rem 2rem 2.2rem;
+  box-shadow: 0 22px 55px rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.admin-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.admin-header p {
+  margin-top: 0.35rem;
+  font-size: 0.86rem;
+  color: #6b7280;
+}
+
+.admin-form {
+  margin-top: 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.admin-note {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+}

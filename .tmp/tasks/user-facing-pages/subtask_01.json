@@ -1,0 +1,25 @@
+{
+  "id": "user-facing-pages-01",
+  "seq": "01",
+  "title": "Create UserLayout Component",
+  "status": "pending",
+  "depends_on": [],
+  "parallel": false,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/components/vendor/VendorLayout.jsx",
+    "src/context/AuthContext.jsx"
+  ],
+  "acceptance_criteria": [
+    "UserLayout.jsx created with navigation bar.",
+    "Navigation links point to correct paths (/vendors, /budget, /chat, /dashboard).",
+    "Displays user profile info/logout using AuthContext.",
+    "Responsive at all breakpoints."
+  ],
+  "deliverables": [
+    "src/components/user/UserLayout.jsx",
+    "src/components/user/UserNavbar.jsx",
+    "src/components/user/UserLayout.css"
+  ]
+}

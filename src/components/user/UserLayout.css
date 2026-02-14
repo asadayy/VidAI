@@ -1,0 +1,231 @@
+.user-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--gray-50);
+}
+
+.user-navbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 1.5rem;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+
+.user-navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Brand */
+.user-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-brand-text {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
+}
+
+/* Desktop Navigation */
+.user-nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.user-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  color: var(--gray-600);
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.user-nav-link:hover {
+  background-color: var(--gray-50);
+  color: var(--pink);
+  text-decoration: none;
+}
+
+.user-nav-link.active {
+  background-color: #fff0f7; /* Light pink background */
+  color: var(--pink);
+}
+
+/* User Actions */
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: 1rem;
+  border-right: 1px solid var(--gray-200);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--gradient);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.user-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--gray-700);
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-logout-btn {
+  color: var(--gray-500);
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-logout-btn:hover {
+  background-color: var(--gray-100);
+  color: var(--danger);
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  color: var(--gray-600);
+  padding: 0.5rem;
+}
+
+/* Mobile Navigation */
+.user-nav-mobile {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--gray-200);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-md);
+  animation: slideDown 0.2s ease-out;
+}
+
+.user-nav-link-mobile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--gray-600);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.user-nav-link-mobile:hover,
+.user-nav-link-mobile.active {
+  background-color: var(--gray-50);
+  color: var(--pink);
+}
+
+.user-content {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 768px) {
+  .user-nav-desktop {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .user-info {
+    display: none; /* Hide user info on mobile to save space, or keep avatar only */
+    border-right: none;
+    padding-right: 0;
+  }
+  
+  .user-avatar {
+      display: flex; /* keep avatar */
+  }
+  
+  .user-name {
+      display: none;
+  }
+
+  .user-logout-btn {
+    display: none; /* Move logout to mobile menu or keep? Let's hide it and assume it should be in menu if we had one, but for now I'll just leave it visible if there's space, or hide it. 
+    Actually, let's keep the logout button next to the hamburger for easy access on mobile, or put it in the dropdown. 
+    For simplicity, let's keep it visible but maybe smaller/compact. 
+    Wait, the user-info was hidden above. Let's adjust. */
+  }
+  
+  .user-navbar {
+      padding: 0 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+    .user-info {
+        display: none;
+    }
+    .user-logout-btn {
+        display: flex;
+    }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "user-facing-pages-07",
+  "seq": "07",
+  "title": "Create User Dashboard & Bookings",
+  "status": "pending",
+  "depends_on": ["user-facing-pages-01"],
+  "parallel": true,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/components/vendor/VendorLayout.jsx",
+    "src/context/AuthContext.jsx",
+    "src/api/client.js"
+  ],
+  "acceptance_criteria": [
+    "UserDashboard.jsx shows overview of bookings/budget.",
+    "UserBookings.jsx lists active/past bookings.",
+    "Responsive layout."
+  ],
+  "deliverables": [
+    "src/pages/UserDashboard.jsx",
+    "src/pages/UserBookings.jsx",
+    "src/pages/UserDashboard.css"
+  ]
+}

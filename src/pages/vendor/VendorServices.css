@@ -1,0 +1,177 @@
+.vendor-services {
+  max-width: 1100px;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  margin-top: 0.2rem;
+}
+
+/* ── Packages grid ── */
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.package-card {
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: box-shadow 0.15s;
+}
+
+.package-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.package-inactive {
+  opacity: 0.6;
+}
+
+.package-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.package-card-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin: 0;
+}
+
+.package-card-actions {
+  display: flex;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.package-card-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--pink);
+  margin-bottom: 0.6rem;
+}
+
+.package-card-desc {
+  font-size: 0.88rem;
+  color: var(--gray-600);
+  margin-bottom: 0.6rem;
+  line-height: 1.5;
+}
+
+.package-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.package-features li {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  padding: 0.2rem 0;
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.package-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.package-inactive-badge {
+  margin-top: 0.6rem;
+}
+
+/* ── Icon buttons ── */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 0.4rem;
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.icon-btn:hover {
+  color: var(--gray-700);
+  background-color: var(--gray-100);
+}
+
+.icon-btn-danger:hover {
+  color: var(--danger);
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+.text-success { color: var(--success); }
+.text-muted { color: var(--gray-400); }
+
+/* ── Service modal ── */
+.service-modal {
+  max-width: 520px;
+}
+
+.service-modal textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.feature-input-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.feature-input-row input {
+  flex: 1;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* ── Delete modal ── */
+.delete-modal {
+  max-width: 400px;
+  text-align: center;
+}
+
+.delete-modal h3 {
+  margin-bottom: 0.5rem;
+}
+
+.delete-modal p {
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.delete-modal .modal-actions {
+  justify-content: center;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .packages-grid {
+    grid-template-columns: 1fr;
+  }
+}

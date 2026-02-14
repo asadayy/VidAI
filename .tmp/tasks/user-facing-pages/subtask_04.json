@@ -1,0 +1,26 @@
+{
+  "id": "user-facing-pages-04",
+  "seq": "04",
+  "title": "Create Vendor Details & Booking",
+  "status": "pending",
+  "depends_on": ["user-facing-pages-03"],
+  "parallel": false,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/api/vendors.js",
+    "src/api/client.js",
+    "src/context/AuthContext.jsx"
+  ],
+  "acceptance_criteria": [
+    "VendorDetails.jsx fetches vendor by ID/slug.",
+    "Displays profile, services, and pricing.",
+    "Booking form allows date selection and request submission.",
+    "Connects to API for booking creation."
+  ],
+  "deliverables": [
+    "src/pages/VendorDetails.jsx",
+    "src/pages/VendorDetails.css",
+    "src/components/user/BookingForm.jsx"
+  ]
+}

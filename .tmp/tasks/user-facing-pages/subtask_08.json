@@ -1,0 +1,31 @@
+{
+  "id": "user-facing-pages-08",
+  "seq": "08",
+  "title": "Integrate User Routes in App.jsx",
+  "status": "pending",
+  "depends_on": [
+    "user-facing-pages-01",
+    "user-facing-pages-02",
+    "user-facing-pages-03",
+    "user-facing-pages-04",
+    "user-facing-pages-05",
+    "user-facing-pages-06",
+    "user-facing-pages-07"
+  ],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [],
+  "reference_files": [
+    "src/App.jsx",
+    "src/context/AuthContext.jsx"
+  ],
+  "acceptance_criteria": [
+    "App.jsx updated with all user routes.",
+    "Routes protected with <ProtectedRoute roles='user' />.",
+    "Public Home route accessible without login.",
+    "Navigation flows correctly between pages."
+  ],
+  "deliverables": [
+    "src/App.jsx"
+  ]
+}

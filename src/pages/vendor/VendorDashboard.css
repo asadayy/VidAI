@@ -1,0 +1,157 @@
+.vendor-dashboard {
+  max-width: 1200px;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  margin-top: 0.2rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dashboard-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ── Stat card with icon ── */
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.stat-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stat-icon-pink { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
+.stat-icon-amber { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.stat-icon-green { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.stat-icon-blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.stat-icon-purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.stat-icon-orange { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+
+.stat-sub {
+  font-size: 0.72rem;
+  color: var(--gray-400);
+}
+
+/* ── Dashboard row ── */
+.dashboard-row {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 1.25rem;
+}
+
+.dashboard-card {
+  min-height: 260px;
+}
+
+.dashboard-card-narrow {
+  min-width: 0;
+}
+
+.capitalize {
+  text-transform: capitalize;
+}
+
+.empty-icon {
+  color: var(--gray-300);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Package list ── */
+.package-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.package-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--gray-100);
+  gap: 0.5rem;
+}
+
+.package-item:last-child {
+  border-bottom: none;
+}
+
+.package-item > div {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.package-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--gray-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.package-price {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  white-space: nowrap;
+}
+
+.package-more {
+  padding: 0.5rem 0;
+  font-size: 0.82rem;
+  color: var(--gray-500);
+}
+
+/* ── Setup prompt ── */
+.dashboard-setup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.setup-card {
+  text-align: center;
+  max-width: 420px;
+  padding: 2.5rem 2rem;
+}
+
+.setup-icon {
+  color: var(--gray-300);
+  margin-bottom: 1rem;
+}
+
+.setup-card h2 {
+  margin-bottom: 0.5rem;
+}
+
+.setup-card p {
+  font-size: 0.92rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .dashboard-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-02-14T00:00:00Z",
+  "libraries": {
+    "stripe-node": {
+      "package": "stripe",
+      "fetched": "2026-02-14T00:00:00Z",
+      "source": "Stripe Official Documentation",
+      "files": [
+        {
+          "filename": "payment-intent-ownership-verification.md",
+          "topic": "Payment Intent ownership verification and IDOR prevention",
+          "tech_stack": "Node.js",
+          "description": "Patterns for verifying payment ownership using metadata, database checks, and customer fields to prevent unauthorized access",
+          "security_focus": true,
+          "covers": [
+            "Metadata for ownership tracking",
+            "Database ownership verification",
+            "Client secret security",
+            "Customer field authorization",
+            "IDOR vulnerability prevention"
+          ]
+        },
+        {
+          "filename": "webhook-security-best-practices.md",
+          "topic": "Webhook security and signature verification",
+          "tech_stack": "Node.js",
+          "description": "Complete guide to securing Stripe webhooks including signature verification, replay attack prevention, and async processing",
+          "security_focus": true,
+          "covers": [
+            "Webhook signature verification",
+            "Replay attack prevention",
+            "Duplicate event handling",
+            "Async queue patterns",
+            "HTTPS and TLS requirements",
+            "Secret rotation"
+          ]
+        },
+        {
+          "filename": "payment-status-verification.md",
+          "topic": "Payment status verification and authorization patterns",
+          "tech_stack": "Node.js",
+          "description": "Server-side payment status checking with proper authorization, webhook-first patterns, and ownership validation",
+          "security_focus": true,
+          "covers": [
+            "Webhook-first payment verification",
+            "Client + webhook patterns",
+            "Payment status authorization",
+            "PaymentIntent lifecycle",
+            "Failure handling",
+            "Listing user payments securely"
+          ]
+        },
+        {
+          "filename": "idor-prevention-quick-reference.md",
+          "topic": "IDOR vulnerability prevention quick reference",
+          "tech_stack": "Node.js",
+          "description": "Quick reference guide for preventing Insecure Direct Object Reference vulnerabilities in payment endpoints",
+          "security_focus": true,
+          "covers": [
+            "Three-layer authorization pattern",
+            "Critical endpoints to protect",
+            "Common security mistakes",
+            "Implementation checklist",
+            "Quick fixes for common scenarios"
+          ]
+        }
+      ],
+      "total_files": 4,
+      "primary_focus": [
+        "Payment Intent ownership verification",
+        "IDOR vulnerability prevention",
+        "Webhook signature verification",
+        "Authorization patterns",
+        "Metadata for access control"
+      ],
+      "use_case": "Fixing IDOR vulnerability where authenticated users can access other users' payment data"
+    }
+  }
+}

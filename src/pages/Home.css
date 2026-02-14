@@ -1,0 +1,160 @@
+/* src/pages/Home.css */
+.home-container {
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1519741497674-611481863552?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+  background-size: cover;
+  background-position: center;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: white;
+  padding: 0 20px;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
+  max-width: 600px;
+}
+
+/* Search Bar */
+.search-container {
+  background: white;
+  padding: 1rem;
+  border-radius: 50px;
+  display: flex;
+  gap: 1rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 700px;
+}
+
+.search-input {
+  border: none;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  flex: 1;
+  border-right: 1px solid #eee;
+  outline: none;
+}
+
+.search-input:last-child {
+  border-right: none;
+}
+
+.search-button {
+  background-color: #e91e63;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.3s;
+}
+
+.search-button:hover {
+  background-color: #d81b60;
+}
+
+/* Features Section */
+.features-section {
+  padding: 5rem 20px;
+  background-color: #f9f9f9;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #333;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  transition: transform 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.feature-title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.feature-description {
+  color: #666;
+  line-height: 1.6;
+}
+
+/* CTA Section */
+.cta-section {
+  padding: 5rem 20px;
+  text-align: center;
+  background-color: white;
+}
+
+.cta-button {
+  background-color: #e91e63;
+  color: white;
+  border: none;
+  padding: 1rem 3rem;
+  font-size: 1.2rem;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(233, 30, 99, 0.5);
+}
+
+.vendor-link {
+  display: block;
+  margin-top: 1.5rem;
+  color: #666;
+  text-decoration: none;
+}
+
+.vendor-link:hover {
+  text-decoration: underline;
+  color: #e91e63;
+}

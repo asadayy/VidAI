@@ -1,0 +1,190 @@
+.vendor-profile {
+  max-width: 800px;
+}
+
+.page-subtitle {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  margin-top: 0.2rem;
+}
+
+/* ── Cover image section ── */
+.profile-cover-section {
+  margin-bottom: 1.5rem;
+}
+
+.profile-cover {
+  height: 200px;
+  border-radius: var(--radius-lg);
+  background-color: var(--gray-100);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  color: var(--gray-400);
+  font-size: 0.88rem;
+}
+
+.cover-upload-btn {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ── Completeness bar ── */
+.completeness-bar {
+  margin-top: 0.85rem;
+}
+
+.completeness-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--gray-600);
+  margin-bottom: 0.35rem;
+}
+
+.completeness-track {
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.completeness-fill {
+  height: 100%;
+  background: var(--gradient);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ── Profile form ── */
+.profile-form {
+  padding: 1.5rem;
+}
+
+.profile-form h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--gray-800);
+}
+
+.profile-form h3:first-child {
+  margin-top: 0;
+}
+
+.profile-form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.profile-form select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  padding-right: 2rem;
+}
+
+.profile-form label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.profile-form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Portfolio ── */
+.portfolio-section {
+  margin-top: 1.25rem;
+  padding: 1.5rem;
+}
+
+.portfolio-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.portfolio-upload-btn {
+  cursor: pointer;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.portfolio-item {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  background: var(--gray-100);
+}
+
+.portfolio-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.portfolio-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  color: #ffffff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+}
+
+.empty-icon {
+  color: var(--gray-300);
+  margin-bottom: 0.5rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-cover {
+    height: 150px;
+  }
+
+  .portfolio-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

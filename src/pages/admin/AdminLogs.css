@@ -1,0 +1,94 @@
+/* ── Admin Activity Logs ── */
+.admin-log-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.admin-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--gray-500);
+}
+
+.admin-filter-group select,
+.admin-action-input {
+  min-width: 160px;
+}
+
+/* Log list (timeline) */
+.admin-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.admin-log-item {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--gray-100);
+  align-items: flex-start;
+}
+
+.admin-log-item:last-child {
+  border-bottom: none;
+}
+
+.admin-log-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.45rem;
+}
+
+.admin-log-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-log-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.admin-log-action {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.admin-log-resource {
+  font-size: 0.7rem;
+}
+
+.admin-log-details {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.45;
+  margin-bottom: 0.3rem;
+}
+
+.admin-log-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+}
+
+.admin-log-user {
+  font-weight: 500;
+}
+
+.admin-log-time {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

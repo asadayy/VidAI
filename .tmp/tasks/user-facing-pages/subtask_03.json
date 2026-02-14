@@ -1,0 +1,25 @@
+{
+  "id": "user-facing-pages-03",
+  "seq": "03",
+  "title": "Create Vendor Search Page",
+  "status": "pending",
+  "depends_on": ["user-facing-pages-01"],
+  "parallel": true,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/api/vendors.js",
+    "src/api/client.js"
+  ],
+  "acceptance_criteria": [
+    "VendorSearch.jsx lists vendors from API.",
+    "Filter controls (category, price, location) work.",
+    "Clicking a vendor navigates to details page.",
+    "Responsive grid layout."
+  ],
+  "deliverables": [
+    "src/pages/VendorSearch.jsx",
+    "src/pages/VendorSearch.css",
+    "src/components/user/VendorCard.jsx"
+  ]
+}

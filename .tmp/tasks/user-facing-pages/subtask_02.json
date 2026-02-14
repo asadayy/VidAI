@@ -1,0 +1,26 @@
+{
+  "id": "user-facing-pages-02",
+  "seq": "02",
+  "title": "Create Home Landing Page & Auth",
+  "status": "pending",
+  "depends_on": [],
+  "parallel": true,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [],
+  "reference_files": [
+    "src/pages/VendorLanding.jsx",
+    "src/context/AuthContext.jsx",
+    "src/api/client.js"
+  ],
+  "acceptance_criteria": [
+    "Home.jsx landing page created.",
+    "AuthModal or login/signup forms implemented for 'user' role.",
+    "Successful login redirects to dashboard or previous page.",
+    "Responsive design."
+  ],
+  "deliverables": [
+    "src/pages/Home.jsx",
+    "src/pages/Home.css",
+    "src/components/auth/AuthModal.jsx"
+  ]
+}
