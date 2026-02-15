@@ -1,0 +1,14 @@
+node_modules
+.venv
+dist
+.git
+.vscode
+.env
+logs
+*.log
+.kiro
+.tmp
+.ruff_cache
+server/node_modules
+ai-service/.venv
+ai-service/__pycache__
