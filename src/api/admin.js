@@ -1,4 +1,5 @@
-import client from './client';
+// Re-export from shared API
+import client from '../../shared/api/client.js';
 
 export const adminAPI = {
   getDashboard: () => client.get('/admin/dashboard'),

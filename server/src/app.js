@@ -35,12 +35,25 @@ app.use(cors({
     process.env.CLIENT_URL,
     'http://localhost:3000',
     'http://localhost:5173',
-    /\.vercel\.app$/ // Matches any vercel.app subdomain
+    'http://10.1.146.230:5173',
+    'http://192.168.2.102:5173',
+    /\.vercel\.app$/, // Matches any vercel.app subdomain
+    // Allow mobile app requests (no origin header for native apps)
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
 }));
+
+// Allow requests without origin header (mobile apps)
+app.use((req, res, next) => {
+  if (!req.headers.origin) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, ngrok-skip-browser-warning');
+  }
+  next();
+});
 
 // Rate limiting - global
 const limiter = rateLimit({

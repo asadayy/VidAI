@@ -8,7 +8,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "validate": "node scripts/validate.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mobile:start": "cd mobile && npm start",
+    "mobile:android": "cd mobile && npm run android",
+    "mobile:ios": "cd mobile && npm run ios",
+    "mobile:web": "cd mobile && npm run web"
   },
   "dependencies": {
     "axios": "^1.13.5",

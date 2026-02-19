@@ -4,18 +4,36 @@ dotenv.config();
 import app from './src/app.js';
 import { connectDB } from './src/config/database.js';
 import { logger } from './src/config/logger.js';
+import { networkInterfaces } from 'os';
 
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+// Get local IP address
+function getLocalIP() {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
 
 // Connect to MongoDB Atlas then start server
 const startServer = async () => {
   try {
     await connectDB();
     
-    app.listen(PORT, () => {
-      logger.info(`VidAI Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    const localIP = getLocalIP();
+    
+    app.listen(PORT, HOST, () => {
+      logger.info(`VidAI Server running in ${process.env.NODE_ENV} mode on ${HOST}:${PORT}`);
       logger.info(`API available at http://localhost:${PORT}/api/v1`);
       logger.info(`Health check at http://localhost:${PORT}/api/v1/health`);
+      logger.info(`Mobile app can connect at http://${localIP}:${PORT}/api/v1`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error.message);

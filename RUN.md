@@ -58,3 +58,26 @@ In your browser go to: **http://localhost:3000**
 | **Sign in again** | Log in again and confirm protected routes still work. |
 
 Backend and AI service must be running for API and AI features to work. To confirm everything: run `npm run validate` from the project root (with backend and AI service already started).
+
+---
+
+## 4. Mobile App (React Native + Expo)
+
+```bash
+cd mobile
+npm start
+```
+
+- **Platform:** React Native with Expo
+- **Requires:** Backend and AI service running (ports 5000 and 8000)
+- **To run on Android:** `npm run android` (requires Android emulator or device)
+- **To run on iOS:** `npm run ios` (requires macOS and iOS simulator)
+- **To run on web:** `npm run web` (for testing)
+
+**From project root:**
+- `npm run mobile:start` - Start Expo dev server
+- `npm run mobile:android` - Run on Android
+- `npm run mobile:ios` - Run on iOS
+- `npm run mobile:web` - Run on web
+
+**Note:** The mobile app uses the same backend API. Make sure the backend is running on `http://localhost:5000` or update the API URL in `mobile/app.json` (`extra.apiUrl`).

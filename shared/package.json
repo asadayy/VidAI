@@ -1,0 +1,15 @@
+{
+  "name": "@vidai/shared",
+  "version": "1.0.0",
+  "description": "Shared API services for VidAI web and mobile",
+  "main": "api/index.js",
+  "type": "module",
+  "exports": {
+    "./api/client": "./api/client.js",
+    "./api/auth": "./api/auth.js",
+    "./api/vendors": "./api/vendors.js",
+    "./api/bookings": "./api/bookings.js",
+    "./api/budget": "./api/budget.js",
+    "./api/payments": "./api/payments.js"
+  }
+}
