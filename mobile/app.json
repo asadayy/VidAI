@@ -37,7 +37,7 @@
       "expo-font"
     ],
     "extra": {
-      "apiUrl": "http://192.168.2.102:5000/api/v1",
+      "apiUrl": "https://rebekah-interprotoplasmic-premillennially.ngrok-free.dev/api/v1",
       "router": {},
       "eas": {
         "projectId": "42999439-5ec5-4c10-91c4-a789d8a30697"

@@ -73,9 +73,9 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #ec4899, #f97316);
+  background: linear-gradient(135deg, #D7385E, #B82A4D);
   color: #ffffff;
-  box-shadow: 0 10px 25px rgba(236, 72, 153, 0.38);
+  box-shadow: 0 10px 25px rgba(215, 56, 94, 0.38);
 }
 
 .btn-primary:hover {
@@ -119,7 +119,7 @@
 
 .hero-copy .accent {
   display: block;
-  color: #ec4899;
+  color: #D7385E;
 }
 
 .hero-subtitle {

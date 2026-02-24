@@ -336,18 +336,24 @@ const styles = StyleSheet.create({
   },
   vendorCard: {
     backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.md,
+    borderRadius: 20,
+    marginBottom: 24,
     overflow: 'hidden',
-    ...theme.shadows.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 15,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   vendorImage: {
     width: '100%',
-    height: 200,
+    height: 220,
     backgroundColor: theme.colors.border,
   },
   vendorContent: {
-    padding: theme.spacing.md,
+    padding: 20,
   },
   vendorCategory: {
     ...theme.typography.caption,
@@ -376,8 +382,9 @@ const styles = StyleSheet.create({
   },
   vendorPrice: {
     ...theme.typography.body,
-    fontWeight: '600',
+    fontWeight: '700',
     color: theme.colors.primary,
-    marginTop: theme.spacing.xs,
+    marginTop: 12,
+    fontSize: 16,
   },
 });

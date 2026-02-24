@@ -13,10 +13,16 @@ const Card = ({ children, style }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: theme.colors.white,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.md,
-    ...theme.shadows.md,
-    marginBottom: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl || 16,
+    padding: theme.spacing.lg || 20,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: theme.spacing.lg || 24,
+    borderWidth: 1,
+    borderColor: 'rgba(215, 56, 94, 0.05)',
   },
 });
 
