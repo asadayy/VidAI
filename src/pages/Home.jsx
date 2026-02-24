@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthModal from '../components/auth/AuthModal';
 import { useAuth } from '../context/AuthContext';
 import './Home.css';
@@ -8,6 +8,7 @@ const Home = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('login');
   const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   const openAuthModal = (mode = 'login') => {
     setModalMode(mode);
@@ -20,7 +21,16 @@ const Home = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    console.log("Searching...");
+    const searchInput = e.target.elements[0].value;
+    const cityInput = e.target.elements[1].value;
+
+    // Construct query params
+    const params = new URLSearchParams();
+    if (searchInput) params.append('search', searchInput);
+    if (cityInput) params.append('city', cityInput);
+
+    // Redirect to the vendor search page
+    navigate(`/user/vendors?${params.toString()}`);
   };
 
   return (
@@ -33,7 +43,7 @@ const Home = () => {
         </p>
 
         {/* Search Bar */}
-        <div className="search-container">
+        <form className="search-container" onSubmit={handleSearch}>
           <input
             type="text"
             placeholder="Search vendors (e.g. Photographers)"
@@ -45,10 +55,10 @@ const Home = () => {
             placeholder="City (e.g. Lahore, Islamabad)"
             className="search-input"
           />
-          <button className="search-button" onClick={handleSearch}>
+          <button type="submit" className="search-button">
             Search
           </button>
-        </div>
+        </form>
       </section>
 
       {/* Features Section */}

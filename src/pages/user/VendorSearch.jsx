@@ -34,12 +34,13 @@ const VendorSearch = () => {
         // Remove empty keys
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
 
-        // Use search() if there's a text search query, otherwise use getAll() for filtering
         const response = params.search
           ? await vendorAPI.search({ q: params.search, ...params })
           : await vendorAPI.getAll(params);
 
-        setVendors(response.data.vendors || response.data); // Adjust based on API response structure
+        // The API returns the array inside response.data.data.vendors
+        const vendorsList = response.data?.data?.vendors || response.data?.vendors || [];
+        setVendors(vendorsList);
       } catch (error) {
         console.error('Error fetching vendors:', error);
         toast.error('Failed to load vendors. Please try again.');
