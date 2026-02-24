@@ -30,18 +30,30 @@ app.use(helmet());
 
 // CORS - allow frontend
 // CORS - allow frontend (Vite local and Vercel production)
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://10.1.146.230:5173',
+  'http://192.168.2.102:5173',
+];
+if (process.env.CLIENT_URL) {
+  allowedOrigins.push(process.env.CLIENT_URL);
+}
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL,
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://10.1.146.230:5173',
-    'http://192.168.2.102:5173',
-    /\.vercel\.app$/, // Matches any vercel.app subdomain
-    // Allow mobile app requests (no origin header for native apps)
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    // Allow any Vercel deployment URL
+    if (/\.vercel\.app$/.test(origin)) return callback(null, true);
+    // Allow any ngrok tunnel
+    if (/\.ngrok(-free)?\.app$/.test(origin) || /\.ngrok\.io$/.test(origin)) return callback(null, true);
+    // Allow explicitly whitelisted origins
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning'],
 }));
 

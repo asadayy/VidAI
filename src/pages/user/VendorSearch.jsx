@@ -33,12 +33,12 @@ const VendorSearch = () => {
         const params = Object.fromEntries([...searchParams]);
         // Remove empty keys
         Object.keys(params).forEach(key => !params[key] && delete params[key]);
-        
+
         // Use search() if there's a text search query, otherwise use getAll() for filtering
-        const response = params.search 
+        const response = params.search
           ? await vendorAPI.search({ q: params.search, ...params })
           : await vendorAPI.getAll(params);
-        
+
         setVendors(response.data.vendors || response.data); // Adjust based on API response structure
       } catch (error) {
         console.error('Error fetching vendors:', error);
@@ -65,7 +65,7 @@ const VendorSearch = () => {
     if (filters.minPrice) params.minPrice = filters.minPrice;
     if (filters.maxPrice) params.maxPrice = filters.maxPrice;
     if (filters.search) params.search = filters.search;
-    
+
     setSearchParams(params);
   };
 
@@ -166,8 +166,8 @@ const VendorSearch = () => {
           <button type="submit" className="search-button" style={{ flex: 1 }}>
             Search
           </button>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={clearFilters}
             className="search-button"
             style={{ backgroundColor: '#95a5a6', flex: 0.5 }}
@@ -200,7 +200,7 @@ const VendorSearch = () => {
                     {vendor.category.replace(/_/g, ' ')}
                   </span>
                   <h3 className="card-title">{vendor.businessName}</h3>
-                  
+
                   <div className="card-details">
                     <div className="card-location">
                       <MapPin size={16} />
@@ -215,8 +215,8 @@ const VendorSearch = () => {
                   <div className="card-price">
                     Starting from Rs. {vendor.startingPrice.toLocaleString()}
                   </div>
-                  
-                  <Link to={`/vendors/${vendor.slug}`} className="view-profile-btn">
+
+                  <Link to={`/user/vendors/${vendor.slug}`} className="view-profile-btn">
                     View Profile
                   </Link>
                 </div>

@@ -4,12 +4,12 @@ import { bookingAPI } from '../../api/bookings';
 import { paymentAPI } from '../../api/payments';
 import Loading from '../../components/Loading';
 import toast from 'react-hot-toast';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  DollarSign, 
-  Clock, 
+import {
+  Calendar,
+  MapPin,
+  Users,
+  DollarSign,
+  Clock,
   MoreVertical,
   XCircle,
   CheckCircle,
@@ -211,14 +211,14 @@ const UserBookings = () => {
               </div>
 
               <div className="booking-actions">
-                <Link to={`/vendors/${booking.vendor?._id}`} className="btn-secondary">
+                <Link to={`/user/vendors/${booking.vendor?.slug || booking.vendor?._id}`} className="btn-secondary">
                   <ExternalLink size={16} />
                   View Vendor
                 </Link>
-                
+
                 {/* Pay Now — only for approved bookings that are unpaid */}
                 {booking.status === 'approved' && booking.paymentStatus === 'unpaid' && (
-                  <button 
+                  <button
                     className="btn-pay-now"
                     onClick={() => handlePayNow(booking._id)}
                     disabled={payingBookingId === booking._id}
@@ -238,7 +238,7 @@ const UserBookings = () => {
                 )}
 
                 {booking.status === 'pending' && (
-                  <button 
+                  <button
                     className="btn-danger-outline"
                     onClick={() => setCancelModal({ open: true, bookingId: booking._id })}
                   >
@@ -253,7 +253,7 @@ const UserBookings = () => {
             <Calendar size={48} className="empty-icon" />
             <h3>No bookings found</h3>
             <p>You haven't made any bookings with this status yet.</p>
-            <Link to="/vendors" className="btn-primary">
+            <Link to="/user/vendors" className="btn-primary">
               Browse Vendors
             </Link>
           </div>
@@ -270,13 +270,13 @@ const UserBookings = () => {
             </div>
             <p>Are you sure you want to cancel this booking request? This action cannot be undone.</p>
             <div className="modal-actions">
-              <button 
+              <button
                 className="btn-secondary"
                 onClick={() => setCancelModal({ open: false, bookingId: null })}
               >
                 Keep Booking
               </button>
-              <button 
+              <button
                 className="btn-danger"
                 onClick={handleCancelBooking}
               >

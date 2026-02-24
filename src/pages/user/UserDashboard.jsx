@@ -4,12 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import { bookingAPI } from '../../api/bookings';
 import { budgetAPI } from '../../api/budget';
 import Loading from '../../components/Loading';
-import { 
-  Calendar, 
-  Wallet, 
-  MessageSquare, 
-  Search, 
-  ArrowRight, 
+import {
+  Calendar,
+  Wallet,
+  MessageSquare,
+  Search,
+  ArrowRight,
   CreditCard,
   Clock,
   CheckCircle,
@@ -95,7 +95,7 @@ const UserDashboard = () => {
         <div className="dashboard-card budget-card">
           <div className="card-header">
             <h3><Wallet className="icon" size={20} /> Budget Overview</h3>
-            <Link to="/budget" className="btn-link">View Details <ArrowRight size={16} /></Link>
+            <Link to="/user/budget" className="btn-link">View Details <ArrowRight size={16} /></Link>
           </div>
           <div className="budget-stats">
             <div className="budget-stat">
@@ -114,8 +114,8 @@ const UserDashboard = () => {
             </div>
           </div>
           <div className="budget-progress">
-            <div 
-              className="progress-bar" 
+            <div
+              className="progress-bar"
               style={{ width: `${Math.min((totalSpent / (totalBudget || 1)) * 100, 100)}%` }}
             ></div>
           </div>
@@ -123,19 +123,19 @@ const UserDashboard = () => {
 
         {/* Quick Actions Grid */}
         <div className="quick-actions-grid">
-          <Link to="/vendors" className="action-card">
+          <Link to="/user/vendors" className="action-card">
             <div className="action-icon search-icon">
               <Search size={24} />
             </div>
             <span>Find Vendors</span>
           </Link>
-          <Link to="/budget" className="action-card">
+          <Link to="/user/budget" className="action-card">
             <div className="action-icon budget-icon">
               <CreditCard size={24} />
             </div>
             <span>Update Budget</span>
           </Link>
-          <Link to="/chat" className="action-card">
+          <Link to="/user/chat" className="action-card">
             <div className="action-icon ai-icon">
               <MessageSquare size={24} />
             </div>
@@ -148,9 +148,9 @@ const UserDashboard = () => {
       <div className="dashboard-section">
         <div className="section-header">
           <h3>Recent Bookings</h3>
-          <Link to="/bookings" className="btn-outline">View All</Link>
+          <Link to="/user/bookings" className="btn-outline">View All</Link>
         </div>
-        
+
         {bookings.length > 0 ? (
           <div className="bookings-list">
             {bookings.map(booking => (
@@ -172,7 +172,7 @@ const UserDashboard = () => {
           <div className="empty-state">
             <Calendar size={48} className="empty-icon" />
             <p>No bookings yet. Start exploring vendors!</p>
-            <Link to="/vendors" className="btn-primary">Browse Vendors</Link>
+            <Link to="/user/vendors" className="btn-primary">Browse Vendors</Link>
           </div>
         )}
       </div>

@@ -45,18 +45,19 @@ function App() {
 
           {/* ── User portal (role: user) ── */}
           <Route
+            path="/user"
             element={
               <ProtectedRoute roles="user" redirectTo="/">
                 <UserLayout />
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<UserDashboard />} />
-            <Route path="/bookings" element={<UserBookings />} />
-            <Route path="/budget" element={<BudgetPlanner />} />
-            <Route path="/chat" element={<AIChat />} />
-            <Route path="/vendors" element={<VendorSearch />} />
-            <Route path="/vendors/:slug" element={<VendorDetails />} />
+            <Route index element={<UserDashboard />} />
+            <Route path="bookings" element={<UserBookings />} />
+            <Route path="budget" element={<BudgetPlanner />} />
+            <Route path="chat" element={<AIChat />} />
+            <Route path="vendors" element={<VendorSearch />} />
+            <Route path="vendors/:slug" element={<VendorDetails />} />
           </Route>
 
           {/* ── Vendor portal (role: vendor) ── */}
@@ -78,11 +79,12 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute roles="admin" redirectTo="/admin">
+              <ProtectedRoute roles="admin" redirectTo="/">
                 <AdminLayout />
               </ProtectedRoute>
             }
           >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="vendors" element={<AdminVendors />} />
             <Route path="users" element={<AdminUsers />} />

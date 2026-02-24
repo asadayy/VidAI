@@ -16,11 +16,11 @@ import './UserLayout.css';
 
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/vendors', icon: Store, label: 'Vendors' },
-  { to: '/bookings', icon: Calendar, label: 'Bookings' },
-  { to: '/budget', icon: Calculator, label: 'Budget' },
-  { to: '/chat', icon: MessageCircle, label: 'Chat' },
+  { to: '/user', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/user/vendors', icon: Store, label: 'Vendors' },
+  { to: '/user/bookings', icon: Calendar, label: 'Bookings' },
+  { to: '/user/budget', icon: Calculator, label: 'Budget' },
+  { to: '/user/chat', icon: MessageCircle, label: 'Chat' },
 ];
 
 function UserLayout() {
@@ -71,13 +71,13 @@ function UserLayout() {
               </div>
               <span className="user-name">{user?.name || user?.email}</span>
             </div>
-            
+
             <button onClick={handleLogout} className="user-logout-btn" title="Logout">
               <LogOut size={18} />
             </button>
 
-            <button 
-              className="mobile-menu-toggle" 
+            <button
+              className="mobile-menu-toggle"
               onClick={toggleMobileMenu}
               aria-label="Toggle menu"
             >

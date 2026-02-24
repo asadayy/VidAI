@@ -7,7 +7,7 @@ import './Home.css';
 const Home = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('login');
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const openAuthModal = (mode = 'login') => {
     setModalMode(mode);
@@ -100,7 +100,17 @@ const Home = () => {
             Get Started Now
           </button>
         ) : (
-          <Link to="/user" className="cta-button" style={{ textDecoration: 'none' }}>
+          <Link
+            to={
+              user?.role === 'admin'
+                ? '/admin/dashboard'
+                : user?.role === 'vendor'
+                  ? '/vendor'
+                  : '/user'
+            }
+            className="cta-button"
+            style={{ textDecoration: 'none' }}
+          >
             Go to My Dashboard
           </Link>
         )}

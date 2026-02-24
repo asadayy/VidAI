@@ -31,13 +31,13 @@ const VendorDetails = () => {
         const { data } = await vendorAPI.getBySlug(slug);
         // Assuming the API returns the vendor object directly or nested
         // Adjust based on actual API response structure (usually data.data or just data)
-        const vendorData = data.vendor || data; 
+        const vendorData = data.vendor || data;
         setVendor(vendorData);
         setPackages(vendorData.packages || []);
       } catch (error) {
         console.error('Error fetching vendor details:', error);
         toast.error('Failed to load vendor details.');
-        navigate('/vendors'); // Redirect back to list on error
+        navigate('/user/vendors'); // Redirect back to list on error
       } finally {
         setLoading(false);
       }
@@ -86,7 +86,7 @@ const VendorDetails = () => {
       };
 
       await client.post('/bookings', payload);
-      
+
       toast.success('Booking request sent successfully!');
       handleModalClose();
     } catch (error) {
@@ -105,9 +105,9 @@ const VendorDetails = () => {
     <div className="vendor-details-container">
       {/* Hero Section */}
       <div className="vendor-hero">
-        <img 
-          src={vendor.coverImage?.url || 'https://via.placeholder.com/1200x400?text=No+Cover+Image'} 
-          alt={vendor.businessName} 
+        <img
+          src={vendor.coverImage?.url || 'https://via.placeholder.com/1200x400?text=No+Cover+Image'}
+          alt={vendor.businessName}
           className="hero-image"
           onError={(e) => {
             e.target.src = 'https://via.placeholder.com/1200x400?text=No+Cover+Image';
@@ -142,9 +142,9 @@ const VendorDetails = () => {
             {vendor.portfolio?.length > 0 ? (
               vendor.portfolio.map((img, index) => (
                 <div key={index} className="portfolio-item">
-                  <img 
-                    src={img.url || img} 
-                    alt={`Portfolio ${index + 1}`} 
+                  <img
+                    src={img.url || img}
+                    alt={`Portfolio ${index + 1}`}
                     onError={(e) => {
                       e.target.src = 'https://via.placeholder.com/150x150?text=Image';
                     }}
@@ -191,7 +191,7 @@ const VendorDetails = () => {
                   <span className="package-price">Rs. {pkg.price.toLocaleString()}</span>
                 </div>
                 <p className="package-description">{pkg.description}</p>
-                
+
                 {pkg.features && pkg.features.length > 0 && (
                   <ul className="package-features">
                     {pkg.features.map((feature, idx) => (
@@ -199,8 +199,8 @@ const VendorDetails = () => {
                     ))}
                   </ul>
                 )}
-                
-                <button 
+
+                <button
                   className="book-btn"
                   onClick={() => handleBookClick(pkg)}
                 >
@@ -221,9 +221,9 @@ const VendorDetails = () => {
             <button className="modal-close" onClick={handleModalClose}>
               <X size={24} />
             </button>
-            
+
             <h2 className="modal-title">Book {selectedPackage?.name}</h2>
-            
+
             <form onSubmit={handleBookingSubmit} className="booking-form">
               <div className="form-group">
                 <label htmlFor="eventDate">Event Date</label>
@@ -290,9 +290,9 @@ const VendorDetails = () => {
                 />
               </div>
 
-              <button 
-                type="submit" 
-                className="submit-btn" 
+              <button
+                type="submit"
+                className="submit-btn"
                 disabled={submitting}
               >
                 {submitting ? 'Submitting...' : 'Confirm Booking'}

@@ -26,14 +26,21 @@ function getLocalIP() {
 const startServer = async () => {
   try {
     await connectDB();
-    
+
     const localIP = getLocalIP();
-    
+
     app.listen(PORT, HOST, () => {
       logger.info(`VidAI Server running in ${process.env.NODE_ENV} mode on ${HOST}:${PORT}`);
       logger.info(`API available at http://localhost:${PORT}/api/v1`);
+
+      const publicUrl = process.env.PUBLIC_URL;
+      if (publicUrl) {
+        logger.info(`Mobile app can connect at ${publicUrl}/api/v1`);
+      } else {
+        logger.info(`Mobile app can connect at http://${localIP}:${PORT}/api/v1`);
+      }
+
       logger.info(`Health check at http://localhost:${PORT}/api/v1/health`);
-      logger.info(`Mobile app can connect at http://${localIP}:${PORT}/api/v1`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error.message);

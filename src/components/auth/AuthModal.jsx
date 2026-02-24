@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './AuthModal.css';
@@ -12,6 +13,7 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { login, register } = useAuth();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -32,10 +34,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
     setIsLoading(true);
 
     try {
+      let user;
       if (isLogin) {
-        await login(formData.email, formData.password);
+        user = await login(formData.email, formData.password);
       } else {
-        await register({
+        user = await register({
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -43,6 +46,15 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         });
       }
       onClose(); // Close modal on success
+
+      // Dynamic redirect based on role
+      if (user?.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else if (user?.role === 'vendor') {
+        navigate('/vendor');
+      } else {
+        navigate('/user');
+      }
     } catch (error) {
       console.error('Auth error:', error);
       toast.error(error.response?.data?.message || 'Authentication failed. Please try again.');
@@ -62,13 +74,13 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
         <button className="modal-close" onClick={onClose}>
           &times;
         </button>
-        
+
         <h2 className="modal-title">
           {isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
         <p className="modal-subtitle">
-          {isLogin 
-            ? 'Login to access your wedding planner' 
+          {isLogin
+            ? 'Login to access your wedding planner'
             : 'Start planning your dream wedding today'}
         </p>
 
@@ -104,30 +116,30 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
           <div className="form-group">
             <label className="form-label">Password</label>
             <input
-                type="password"
-                name="password"
-                className="form-input"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-                minLength={8}
-                title="At least 8 characters, one uppercase, one lowercase, one number"
-              />
-              {!isLogin && (
-                <small className="form-hint" style={{ display: 'block', marginTop: '4px', color: 'var(--text-muted, #666)', fontSize: '0.8rem' }}>
-                  Min 8 characters, include uppercase, lowercase, and a number
-                </small>
-              )}
+              type="password"
+              name="password"
+              className="form-input"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+              minLength={8}
+              title="At least 8 characters, one uppercase, one lowercase, one number"
+            />
+            {!isLogin && (
+              <small className="form-hint" style={{ display: 'block', marginTop: '4px', color: 'var(--text-muted, #666)', fontSize: '0.8rem' }}>
+                Min 8 characters, include uppercase, lowercase, and a number
+              </small>
+            )}
           </div>
 
-          <button 
-            type="submit" 
-            className="auth-submit-btn" 
+          <button
+            type="submit"
+            className="auth-submit-btn"
             disabled={isLoading}
           >
-            {isLoading 
-              ? 'Processing...' 
+            {isLoading
+              ? 'Processing...'
               : (isLogin ? 'Login' : 'Sign Up')}
           </button>
         </form>
