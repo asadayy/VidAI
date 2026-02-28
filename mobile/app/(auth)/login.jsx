@@ -36,8 +36,12 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await login(email, password);
-      router.replace('/(tabs)/dashboard');
+      const user = await login(email, password);
+      if (!user?.onboarding?.isComplete && user?.role === 'user') {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/dashboard');
+      }
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed. Please try again.';
       setErrors({ general: message });

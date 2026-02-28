@@ -135,9 +135,14 @@ Rules:
 def build_chat_messages(
     user_message: str,
     conversation_history: list[dict],
+    vendors_context: str = ""
 ) -> list[dict]:
     """Build the messages array for Ollama chat completion."""
-    messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
+    sys_prompt = CHAT_SYSTEM_PROMPT
+    if vendors_context:
+        sys_prompt += f"\n\nHere are some vendors from our database that you can recommend if relevant (use them instead of making up fictional ones):\n{vendors_context}"
+
+    messages = [{"role": "system", "content": sys_prompt}]
 
     for msg in conversation_history[-10:]:  # Keep last 10 messages for context
         messages.append(
@@ -155,26 +160,38 @@ def build_budget_prompt(
     total_budget: float,
     event_type: str,
     preferences: dict,
+    vendors_context: str = ""
 ) -> list[dict]:
     """Build the messages array for budget plan generation."""
     guest_count = preferences.get("guestCount", "not specified")
     priority = preferences.get("priority", "balanced")
     style = preferences.get("style", "traditional")
-    city = preferences.get("city", "not specified")
+    city = preferences.get("weddingLocation", preferences.get("city", "not specified"))
+    budgets_pref = preferences.get("budgets", {})
 
     user_prompt = (
         f"Create a detailed budget plan for a Pakistani {event_type} with:\n"
-        f"- Total Budget: ₨{total_budget:,.0f} PKR\n"
+        f"- Total Budget Available: ₨{total_budget:,.0f} PKR\n"
         f"- Guest Count: {guest_count}\n"
         f"- Priority: {priority}\n"
         f"- Style: {style}\n"
-        f"- City: {city}\n\n"
-        f"Allocate the budget across relevant categories. "
-        f"Respond with ONLY the JSON object, no other text."
+        f"- City: {city}\n"
     )
 
+    if budgets_pref:
+        user_prompt += "\nThe user set the following category budgets/percentages during onboarding:\n"
+        for k, v in budgets_pref.items():
+            user_prompt += f"- {k}: {v}\n"
+        user_prompt += "\nPlease respect these constraints where possible and suggest best-suited vendors from the provided database for these categories.\n"
+
+    user_prompt += "\nAllocate the budget. Respond with ONLY the JSON object, no other text."
+
+    sys_prompt = BUDGET_PLAN_SYSTEM_PROMPT
+    if vendors_context:
+        sys_prompt += f"\n\nUse these real vendors from our database to justify your budget allocation and provide specific recommendations:\n{vendors_context}"
+
     return [
-        {"role": "system", "content": BUDGET_PLAN_SYSTEM_PROMPT},
+        {"role": "system", "content": sys_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
@@ -184,6 +201,7 @@ def build_recommendation_prompt(
     budget: float,
     city: str,
     category: str,
+    vendors_context: str = ""
 ) -> list[dict]:
     """Build the messages array for vendor recommendations."""
     style = preferences.get("style", "not specified")
@@ -204,7 +222,11 @@ def build_recommendation_prompt(
         f"Respond with ONLY the JSON object, no other text."
     )
 
+    sys_prompt = RECOMMENDATION_SYSTEM_PROMPT
+    if vendors_context:
+        sys_prompt += f"\n\nPlease use the following real database of vendors to make exact matches when possible:\n{vendors_context}"
+
     return [
-        {"role": "system", "content": RECOMMENDATION_SYSTEM_PROMPT},
+        {"role": "system", "content": sys_prompt},
         {"role": "user", "content": user_prompt},
     ]

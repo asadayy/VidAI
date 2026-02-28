@@ -53,7 +53,11 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
       } else if (user?.role === 'vendor') {
         navigate('/vendor');
       } else {
-        navigate('/user');
+        if (!user?.onboarding?.isComplete) {
+          navigate('/user/onboarding');
+        } else {
+          navigate('/user');
+        }
       }
     } catch (error) {
       console.error('Auth error:', error);

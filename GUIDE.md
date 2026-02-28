@@ -96,9 +96,13 @@ VidAI has three distinct user roles. Here is how to access each:
 
 The mobile app is built with **React Native (Expo)** and requires the backend to be accessible publicly or via a local network.
 
-### Step 1: Configure the API URL
-1.  Open `mobile/app.json`.
-2.  Locate the `"extra"` section and update `"apiUrl"`:
+### Step 1: Install Expo CLI & Configure API
+1.  **Install Expo globally** (if not already installed):
+    ```bash
+    npm install -g expo-cli
+    ```
+2.  Open `mobile/app.json`.
+3.  Locate the `"extra"` section and update `"apiUrl"`:
     ```json
     "extra": {
       "apiUrl": "https://your-ngrok-url.ngrok-free.dev/api/v1"
@@ -117,18 +121,22 @@ npm install
 2. Go to **Device Manager** and start your Virtual Device (Emulator).
 3. In your terminal, run:
    ```bash
+   cd mobile
    npm run android
    ```
 
 ### Step 4: Run on physical device (Expo Go)
-1. Install **Expo Go** from the Play Store/App Store.
-2. In your terminal, run:
+1. Install **Expo Go** from the Play Store/App Store on your Android phone.
+2. In your terminal, start the development server:
    ```bash
    cd mobile
-   npm start
+   npx expo start
    ```
-3. Scan the **QR Code** using the Expo Go app. 
-   *(Ensure your phone and computer are on the same Wi-Fi, or use the ngrok URL configured in Step 1).*
+3. A **QR Code** will appear in your terminal.
+4. **Scan the Code**:
+   - Open the **Expo Go** app on your phone.
+   - Tap "Scan QR Code" and point it at your terminal.
+5. **Connection Tip**: If the app doesn't load, ensure your phone and PC are on the **same Wi-Fi**. If it still fails, press `s` in the terminal to switch to **Tunnel** mode (requires ngrok).
 
 ---
 

@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function Budget() {
   const [budget, setBudget] = useState(null);
@@ -201,52 +202,54 @@ export default function Budget() {
 
   if (!budget) {
     return (
-      <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.emptyContainer}>
-          <EmptyState
-            icon={<Ionicons name="wallet-outline" size={48} color={theme.colors.textSecondary} />}
-            title="No Budget Set"
-            message="Create a budget to start tracking your wedding expenses"
-          />
-          <Button
-            title="Create Budget"
-            onPress={() => setIsModalOpen(true)}
-            style={styles.createButton}
-          />
-        </ScrollView>
+      <ProtectedRoute roles="user">
+        <View style={styles.container}>
+          <ScrollView contentContainerStyle={styles.emptyContainer}>
+            <EmptyState
+              icon={<Ionicons name="wallet-outline" size={48} color={theme.colors.textSecondary} />}
+              title="No Budget Set"
+              message="Create a budget to start tracking your wedding expenses"
+            />
+            <Button
+              title="Create Budget"
+              onPress={() => setIsModalOpen(true)}
+              style={styles.createButton}
+            />
+          </ScrollView>
 
-        {/* Create Budget Modal */}
-        <Modal
-          visible={isModalOpen}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setIsModalOpen(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Create Budget</Text>
-              <TouchableOpacity onPress={() => setIsModalOpen(false)}>
-                <Ionicons name="close" size={24} color={theme.colors.text} />
-              </TouchableOpacity>
+          {/* Create Budget Modal */}
+          <Modal
+            visible={isModalOpen}
+            animationType="slide"
+            presentationStyle="pageSheet"
+            onRequestClose={() => setIsModalOpen(false)}
+          >
+            <View style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Create Budget</Text>
+                <TouchableOpacity onPress={() => setIsModalOpen(false)}>
+                  <Ionicons name="close" size={24} color={theme.colors.text} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalLabel}>Total Budget (PKR) *</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Enter total budget"
+                  keyboardType="numeric"
+                  value={createAmount}
+                  onChangeText={setCreateAmount}
+                />
+                <Button
+                  title="Create"
+                  onPress={handleCreateBudget}
+                  style={styles.modalButton}
+                />
+              </View>
             </View>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalLabel}>Total Budget (PKR) *</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter total budget"
-                keyboardType="numeric"
-                value={createAmount}
-                onChangeText={setCreateAmount}
-              />
-              <Button
-                title="Create"
-                onPress={handleCreateBudget}
-                style={styles.modalButton}
-              />
-            </View>
-          </View>
-        </Modal>
-      </View>
+          </Modal>
+        </View>
+      </ProtectedRoute>
     );
   }
 
@@ -255,180 +258,182 @@ export default function Budget() {
   const remaining = totalBudget - totalSpent;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.content}>
-        {/* Budget Overview */}
-        <Card style={styles.overviewCard}>
-          <Text style={styles.cardTitle}>Budget Overview</Text>
-          <View style={styles.budgetStats}>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Total Budget</Text>
-              <Text style={styles.budgetValue}>{formatCurrency(totalBudget)}</Text>
-            </View>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Spent</Text>
-              <Text style={styles.budgetValue}>{formatCurrency(totalSpent)}</Text>
-            </View>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Remaining</Text>
-              <Text style={[styles.budgetValue, remaining < 0 && styles.budgetValueDanger]}>
-                {formatCurrency(remaining)}
-              </Text>
-            </View>
-          </View>
-          {totalBudget > 0 && (
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` },
-                ]}
-              />
-            </View>
-          )}
-        </Card>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <Button
-            title="Generate AI Plan"
-            onPress={handleGenerateAI}
-            loading={aiLoading}
-            variant="secondary"
-            style={styles.actionButton}
-          />
-          <Button
-            title="Add Item"
-            onPress={() => {
-              setEditingItem(null);
-              setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
-              setIsItemModalOpen(true);
-            }}
-            style={styles.actionButton}
-          />
-        </View>
-
-        {/* Budget Items */}
-        <View style={styles.itemsSection}>
-          <Text style={styles.sectionTitle}>Budget Items</Text>
-          {budget.items && budget.items.length > 0 ? (
-            budget.items.map((item) => (
-              <Card key={item._id} style={styles.itemCard}>
-                <View style={styles.itemHeader}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemCategory}>
-                      {item.category?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                    </Text>
-                    {item.notes && (
-                      <Text style={styles.itemNotes}>{item.notes}</Text>
-                    )}
-                  </View>
-                  <View style={styles.itemActions}>
-                    <TouchableOpacity onPress={() => openEditModal(item)}>
-                      <Ionicons name="pencil" size={20} color={theme.colors.primary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteItem(item._id)}>
-                      <Ionicons name="trash" size={20} color={theme.colors.danger} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.itemAmounts}>
-                  <View style={styles.itemAmount}>
-                    <Text style={styles.itemAmountLabel}>Allocated</Text>
-                    <Text style={styles.itemAmountValue}>
-                      {formatCurrency(item.allocatedAmount)}
-                    </Text>
-                  </View>
-                  <View style={styles.itemAmount}>
-                    <Text style={styles.itemAmountLabel}>Spent</Text>
-                    <Text style={styles.itemAmountValue}>
-                      {formatCurrency(item.spentAmount)}
-                    </Text>
-                  </View>
-                </View>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              icon={<Ionicons name="list-outline" size={48} color={theme.colors.textSecondary} />}
-              title="No budget items"
-              message="Add items to track your expenses"
-            />
-          )}
-        </View>
-      </View>
-
-      {/* Add/Edit Item Modal */}
-      <Modal
-        visible={isItemModalOpen}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setIsItemModalOpen(false)}
+    <ProtectedRoute roles="user">
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {editingItem ? 'Edit Item' : 'Add Budget Item'}
-            </Text>
-            <TouchableOpacity
+        <View style={styles.content}>
+          {/* Budget Overview */}
+          <Card style={styles.overviewCard}>
+            <Text style={styles.cardTitle}>Budget Overview</Text>
+            <View style={styles.budgetStats}>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Total Budget</Text>
+                <Text style={styles.budgetValue}>{formatCurrency(totalBudget)}</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Spent</Text>
+                <Text style={styles.budgetValue}>{formatCurrency(totalSpent)}</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Remaining</Text>
+                <Text style={[styles.budgetValue, remaining < 0 && styles.budgetValueDanger]}>
+                  {formatCurrency(remaining)}
+                </Text>
+              </View>
+            </View>
+            {totalBudget > 0 && (
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` },
+                  ]}
+                />
+              </View>
+            )}
+          </Card>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <Button
+              title="Generate AI Plan"
+              onPress={handleGenerateAI}
+              loading={aiLoading}
+              variant="secondary"
+              style={styles.actionButton}
+            />
+            <Button
+              title="Add Item"
               onPress={() => {
-                setIsItemModalOpen(false);
                 setEditingItem(null);
                 setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+                setIsItemModalOpen(true);
               }}
-            >
-              <Ionicons name="close" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+              style={styles.actionButton}
+            />
           </View>
-          <ScrollView style={styles.modalContent}>
-            <Text style={styles.modalLabel}>Category *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="e.g. Venue, Catering, Photography"
-              value={itemForm.category}
-              onChangeText={(text) => setItemForm({ ...itemForm, category: text })}
-            />
 
-            <Text style={styles.modalLabel}>Allocated Amount (PKR) *</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter allocated amount"
-              keyboardType="numeric"
-              value={itemForm.allocatedAmount}
-              onChangeText={(text) => setItemForm({ ...itemForm, allocatedAmount: text })}
-            />
-
-            <Text style={styles.modalLabel}>Spent Amount (PKR)</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Enter spent amount"
-              keyboardType="numeric"
-              value={itemForm.spentAmount}
-              onChangeText={(text) => setItemForm({ ...itemForm, spentAmount: text })}
-            />
-
-            <Text style={styles.modalLabel}>Notes</Text>
-            <TextInput
-              style={[styles.modalInput, styles.modalTextArea]}
-              placeholder="Additional notes..."
-              multiline
-              numberOfLines={4}
-              value={itemForm.notes}
-              onChangeText={(text) => setItemForm({ ...itemForm, notes: text })}
-            />
-
-            <Button
-              title={editingItem ? 'Update Item' : 'Add Item'}
-              onPress={handleSaveItem}
-              style={styles.modalButton}
-            />
-          </ScrollView>
+          {/* Budget Items */}
+          <View style={styles.itemsSection}>
+            <Text style={styles.sectionTitle}>Budget Items</Text>
+            {budget.items && budget.items.length > 0 ? (
+              budget.items.map((item) => (
+                <Card key={item._id} style={styles.itemCard}>
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemCategory}>
+                        {item.category?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </Text>
+                      {item.notes && (
+                        <Text style={styles.itemNotes}>{item.notes}</Text>
+                      )}
+                    </View>
+                    <View style={styles.itemActions}>
+                      <TouchableOpacity onPress={() => openEditModal(item)}>
+                        <Ionicons name="pencil" size={20} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteItem(item._id)}>
+                        <Ionicons name="trash" size={20} color={theme.colors.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <View style={styles.itemAmounts}>
+                    <View style={styles.itemAmount}>
+                      <Text style={styles.itemAmountLabel}>Allocated</Text>
+                      <Text style={styles.itemAmountValue}>
+                        {formatCurrency(item.allocatedAmount)}
+                      </Text>
+                    </View>
+                    <View style={styles.itemAmount}>
+                      <Text style={styles.itemAmountLabel}>Spent</Text>
+                      <Text style={styles.itemAmountValue}>
+                        {formatCurrency(item.spentAmount)}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <EmptyState
+                icon={<Ionicons name="list-outline" size={48} color={theme.colors.textSecondary} />}
+                title="No budget items"
+                message="Add items to track your expenses"
+              />
+            )}
+          </View>
         </View>
-      </Modal>
-    </ScrollView>
+
+        {/* Add/Edit Item Modal */}
+        <Modal
+          visible={isItemModalOpen}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setIsItemModalOpen(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editingItem ? 'Edit Item' : 'Add Budget Item'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsItemModalOpen(false);
+                  setEditingItem(null);
+                  setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+                }}
+              >
+                <Ionicons name="close" size={24} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalContent}>
+              <Text style={styles.modalLabel}>Category *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. Venue, Catering, Photography"
+                value={itemForm.category}
+                onChangeText={(text) => setItemForm({ ...itemForm, category: text })}
+              />
+
+              <Text style={styles.modalLabel}>Allocated Amount (PKR) *</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter allocated amount"
+                keyboardType="numeric"
+                value={itemForm.allocatedAmount}
+                onChangeText={(text) => setItemForm({ ...itemForm, allocatedAmount: text })}
+              />
+
+              <Text style={styles.modalLabel}>Spent Amount (PKR)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="Enter spent amount"
+                keyboardType="numeric"
+                value={itemForm.spentAmount}
+                onChangeText={(text) => setItemForm({ ...itemForm, spentAmount: text })}
+              />
+
+              <Text style={styles.modalLabel}>Notes</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextArea]}
+                placeholder="Additional notes..."
+                multiline
+                numberOfLines={4}
+                value={itemForm.notes}
+                onChangeText={(text) => setItemForm({ ...itemForm, notes: text })}
+              />
+
+              <Button
+                title={editingItem ? 'Update Item' : 'Add Item'}
+                onPress={handleSaveItem}
+                style={styles.modalButton}
+              />
+            </ScrollView>
+          </View>
+        </Modal>
+      </ScrollView>
+    </ProtectedRoute>
   );
 }
 

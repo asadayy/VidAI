@@ -8,6 +8,7 @@ import Loading from '../../components/Loading';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
 import EmptyState from '../../components/EmptyState';
+import ProtectedRoute from '../../components/ProtectedRoute';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -81,126 +82,128 @@ export default function Dashboard() {
   const remaining = totalBudget - totalSpent;
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Welcome back, {user?.name}!</Text>
-          <Text style={styles.subtitle}>Here's what's happening with your wedding planning.</Text>
-        </View>
+    <ProtectedRoute roles="user">
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.greeting}>Welcome back, {user?.name}!</Text>
+            <Text style={styles.subtitle}>Here's what's happening with your wedding planning.</Text>
+          </View>
 
-        {/* Budget Overview Card */}
-        <Card style={styles.budgetCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleRow}>
-              <Ionicons name="wallet" size={20} color={theme.colors.primary} />
-              <Text style={styles.cardTitle}>Budget Overview</Text>
+          {/* Budget Overview Card */}
+          <Card style={styles.budgetCard}>
+            <View style={styles.cardHeader}>
+              <View style={styles.cardTitleRow}>
+                <Ionicons name="wallet" size={20} color={theme.colors.primary} />
+                <Text style={styles.cardTitle}>Budget Overview</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/budget')}>
+                <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/budget')}>
-              <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
+
+            <View style={styles.budgetStats}>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Total Budget</Text>
+                <Text style={styles.budgetValue}>{formatCurrency(totalBudget)}</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Spent</Text>
+                <Text style={styles.budgetValue}>{formatCurrency(totalSpent)}</Text>
+              </View>
+              <View style={styles.budgetStat}>
+                <Text style={styles.budgetLabel}>Remaining</Text>
+                <Text style={[styles.budgetValue, remaining < 0 && styles.budgetValueDanger]}>
+                  {formatCurrency(remaining)}
+                </Text>
+              </View>
+            </View>
+
+            {totalBudget > 0 && (
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` },
+                  ]}
+                />
+              </View>
+            )}
+          </Card>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/(tabs)/vendors')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#e0e7ff' }]}>
+                <Ionicons name="search" size={24} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.actionText}>Find Vendors</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/(tabs)/budget')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#fef3c7' }]}>
+                <Ionicons name="card" size={24} color={theme.colors.warning} />
+              </View>
+              <Text style={styles.actionText}>Update Budget</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/(tabs)/chat')}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="chatbubbles" size={24} color={theme.colors.info} />
+              </View>
+              <Text style={styles.actionText}>Chat with AI</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.budgetStats}>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Total Budget</Text>
-              <Text style={styles.budgetValue}>{formatCurrency(totalBudget)}</Text>
+          {/* Recent Bookings */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Bookings</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
+                <Text style={styles.sectionLink}>View All</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Spent</Text>
-              <Text style={styles.budgetValue}>{formatCurrency(totalSpent)}</Text>
-            </View>
-            <View style={styles.budgetStat}>
-              <Text style={styles.budgetLabel}>Remaining</Text>
-              <Text style={[styles.budgetValue, remaining < 0 && styles.budgetValueDanger]}>
-                {formatCurrency(remaining)}
-              </Text>
-            </View>
-          </View>
 
-          {totalBudget > 0 && (
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` },
-                ]}
-              />
-            </View>
-          )}
-        </Card>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push('/(tabs)/vendors')}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#e0e7ff' }]}>
-              <Ionicons name="search" size={24} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.actionText}>Find Vendors</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push('/(tabs)/budget')}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#fef3c7' }]}>
-              <Ionicons name="card" size={24} color={theme.colors.warning} />
-            </View>
-            <Text style={styles.actionText}>Update Budget</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push('/(tabs)/chat')}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: '#dbeafe' }]}>
-              <Ionicons name="chatbubbles" size={24} color={theme.colors.info} />
-            </View>
-            <Text style={styles.actionText}>Chat with AI</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Recent Bookings */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Bookings</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
-              <Text style={styles.sectionLink}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {bookings.length > 0 ? (
-            bookings.map((booking) => (
-              <Card key={booking._id} style={styles.bookingCard}>
-                <View style={styles.bookingHeader}>
-                  <View style={styles.bookingInfo}>
-                    <Text style={styles.bookingVendor}>
-                      {booking.vendor?.businessName || 'Unknown Vendor'}
-                    </Text>
-                    <View style={styles.bookingDateRow}>
-                      <Ionicons name="calendar" size={14} color={theme.colors.textSecondary} />
-                      <Text style={styles.bookingDate}>{formatDate(booking.eventDate)}</Text>
+            {bookings.length > 0 ? (
+              bookings.map((booking) => (
+                <Card key={booking._id} style={styles.bookingCard}>
+                  <View style={styles.bookingHeader}>
+                    <View style={styles.bookingInfo}>
+                      <Text style={styles.bookingVendor}>
+                        {booking.vendor?.businessName || 'Unknown Vendor'}
+                      </Text>
+                      <View style={styles.bookingDateRow}>
+                        <Ionicons name="calendar" size={14} color={theme.colors.textSecondary} />
+                        <Text style={styles.bookingDate}>{formatDate(booking.eventDate)}</Text>
+                      </View>
                     </View>
+                    <Badge text={booking.status} variant={getStatusVariant(booking.status)} />
                   </View>
-                  <Badge text={booking.status} variant={getStatusVariant(booking.status)} />
-                </View>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              icon={<Ionicons name="calendar-outline" size={48} color={theme.colors.textSecondary} />}
-              title="No bookings yet"
-              message="Start exploring vendors to make your first booking!"
-            />
-          )}
+                </Card>
+              ))
+            ) : (
+              <EmptyState
+                icon={<Ionicons name="calendar-outline" size={48} color={theme.colors.textSecondary} />}
+                title="No bookings yet"
+                message="Start exploring vendors to make your first booking!"
+              />
+            )}
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </ProtectedRoute>
   );
 }
 

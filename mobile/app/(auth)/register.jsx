@@ -20,17 +20,17 @@ export default function Register() {
 
   const validate = () => {
     const newErrors = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
+
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
@@ -38,11 +38,11 @@ export default function Register() {
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
       newErrors.password = 'Password must contain uppercase, lowercase, and number';
     }
-    
+
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -52,12 +52,16 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await register({
+      const user = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
       });
-      router.replace('/(tabs)/dashboard');
+      if (user?.role === 'user') {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)/dashboard');
+      }
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed. Please try again.';
       setErrors({ general: message });

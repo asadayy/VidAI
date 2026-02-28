@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Sparkles, Brain, Save, X, DollarSign } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetAPI } from '../../api/budget';
+import { useAuth } from '../../context/AuthContext';
 import './BudgetPlanner.css';
 
 const BudgetPlanner = () => {
+  const { user } = useAuth();
   const [budget, setBudget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  
+
   // Form states
   const [createAmount, setCreateAmount] = useState('');
   const [itemForm, setItemForm] = useState({
@@ -23,6 +25,21 @@ const BudgetPlanner = () => {
   useEffect(() => {
     fetchBudget();
   }, []);
+
+  useEffect(() => {
+    if (user?.onboarding?.budgets && !budget && createAmount === '') {
+      let total = 0;
+      Object.values(user.onboarding.budgets).forEach(val => {
+        if (val === 'Under 10,000') total += 10000;
+        else if (val === '10,000 - 25,000') total += 25000;
+        else if (val === '25,000 - 50,000') total += 50000;
+        else if (val === 'Above 50,000') total += 75000;
+      });
+      if (total > 0) {
+        setCreateAmount(total.toString());
+      }
+    }
+  }, [user, budget, createAmount]);
 
   // Debug: Log budget state changes
   useEffect(() => {
@@ -116,7 +133,7 @@ const BudgetPlanner = () => {
 
   const handleDeleteItem = async (itemId) => {
     if (!window.confirm('Are you sure you want to delete this item?')) return;
-    
+
     try {
       await budgetAPI.deleteItem(itemId);
       toast.success('Item deleted');
@@ -229,8 +246,8 @@ const BudgetPlanner = () => {
       </div>
 
       <div className="budget-actions">
-        <button 
-          className="btn-ai-generate" 
+        <button
+          className="btn-ai-generate"
           onClick={handleGenerateAI}
           disabled={aiLoading}
         >

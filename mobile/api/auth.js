@@ -9,4 +9,5 @@ export const authAPI = {
   resetPassword: (data) => client.post('/auth/reset-password', data),
   updatePassword: (data) => client.put('/auth/update-password', data),
   refreshToken: (refreshToken) => client.post('/auth/refresh-token', { refreshToken }),
+  completeOnboarding: (data) => client.post('/auth/onboarding', data),
 };

@@ -119,6 +119,18 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const completeOnboarding = useCallback(async (onboardingData) => {
+    try {
+      const { data } = await authAPI.completeOnboarding(onboardingData);
+      const updatedUser = data.data.user;
+      await AsyncStorage.setItem(TOKEN_KEYS.user, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      throw error;
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authAPI.logout();
@@ -156,8 +168,9 @@ export function AuthProvider({ children }) {
       register,
       logout,
       hasRole,
+      completeOnboarding,
     }),
-    [user, token, loading, isAuthenticated, login, register, logout, hasRole]
+    [user, token, loading, isAuthenticated, login, register, logout, hasRole, completeOnboarding]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -238,7 +238,7 @@
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .modal-close {
@@ -310,20 +310,126 @@
   cursor: not-allowed;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reviews Section */
+.reviews-section {
+  margin-top: 4rem;
+  margin-bottom: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #eee;
+}
+
+.reviews-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: #2c3e50;
+  text-align: center;
+}
+
+.reviews-container {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 3rem;
+}
+
+.review-form-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f0;
+  height: fit-content;
+}
+
+.review-form-card h3 {
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+  color: #333;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.reviews-list h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.review-card {
+  background: #fdfdfd;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #eaeaea;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.reviewer-name {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.review-rating {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-weight: 600;
+  color: #f1c40f;
+  background: #fbf8eb;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.review-title {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.review-comment {
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+
 @media (max-width: 768px) {
-  .vendor-profile {
+
+  .vendor-profile,
+  .reviews-container {
     grid-template-columns: 1fr;
   }
-  
+
   .vendor-hero {
     height: 300px;
   }
-  
+
   .vendor-name {
     font-size: 1.8rem;
   }

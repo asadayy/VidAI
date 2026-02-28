@@ -11,4 +11,6 @@ export const vendorAPI = {
   addPackage: (data) => client.post('/vendors/me/packages', data),
   updatePackage: (packageId, data) => client.put(`/vendors/me/packages/${packageId}`, data),
   deletePackage: (packageId) => client.delete(`/vendors/me/packages/${packageId}`),
+  getReviews: (id) => client.get(`/vendors/${id}/reviews`),
+  addReview: (id, data) => client.post(`/vendors/${id}/reviews`, data),
 };

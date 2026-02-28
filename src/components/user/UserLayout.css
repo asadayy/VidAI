@@ -69,7 +69,8 @@
 }
 
 .user-nav-link.active {
-  background-color: #fff0f7; /* Light pink background */
+  background-color: #fff0f7;
+  /* Light pink background */
   color: var(--pink);
 }
 
@@ -179,6 +180,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -196,36 +198,67 @@
   }
 
   .user-info {
-    display: none; /* Hide user info on mobile to save space, or keep avatar only */
+    display: none;
+    /* Hide user info on mobile to save space, or keep avatar only */
     border-right: none;
     padding-right: 0;
   }
-  
+
   .user-avatar {
-      display: flex; /* keep avatar */
+    display: flex;
+    /* keep avatar */
   }
-  
+
   .user-name {
-      display: none;
+    display: none;
   }
 
   .user-logout-btn {
-    display: none; /* Move logout to mobile menu or keep? Let's hide it and assume it should be in menu if we had one, but for now I'll just leave it visible if there's space, or hide it. 
+    display: none;
+    /* Move logout to mobile menu or keep? Let's hide it and assume it should be in menu if we had one, but for now I'll just leave it visible if there's space, or hide it. 
     Actually, let's keep the logout button next to the hamburger for easy access on mobile, or put it in the dropdown. 
     For simplicity, let's keep it visible but maybe smaller/compact. 
     Wait, the user-info was hidden above. Let's adjust. */
   }
-  
+
   .user-navbar {
-      padding: 0 1rem;
+    padding: 0 1rem;
   }
 }
 
 @media (max-width: 480px) {
-    .user-info {
-        display: none;
-    }
-    .user-logout-btn {
-        display: flex;
-    }
+  .user-info {
+    display: none;
+  }
+
+  .user-logout-btn {
+    display: flex;
+  }
+}
+
+/* Guest Actions */
+.guest-actions {
+  display: flex;
+  align-items: center;
+}
+
+.user-login-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  background-color: var(--pink);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.user-login-btn:hover {
+  background-color: var(--pink-dark, #d61c5a);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }

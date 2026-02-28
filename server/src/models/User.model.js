@@ -38,6 +38,20 @@ const userSchema = new mongoose.Schema(
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
     },
+    onboarding: {
+      isComplete: { type: Boolean, default: false },
+      firstName: String,
+      lastName: String,
+      weddingLocation: String,
+      eventDate: Date,
+      guestCount: Number,
+      lookingFor: [String],
+      eventTypes: [String],
+      budgets: {
+        type: Map,
+        of: String
+      }
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -77,8 +91,8 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 // Generate JWT access token
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
-    { 
-      id: this._id, 
+    {
+      id: this._id,
       role: this.role,
       type: 'access'  // Prevents refresh tokens from being used as access tokens
     },
@@ -90,7 +104,7 @@ userSchema.methods.generateAccessToken = function () {
 // Generate refresh token
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
-    { 
+    {
       id: this._id,
       type: 'refresh'  // Prevents access tokens from being used as refresh tokens
     },

@@ -98,6 +98,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const updateUser = useCallback((newUser) => {
+    localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(newUser));
+    setUser(newUser);
+  }, []);
+
   const isAuthenticated = Boolean(user && token);
 
   const hasRole = useCallback(
@@ -119,8 +124,9 @@ export function AuthProvider({ children }) {
       register,
       logout,
       hasRole,
+      updateUser,
     }),
-    [user, token, loading, isAuthenticated, login, register, logout, hasRole]
+    [user, token, loading, isAuthenticated, login, register, logout, hasRole, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

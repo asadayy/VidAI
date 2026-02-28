@@ -6,6 +6,8 @@ export const vendorAPI = {
   search: (params) => client.get('/vendors/search', { params }),
   getById: (id) => client.get(`/vendors/${id}`),
   getBySlug: (slug) => client.get(`/vendors/slug/${slug}`),
+  getReviews: (id) => client.get(`/vendors/${id}/reviews`),
+  addReview: (id, data) => client.post(`/vendors/${id}/reviews`, data),
 
   // Vendor (protected)
   getMyProfile: () => client.get('/vendors/me/profile'),

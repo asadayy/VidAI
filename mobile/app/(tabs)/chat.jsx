@@ -14,6 +14,7 @@ import Loading from '../../components/Loading';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function Chat() {
   const [messages, setMessages] = useState([
@@ -67,68 +68,70 @@ export default function Chat() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <View style={styles.chatContainer}>
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesList}
-          contentContainerStyle={styles.messagesContent}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-        >
-          {messages.map((msg, index) => (
-            <View
-              key={index}
-              style={[
-                styles.messageBubble,
-                msg.role === 'user' ? styles.userMessage : styles.assistantMessage,
-              ]}
-            >
-              <Text
+    <ProtectedRoute roles="user">
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <View style={styles.chatContainer}>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesList}
+            contentContainerStyle={styles.messagesContent}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {messages.map((msg, index) => (
+              <View
+                key={index}
                 style={[
-                  styles.messageText,
-                  msg.role === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                  styles.messageBubble,
+                  msg.role === 'user' ? styles.userMessage : styles.assistantMessage,
                 ]}
               >
-                {msg.content}
-              </Text>
-            </View>
-          ))}
-          {isTyping && (
-            <View style={[styles.messageBubble, styles.assistantMessage]}>
-              <Text style={[styles.messageText, styles.assistantMessageText]}>Typing...</Text>
-            </View>
-          )}
-        </ScrollView>
+                <Text
+                  style={[
+                    styles.messageText,
+                    msg.role === 'user' ? styles.userMessageText : styles.assistantMessageText,
+                  ]}
+                >
+                  {msg.content}
+                </Text>
+              </View>
+            ))}
+            {isTyping && (
+              <View style={[styles.messageBubble, styles.assistantMessage]}>
+                <Text style={[styles.messageText, styles.assistantMessageText]}>Typing...</Text>
+              </View>
+            )}
+          </ScrollView>
 
-        <View style={styles.inputArea}>
-          <TextInput
-            style={styles.chatInput}
-            placeholder="Ask about venues, budget, or ideas..."
-            placeholderTextColor={theme.colors.textSecondary}
-            value={input}
-            onChangeText={setInput}
-            multiline
-            maxLength={500}
-            editable={!isTyping}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!input.trim() || isTyping) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={!input.trim() || isTyping}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={input.trim() && !isTyping ? theme.colors.white : theme.colors.textSecondary}
+          <View style={styles.inputArea}>
+            <TextInput
+              style={styles.chatInput}
+              placeholder="Ask about venues, budget, or ideas..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={input}
+              onChangeText={setInput}
+              multiline
+              maxLength={500}
+              editable={!isTyping}
             />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.sendButton, (!input.trim() || isTyping) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!input.trim() || isTyping}
+            >
+              <Ionicons
+                name="send"
+                size={20}
+                color={input.trim() && !isTyping ? theme.colors.white : theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ProtectedRoute>
   );
 }
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -23,6 +23,8 @@ import BudgetPlanner from './pages/user/BudgetPlanner';
 import AIChat from './pages/user/AIChat';
 import UserDashboard from './pages/user/UserDashboard';
 import UserBookings from './pages/user/UserBookings';
+import InvitationGenerator from './pages/user/InvitationGenerator';
+import Onboarding from './pages/user/Onboarding';
 import './App.css';
 
 function App() {
@@ -43,21 +45,26 @@ function App() {
           <Route path="/vendor-landing" element={<VendorLanding />} />
           <Route path="/admin" element={<AdminLogin />} />
 
-          {/* ── User portal (role: user) ── */}
-          <Route
-            path="/user"
-            element={
-              <ProtectedRoute roles="user" redirectTo="/">
-                <UserLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<UserDashboard />} />
-            <Route path="bookings" element={<UserBookings />} />
-            <Route path="budget" element={<BudgetPlanner />} />
-            <Route path="chat" element={<AIChat />} />
+          {/* ── User portal (guest-accessible parts) ── */}
+          <Route path="/user" element={<UserLayout />}>
             <Route path="vendors" element={<VendorSearch />} />
             <Route path="vendors/:slug" element={<VendorDetails />} />
+            <Route path="onboarding" element={<Onboarding />} />
+
+            {/* ── Protected user routes ── */}
+            <Route
+              element={
+                <ProtectedRoute roles="user" redirectTo="/">
+                  <Outlet />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<UserDashboard />} />
+              <Route path="bookings" element={<UserBookings />} />
+              <Route path="budget" element={<BudgetPlanner />} />
+              <Route path="chat" element={<AIChat />} />
+              <Route path="invitations" element={<InvitationGenerator />} />
+            </Route>
           </Route>
 
           {/* ── Vendor portal (role: vendor) ── */}

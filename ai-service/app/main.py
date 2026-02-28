@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers.ai_router import router as ai_router
+from app.routers.invitation_router import router as invitation_router
 from app.services.ollama_service import ollama_service
 
 # ── Logging ──────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ app.add_middleware(
 # ── Routes ───────────────────────────────────────────────────────────
 
 app.include_router(ai_router)
+app.include_router(invitation_router, prefix="/api/v1/invitations", tags=["Invitations"])
 
 
 # ── Health Endpoint ──────────────────────────────────────────────────

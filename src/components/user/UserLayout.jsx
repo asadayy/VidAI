@@ -9,24 +9,33 @@ import {
   Calendar,
   LogOut,
   Menu,
-  X
+  X,
+  LogIn,
+  Mail
 } from 'lucide-react';
 import { useState } from 'react';
+import AuthModal from '../auth/AuthModal';
 import './UserLayout.css';
 
-const NAV_ITEMS = [
+const PUBLIC_NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home' },
-  { to: '/user', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/user/vendors', icon: Store, label: 'Vendors' },
+];
+
+const PRIVATE_NAV_ITEMS = [
+  { to: '/user', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/user/bookings', icon: Calendar, label: 'Bookings' },
   { to: '/user/budget', icon: Calculator, label: 'Budget' },
   { to: '/user/chat', icon: MessageCircle, label: 'Chat' },
+  { to: '/user/invitations', icon: Mail, label: 'Invitation' },
 ];
 
 function UserLayout() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
 
   const handleLogout = async () => {
     await logout();
@@ -37,19 +46,27 @@ function UserLayout() {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const openAuthModal = (mode = 'login') => {
+    setAuthMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
+  const navItems = isAuthenticated
+    ? [...PUBLIC_NAV_ITEMS.slice(0, 1), ...PRIVATE_NAV_ITEMS, PUBLIC_NAV_ITEMS[1]]
+    : PUBLIC_NAV_ITEMS;
+
   return (
     <div className="user-layout">
       <header className="user-navbar">
         <div className="user-navbar-container">
           {/* Logo / Brand */}
-          <div className="user-brand">
+          <div className="user-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <span className="user-brand-text">VIDAI</span>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="user-nav-desktop">
-            {/* eslint-disable-next-line no-unused-vars -- NavIcon rendered in JSX */}
-            {NAV_ITEMS.map(({ to, icon: NavIcon, label }) => (
+            {navItems.map(({ to, icon: NavIcon, label }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -65,16 +82,27 @@ function UserLayout() {
 
           {/* User & Mobile Toggle */}
           <div className="user-actions">
-            <div className="user-info">
-              <div className="user-avatar">
-                {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
-              </div>
-              <span className="user-name">{user?.name || user?.email}</span>
-            </div>
+            {isAuthenticated ? (
+              <>
+                <div className="user-info">
+                  <div className="user-avatar">
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="user-name">{user?.name || user?.email}</span>
+                </div>
 
-            <button onClick={handleLogout} className="user-logout-btn" title="Logout">
-              <LogOut size={18} />
-            </button>
+                <button onClick={handleLogout} className="user-logout-btn" title="Logout">
+                  <LogOut size={18} />
+                </button>
+              </>
+            ) : (
+              <div className="guest-actions">
+                <button onClick={() => openAuthModal('login')} className="user-login-btn">
+                  <LogIn size={18} />
+                  <span>Login</span>
+                </button>
+              </div>
+            )}
 
             <button
               className="mobile-menu-toggle"
@@ -89,8 +117,7 @@ function UserLayout() {
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <nav className="user-nav-mobile">
-            {/* eslint-disable-next-line no-unused-vars -- NavIcon rendered in JSX */}
-            {NAV_ITEMS.map(({ to, icon: NavIcon, label }) => (
+            {navItems.map(({ to, icon: NavIcon, label }) => (
               <NavLink
                 key={to}
                 to={to}
@@ -110,6 +137,12 @@ function UserLayout() {
       <main className="user-content">
         <Outlet />
       </main>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authMode}
+      />
     </div>
   );
 }

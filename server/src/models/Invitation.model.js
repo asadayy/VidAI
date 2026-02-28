@@ -12,37 +12,58 @@ const invitationSchema = new mongoose.Schema(
       required: [true, 'Invitation title is required'],
       trim: true,
     },
-    // Template used
-    templateId: {
-      type: String,
-      default: 'default',
+    // Essentials (The Content)
+    content: {
+      names: { type: String, required: true }, // e.g., "Ahmad & Sarah" or with parents
+      date: { type: Date, required: true },
+      time: { type: String, required: true },
+      venue: {
+        name: { type: String, required: true },
+        city: { type: String, required: true },
+        mapLink: { type: String, default: '' },
+      }
     },
-    // Customization data
-    groomName: { type: String, trim: true, default: '' },
-    brideName: { type: String, trim: true, default: '' },
-    eventDate: { type: Date },
-    eventTime: { type: String, default: '' },
-    venue: { type: String, trim: true, default: '' },
-    venueAddress: { type: String, trim: true, default: '' },
-    message: { type: String, trim: true, default: '' },
-    // Styling
-    fontFamily: { type: String, default: 'serif' },
-    primaryColor: { type: String, default: '#ec4899' },
-    secondaryColor: { type: String, default: '#f97316' },
-    backgroundColor: { type: String, default: '#fff7ed' },
-    // Background image
-    backgroundImage: {
-      url: { type: String, default: '' },
-      publicId: { type: String, default: '' },
+    // Style (The Vibe)
+    style: {
+      theme: {
+        type: String,
+        enum: ['Modern Minimalist', 'Traditional/Ornate', 'Floral/Bohemian', 'Whimsical'],
+        default: 'Modern Minimalist'
+      },
+      colorPalette: {
+        primary: { type: String, default: '#ec4899' },
+        secondary: { type: String, default: '#f97316' },
+        background: { type: String, default: '#ffffff' },
+        text: { type: String, default: '#1f2937' },
+      },
+      orientation: {
+        type: String,
+        enum: ['Portrait', 'Landscape'],
+        default: 'Portrait'
+      },
+      imagery: { type: String, default: '' }, // e.g., "minimalist line art", "lavender flowers"
+    },
+    // Tone of Voice
+    tone: {
+      type: String,
+      enum: ['Formal', 'Casual/Modern', 'Poetic'],
+      default: 'Formal'
     },
     // Generated output
-    generatedImage: {
-      url: { type: String, default: '' },
-      publicId: { type: String, default: '' },
+    generatedContent: {
+      headline: String,
+      bodyText: String,
+      footerText: String,
+      rsvpInfo: String,
     },
-    // Sharing
-    shareableLink: { type: String, default: '' },
+    // Meta
+    status: {
+      type: String,
+      enum: ['draft', 'saved', 'published'],
+      default: 'draft'
+    },
     isPublic: { type: Boolean, default: false },
+    shareableLink: { type: String, default: '' },
   },
   {
     timestamps: true,

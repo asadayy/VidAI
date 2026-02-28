@@ -7,6 +7,7 @@ Three endpoints matching the backend proxy contract:
 """
 
 import logging
+import json
 
 from fastapi import APIRouter, HTTPException
 import httpx
@@ -26,6 +27,7 @@ from app.models.schemas import (
     RecommendationResponseData,
 )
 from app.services.ollama_service import ollama_service
+from app.services.database import db_client
 from app.services.prompts import (
     build_budget_prompt,
     build_chat_messages,
@@ -47,12 +49,24 @@ async def chat_with_ai(request: ChatRequest):
     Sends conversation to Ollama and returns the assistant's reply.
     """
     try:
+        # Fetch vendors from DB
+        try:
+            vendors = await db_client.get_all_vendors()
+            vendors_context = json.dumps(vendors, indent=2) if vendors else ""
+        except Exception as e:
+            logger.error("Failed to fetch vendors context for chat: %r", e)
+            vendors_context = ""
+
         # Build message history for Ollama
         history_dicts = [
             {"role": msg.role, "content": msg.content}
             for msg in request.conversationHistory
         ]
-        messages = build_chat_messages(request.message, history_dicts)
+        messages = build_chat_messages(
+            request.message, 
+            history_dicts, 
+            vendors_context=vendors_context
+        )
 
         # Call Ollama
         ai_reply = await ollama_service.chat(messages)
@@ -95,11 +109,20 @@ async def get_recommendations(request: RecommendationRequest):
     Returns structured JSON with recommendations, costs, and tips.
     """
     try:
+        # Fetch vendors from DB
+        try:
+            vendors = await db_client.get_all_vendors()
+            vendors_context = json.dumps(vendors, indent=2) if vendors else ""
+        except Exception as e:
+            logger.error("Failed to fetch vendors context for recommendations: %r", e)
+            vendors_context = ""
+
         messages = build_recommendation_prompt(
             preferences=request.preferences,
             budget=request.budget,
             city=request.city,
             category=request.category,
+            vendors_context=vendors_context
         )
 
         result = await ollama_service.generate_json(messages)
@@ -166,10 +189,19 @@ async def get_budget_plan(request: BudgetPlanRequest):
     Returns structured allocations matching the Budget model's aiPlan schema.
     """
     try:
+        # Fetch vendors from DB
+        try:
+            vendors = await db_client.get_all_vendors()
+            vendors_context = json.dumps(vendors, indent=2) if vendors else ""
+        except Exception as e:
+            logger.error("Failed to fetch vendors context for budget: %r", e)
+            vendors_context = ""
+
         messages = build_budget_prompt(
             total_budget=request.totalBudget,
             event_type=request.eventType,
             preferences=request.preferences,
+            vendors_context=vendors_context
         )
 
         result = await ollama_service.generate_json(messages)

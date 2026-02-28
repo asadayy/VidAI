@@ -1,21 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { MapPin, Star, Mail, Phone, Calendar, Users, FileText, Check, X } from 'lucide-react';
+import { MapPin, Star, Mail, Phone, Calendar, Users, FileText, Check, X, MessageSquare } from 'lucide-react';
 import { vendorAPI } from '../../api/vendors';
 import client from '../../api/client';
 import Loading from '../../components/Loading';
+import AuthModal from '../../components/auth/AuthModal';
+import { useAuth } from '../../context/AuthContext';
 import './VendorDetails.css';
 
 const VendorDetails = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [vendor, setVendor] = useState(null);
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Reviews State
+  const [reviews, setReviews] = useState([]);
+  const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   // Booking Form State
   const [bookingData, setBookingData] = useState({
@@ -25,30 +34,41 @@ const VendorDetails = () => {
     notes: ''
   });
 
-  useEffect(() => {
-    const fetchVendorDetails = async () => {
-      try {
-        const { data } = await vendorAPI.getBySlug(slug);
-        // Assuming the API returns the vendor object directly or nested
-        // Adjust based on actual API response structure (usually data.data or just data)
-        const vendorData = data.vendor || data;
-        setVendor(vendorData);
-        setPackages(vendorData.packages || []);
-      } catch (error) {
-        console.error('Error fetching vendor details:', error);
-        toast.error('Failed to load vendor details.');
-        navigate('/user/vendors'); // Redirect back to list on error
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchVendorDetails = useCallback(async () => {
+    try {
+      const { data } = await vendorAPI.getBySlug(slug);
+      // Assuming the API returns the vendor object directly or nested
+      // Adjust based on actual API response structure (usually data.data or just data)
+      const vendorData = data.data?.vendor || data.vendor || data;
+      setVendor(vendorData);
+      setPackages(vendorData.packages || []);
 
-    if (slug) {
-      fetchVendorDetails();
+      // Fetch reviews
+      if (vendorData._id) {
+        const reviewsRes = await client.get(`/vendors/${vendorData._id}/reviews`);
+        setReviews(reviewsRes.data.data?.reviews || []);
+      }
+    } catch (error) {
+      console.error('Error fetching vendor details:', error);
+      toast.error('Failed to load vendor details.');
+      navigate('/user/vendors'); // Redirect back to list on error
+    } finally {
+      setLoading(false);
     }
   }, [slug, navigate]);
 
+  useEffect(() => {
+    if (slug) {
+      fetchVendorDetails();
+    }
+  }, [slug, fetchVendorDetails]);
+
   const handleBookClick = (pkg) => {
+    if (!isAuthenticated) {
+      toast.error('Please login to book a vendor.');
+      setShowAuthModal(true);
+      return;
+    }
     setSelectedPackage(pkg);
     setShowModal(true);
   };
@@ -95,6 +115,29 @@ const VendorDetails = () => {
       toast.error(message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error('Please login to leave a review.');
+      setShowAuthModal(true);
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await client.post(`/vendors/${vendor._id}/reviews`, reviewData);
+      toast.success('Review added successfully!');
+      fetchVendorDetails(); // Refresh vendor ratings average
+      setReviews(prev => [res.data.data.review, ...prev]);
+      setReviewData({ rating: 5, title: '', comment: '' });
+    } catch (error) {
+      console.error('Review error:', error);
+      toast.error(error.response?.data?.message || 'Failed to submit review.');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -214,6 +257,75 @@ const VendorDetails = () => {
         </div>
       </div>
 
+      {/* Reviews Section */}
+      <div className="reviews-section">
+        <h2>Reviews & Ratings</h2>
+        <div className="reviews-container">
+          <div className="review-form-card">
+            <h3>Leave a Review</h3>
+            <form onSubmit={handleReviewSubmit} className="review-form">
+              <div className="form-group">
+                <label>Rating</label>
+                <select
+                  value={reviewData.rating}
+                  onChange={(e) => setReviewData({ ...reviewData, rating: Number(e.target.value) })}
+                  className="filter-select"
+                >
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Good</option>
+                  <option value="3">3 - Average</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="1">1 - Terrible</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Title</label>
+                <input
+                  type="text"
+                  value={reviewData.title}
+                  onChange={(e) => setReviewData({ ...reviewData, title: e.target.value })}
+                  required
+                  className="filter-input"
+                  placeholder="Summary of your experience"
+                />
+              </div>
+              <div className="form-group">
+                <label>Comment</label>
+                <textarea
+                  value={reviewData.comment}
+                  onChange={(e) => setReviewData({ ...reviewData, comment: e.target.value })}
+                  required
+                  placeholder="Share details of your experience..."
+                  rows="4"
+                  className="filter-input"
+                />
+              </div>
+              <button type="submit" className="submit-btn" disabled={submittingReview}>
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </form>
+          </div>
+
+          <div className="reviews-list">
+            <h3>Recent Reviews</h3>
+            {reviews.length > 0 ? (
+              reviews.map(review => (
+                <div key={review._id} className="review-card">
+                  <div className="review-header">
+                    <span className="reviewer-name">{review.user?.name || 'User'}</span>
+                    <span className="review-rating"><Star size={14} fill="#f1c40f" color="#f1c40f" /> {review.rating}/5</span>
+                  </div>
+                  <h4 className="review-title">{review.title}</h4>
+                  <p className="review-comment">{review.comment}</p>
+                </div>
+              ))
+            ) : (
+              <p>No reviews yet. Be the first to review!</p>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Booking Modal */}
       {showModal && (
         <div className="modal-overlay">
@@ -301,6 +413,13 @@ const VendorDetails = () => {
           </div>
         </div>
       )}
+
+      {/* Auth Modal for Guests */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode="login"
+      />
     </div>
   );
 };

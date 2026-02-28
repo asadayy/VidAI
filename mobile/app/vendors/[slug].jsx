@@ -12,6 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { vendorAPI } from '../../api/vendors.js';
 import { bookingAPI } from '../../api/bookings.js';
+import { useAuth } from '../../contexts/AuthContext';
 import Loading from '../../components/Loading';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
@@ -22,6 +23,7 @@ import { theme } from '../../constants/theme';
 export default function VendorDetails() {
   const { slug } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookingModal, setBookingModal] = useState(false);
@@ -33,6 +35,11 @@ export default function VendorDetails() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const [reviews, setReviews] = useState([]);
+  const [reviewModal, setReviewModal] = useState(false);
+  const [reviewData, setReviewData] = useState({ rating: '5', title: '', comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
+
   useEffect(() => {
     fetchVendor();
   }, [slug]);
@@ -40,7 +47,13 @@ export default function VendorDetails() {
   const fetchVendor = async () => {
     try {
       const response = await vendorAPI.getBySlug(slug);
-      setVendor(response.data.data.vendor || response.data.vendor || response.data);
+      const vendorData = response.data.data.vendor || response.data.vendor || response.data;
+      setVendor(vendorData);
+
+      if (vendorData && vendorData._id) {
+        const reviewRes = await vendorAPI.getReviews(vendorData._id);
+        setReviews(reviewRes.data.data?.reviews || []);
+      }
     } catch (error) {
       console.error('Error fetching vendor:', error);
       Toast.show({
@@ -53,6 +66,15 @@ export default function VendorDetails() {
   };
 
   const handleBooking = async () => {
+    if (!user) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to book a vendor',
+      });
+      router.push('/(auth)/login');
+      return;
+    }
+
     if (!bookingData.eventDate || !bookingData.guestCount || !bookingData.packageId) {
       Toast.show({
         type: 'error',
@@ -84,6 +106,51 @@ export default function VendorDetails() {
       });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleReview = async () => {
+    if (!user) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please login to leave a review',
+      });
+      setReviewModal(false);
+      router.push('/(auth)/login');
+      return;
+    }
+
+    if (!reviewData.rating || !reviewData.title || !reviewData.comment) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill in all review fields',
+      });
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await vendorAPI.addReview(vendor._id, {
+        rating: Number(reviewData.rating),
+        title: reviewData.title,
+        comment: reviewData.comment
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Review added successfully!',
+      });
+      setReviewModal(false);
+      setReviews(prev => [res.data.data.review, ...prev]);
+      setReviewData({ rating: '5', title: '', comment: '' });
+      fetchVendor(); // refresh vendor data to update average
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to submit review';
+      Toast.show({
+        type: 'error',
+        text1: message,
+      });
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -165,6 +232,33 @@ export default function VendorDetails() {
         />
       </View>
 
+      <View style={styles.reviewsContainer}>
+        <View style={styles.reviewsHeader}>
+          <Text style={styles.sectionTitle}>Reviews</Text>
+          <TouchableOpacity onPress={() => setReviewModal(true)}>
+            <Text style={styles.addReviewText}>+ Add Review</Text>
+          </TouchableOpacity>
+        </View>
+
+        {reviews.length > 0 ? (
+          reviews.map((review) => (
+            <Card key={review._id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewUsername}>{review.user?.name || 'User'}</Text>
+                <View style={styles.reviewRatingBadge}>
+                  <Ionicons name="star" size={14} color="#fbbf24" />
+                  <Text style={styles.reviewRatingText}>{review.rating}</Text>
+                </View>
+              </View>
+              <Text style={styles.reviewTitle}>{review.title}</Text>
+              <Text style={styles.reviewComment}>{review.comment}</Text>
+            </Card>
+          ))
+        ) : (
+          <Text style={styles.noReviewsText}>No reviews yet. Be the first to review!</Text>
+        )}
+      </View>
+
       {/* Booking Modal */}
       <Modal
         visible={bookingModal}
@@ -212,6 +306,59 @@ export default function VendorDetails() {
               title="Confirm Booking"
               onPress={handleBooking}
               loading={submitting}
+              style={styles.modalButton}
+            />
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Review Modal */}
+      <Modal
+        visible={reviewModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setReviewModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Write a Review</Text>
+            <TouchableOpacity onPress={() => setReviewModal(false)}>
+              <Ionicons name="close" size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <Text style={styles.modalLabel}>Rating (1-5)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. 5"
+              keyboardType="numeric"
+              value={reviewData.rating}
+              onChangeText={(text) => setReviewData({ ...reviewData, rating: text })}
+            />
+
+            <Text style={styles.modalLabel}>Summary Title</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Summary of experience"
+              value={reviewData.title}
+              onChangeText={(text) => setReviewData({ ...reviewData, title: text })}
+            />
+
+            <Text style={styles.modalLabel}>Comment</Text>
+            <TextInput
+              style={[styles.modalInput, styles.modalTextArea]}
+              placeholder="Share details of your experience..."
+              multiline
+              numberOfLines={4}
+              value={reviewData.comment}
+              onChangeText={(text) => setReviewData({ ...reviewData, comment: text })}
+            />
+
+            <Button
+              title="Submit Review"
+              onPress={handleReview}
+              loading={submittingReview}
               style={styles.modalButton}
             />
           </ScrollView>
@@ -353,5 +500,66 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     textAlign: 'center',
     marginTop: theme.spacing.xl,
+  },
+  reviewsContainer: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  addReviewText: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  reviewCard: {
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  reviewUsername: {
+    ...theme.typography.body,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  reviewRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fffbeb',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  reviewRatingText: {
+    ...theme.typography.caption,
+    marginLeft: 4,
+    fontWeight: 'bold',
+    color: '#d97706',
+  },
+  reviewTitle: {
+    ...theme.typography.body,
+    fontWeight: '600',
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  reviewComment: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.textSecondary,
+  },
+  noReviewsText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: theme.spacing.lg,
   },
 });

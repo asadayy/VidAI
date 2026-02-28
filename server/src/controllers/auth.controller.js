@@ -391,3 +391,54 @@ export const refreshToken = asyncHandler(async (req, res) => {
     data: { accessToken },
   });
 });
+
+/**
+ * @route   POST /api/v1/auth/onboarding
+ * @desc    Submit user onboarding details
+ * @access  Private
+ */
+export const completeOnboarding = asyncHandler(async (req, res) => {
+  const { firstName, lastName, weddingLocation, eventDate, guestCount, lookingFor, eventTypes, budgets } = req.body;
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    const error = new Error('User not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  user.onboarding = {
+    isComplete: true,
+    firstName,
+    lastName,
+    weddingLocation,
+    eventDate,
+    guestCount,
+    lookingFor,
+    eventTypes,
+    budgets
+  };
+
+  // If the user's name is just the email prefix or empty, we can update it
+  if (!user.name || user.name === user.email.split('@')[0]) {
+    user.name = `${firstName} ${lastName}`.trim();
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Onboarding completed successfully',
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        avatar: user.avatar,
+        onboarding: user.onboarding,
+      }
+    }
+  });
+});

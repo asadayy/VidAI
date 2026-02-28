@@ -1,6 +1,7 @@
 import Vendor from '../models/Vendor.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import slugify from 'slugify';
+import Review from '../models/Review.model.js';
 
 /**
  * @route   GET /api/v1/vendors
@@ -9,11 +10,13 @@ import slugify from 'slugify';
  */
 export const getVendors = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 12;
+  const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
   // Build filter
-  const filter = { verificationStatus: 'approved', isActive: true };
+  const filter = process.env.NODE_ENV === 'development'
+    ? { isActive: true }
+    : { verificationStatus: 'approved', isActive: true };
 
   if (req.query.category) filter.category = req.query.category;
   if (req.query.city) filter.city = { $regex: req.query.city, $options: 'i' };
@@ -70,22 +73,50 @@ export const searchVendors = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const vendors = await Vendor.find(
-    {
-      $text: { $search: q },
-      verificationStatus: 'approved',
-      isActive: true,
-    },
-    { score: { $meta: 'textScore' } }
-  )
-    .sort({ score: { $meta: 'textScore' } })
-    .populate('user', 'name avatar')
-    .limit(20)
-    .lean();
+  // Build detailed filter for search
+  const textFilter = {
+    $text: { $search: q },
+    ...(process.env.NODE_ENV === 'development' ? {} : { verificationStatus: 'approved' }),
+    isActive: true,
+  };
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  // Add additional filters if present
+  if (req.query.category) textFilter.category = req.query.category;
+  if (req.query.city) textFilter.city = { $regex: req.query.city, $options: 'i' };
+  if (req.query.minPrice) textFilter.startingPrice = { $gte: parseInt(req.query.minPrice) };
+  if (req.query.maxPrice) {
+    textFilter.startingPrice = { ...textFilter.startingPrice, $lte: parseInt(req.query.maxPrice) };
+  }
+
+  const [vendors, total] = await Promise.all([
+    Vendor.find(
+      textFilter,
+      { score: { $meta: 'textScore' } }
+    )
+      .sort({ ratingsAverage: -1, score: { $meta: 'textScore' } })
+      .populate('user', 'name avatar')
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Vendor.countDocuments(textFilter),
+  ]);
 
   res.status(200).json({
     success: true,
-    data: { vendors, count: vendors.length },
+    data: {
+      vendors,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+      },
+      count: vendors.length
+    },
   });
 });
 
@@ -334,3 +365,64 @@ export const deletePackage = asyncHandler(async (req, res) => {
     data: { packages: vendor.packages },
   });
 });
+
+/**
+ * @route   POST /api/v1/vendors/:id/reviews
+ * @desc    Add a review for a vendor
+ * @access  Private (User only)
+ */
+export const addReview = asyncHandler(async (req, res) => {
+  const { rating, title, comment } = req.body;
+  const vendorId = req.params.id;
+
+  const vendor = await Vendor.findById(vendorId);
+  if (!vendor) {
+    const error = new Error('Vendor not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Database unique index ensures a user can only review once
+  try {
+    const review = await Review.create({
+      user: req.user._id,
+      vendor: vendorId,
+      rating: Number(rating),
+      title,
+      comment
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Review added successfully.',
+      data: { review }
+    });
+  } catch (error) {
+    // Check for duplicate key error (code 11000)
+    if (error.code === 11000) {
+      const duplicateError = new Error('You have already reviewed this vendor.');
+      duplicateError.statusCode = 400;
+      throw duplicateError;
+    }
+    throw error;
+  }
+});
+
+/**
+ * @route   GET /api/v1/vendors/:id/reviews
+ * @desc    Get all reviews for a vendor
+ * @access  Public
+ */
+export const getReviews = asyncHandler(async (req, res) => {
+  const vendorId = req.params.id;
+
+  const reviews = await Review.find({ vendor: vendorId, isApproved: true })
+    .populate('user', 'name avatar')
+    .sort('-createdAt');
+
+  res.status(200).json({
+    success: true,
+    data: { reviews }
+  });
+});
+

@@ -10,6 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 import { vendorAPI } from '../../api/vendors.js';
 import Loading from '../../components/Loading';
 import Card from '../../components/Card';
@@ -39,8 +40,12 @@ const VENDOR_CATEGORIES = [
 
 export default function Vendors() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [filters, setFilters] = useState({
     city: '',
     category: '',
@@ -52,10 +57,12 @@ export default function Vendors() {
     fetchVendors();
   }, []);
 
-  const fetchVendors = async () => {
-    setLoading(true);
+  const fetchVendors = async (pageNum = 1) => {
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
+
     try {
-      const params = {};
+      const params = { page: pageNum };
       if (filters.search) params.q = filters.search;
       if (filters.city) params.city = filters.city;
       if (filters.category) params.category = filters.category;
@@ -64,21 +71,43 @@ export default function Vendors() {
         ? await vendorAPI.search(params)
         : await vendorAPI.getAll(params);
 
-      setVendors(response.data.vendors || response.data || []);
+      const resData = response.data.data?.vendors || response.data.vendors || response.data || [];
+      const paginationInfo = response.data.data?.pagination;
+
+      if (pageNum === 1) {
+        setVendors(resData);
+      } else {
+        setVendors(prev => [...prev, ...resData]);
+      }
+
+      setPage(pageNum);
+
+      if (paginationInfo) {
+        setHasMore(pageNum < paginationInfo.pages);
+      } else {
+        setHasMore(resData.length >= 10);
+      }
     } catch (error) {
       console.error('Error fetching vendors:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const handleSearch = () => {
-    fetchVendors();
+    fetchVendors(1);
   };
 
   const clearFilters = () => {
     setFilters({ city: '', category: '', search: '' });
-    setTimeout(fetchVendors, 100);
+    setTimeout(() => fetchVendors(1), 100);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchVendors(page + 1);
+    }
   };
 
   const renderVendor = ({ item }) => (
@@ -94,24 +123,24 @@ export default function Vendors() {
         resizeMode="cover"
       />
       <View style={styles.vendorContent}>
-        <Text style={styles.vendorCategory}>
+        <Text style={styles.vendorCategory} numberOfLines={1}>
           {item.category.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
         </Text>
-        <Text style={styles.vendorName}>{item.businessName}</Text>
+        <Text style={styles.vendorName} numberOfLines={1}>{item.businessName}</Text>
         <View style={styles.vendorDetails}>
           <View style={styles.vendorDetailRow}>
-            <Ionicons name="location" size={14} color={theme.colors.textSecondary} />
-            <Text style={styles.vendorDetailText}>{item.city}</Text>
+            <Ionicons name="location" size={12} color={theme.colors.textSecondary} />
+            <Text style={styles.vendorDetailText} numberOfLines={1}>{item.city}</Text>
           </View>
           <View style={styles.vendorDetailRow}>
-            <Ionicons name="star" size={14} color="#fbbf24" />
+            <Ionicons name="star" size={12} color="#fbbf24" />
             <Text style={styles.vendorDetailText}>
               {item.ratingsAverage?.toFixed(1) || '0.0'} ({item.ratingsCount || 0})
             </Text>
           </View>
         </View>
-        <Text style={styles.vendorPrice}>
-          Starting from Rs. {item.startingPrice?.toLocaleString() || '0'}
+        <Text style={styles.vendorPrice} numberOfLines={1}>
+          Rs. {item.startingPrice?.toLocaleString() || '0'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -123,6 +152,17 @@ export default function Vendors() {
 
   return (
     <View style={styles.container}>
+      {/* Guest Banner */}
+      {!isAuthenticated && (
+        <View style={styles.guestBanner}>
+          <Ionicons name="information-circle" size={18} color={theme.colors.white} />
+          <Text style={styles.guestBannerText}>Browsing as guest. </Text>
+          <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+            <Text style={styles.guestBannerLink}>Sign in</Text>
+          </TouchableOpacity>
+          <Text style={styles.guestBannerText}> to book vendors.</Text>
+        </View>
+      )}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
@@ -221,8 +261,15 @@ export default function Vendors() {
           data={vendors}
           renderItem={renderVendor}
           keyExtractor={(item) => item._id}
+          numColumns={2}
+          columnWrapperStyle={styles.rowWrapper}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() =>
+            loadingMore ? <Loading message="Loading more..." /> : null
+          }
         />
       ) : (
         <EmptyState
@@ -239,6 +286,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.surface,
+  },
+  guestBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  guestBannerText: {
+    color: theme.colors.white,
+    fontSize: 13,
+  },
+  guestBannerLink: {
+    color: '#fde68a',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   searchContainer: {
     flexDirection: 'row',
@@ -332,59 +398,65 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   listContent: {
-    padding: theme.spacing.md,
+    padding: theme.spacing.sm,
+  },
+  rowWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.xs,
   },
   vendorCard: {
     backgroundColor: theme.colors.white,
-    borderRadius: 20,
-    marginBottom: 24,
+    borderRadius: 16,
+    marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 15,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
+    width: '48%', // take up roughly half the row for 2 columns
   },
   vendorImage: {
     width: '100%',
-    height: 220,
+    height: 120, // Smaller image for tiles
     backgroundColor: theme.colors.border,
   },
   vendorContent: {
-    padding: 20,
+    padding: 12,
   },
   vendorCategory: {
-    ...theme.typography.caption,
+    fontSize: 10,
+    fontWeight: 'bold',
     color: theme.colors.primary,
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.xs,
+    marginBottom: 4,
   },
   vendorName: {
-    ...theme.typography.h3,
+    fontSize: 14,
+    fontWeight: 'bold',
     color: theme.colors.text,
-    marginBottom: theme.spacing.sm,
+    marginBottom: 4,
   },
   vendorDetails: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
+    flexDirection: 'column',
+    gap: 4,
+    marginBottom: 8,
   },
   vendorDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.xs,
+    gap: 4,
   },
   vendorDetailText: {
-    ...theme.typography.bodySmall,
+    fontSize: 11,
     color: theme.colors.textSecondary,
   },
   vendorPrice: {
-    ...theme.typography.body,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: 'bold',
     color: theme.colors.primary,
-    marginTop: 12,
-    fontSize: 16,
+    marginTop: 4,
   },
 });

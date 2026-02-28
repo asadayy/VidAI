@@ -16,13 +16,15 @@ const VENDOR_CATEGORIES = [
 const VendorSearch = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [vendors, setVendors] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     city: searchParams.get('city') || '',
     category: searchParams.get('category') || '',
     minPrice: searchParams.get('minPrice') || '',
     maxPrice: searchParams.get('maxPrice') || '',
-    search: searchParams.get('search') || '' // General text search
+    search: searchParams.get('search') || '', // General text search
+    page: searchParams.get('page') || 1
   });
 
   // Fetch vendors on mount and when search params change
@@ -41,6 +43,9 @@ const VendorSearch = () => {
         // The API returns the array inside response.data.data.vendors
         const vendorsList = response.data?.data?.vendors || response.data?.vendors || [];
         setVendors(vendorsList);
+        if (response.data?.data?.pagination) {
+          setPagination(response.data.data.pagination);
+        }
       } catch (error) {
         console.error('Error fetching vendors:', error);
         toast.error('Failed to load vendors. Please try again.');
@@ -66,8 +71,16 @@ const VendorSearch = () => {
     if (filters.minPrice) params.minPrice = filters.minPrice;
     if (filters.maxPrice) params.maxPrice = filters.maxPrice;
     if (filters.search) params.search = filters.search;
+    params.page = 1; // reset to 1 on new search
 
     setSearchParams(params);
+  };
+
+  const handlePageChange = (newPage) => {
+    const params = Object.fromEntries([...searchParams]);
+    params.page = newPage;
+    setSearchParams(params);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const clearFilters = () => {
@@ -76,7 +89,8 @@ const VendorSearch = () => {
       category: '',
       minPrice: '',
       maxPrice: '',
-      search: ''
+      search: '',
+      page: 1
     });
     setSearchParams({});
   };
@@ -198,23 +212,23 @@ const VendorSearch = () => {
                 </div>
                 <div className="card-content">
                   <span className="card-category">
-                    {vendor.category.replace(/_/g, ' ')}
+                    {vendor.category?.replace(/_/g, ' ') || 'General'}
                   </span>
                   <h3 className="card-title">{vendor.businessName}</h3>
 
                   <div className="card-details">
                     <div className="card-location">
                       <MapPin size={16} />
-                      <span>{vendor.city}</span>
+                      <span>{vendor.city || 'N/A'}</span>
                     </div>
                     <div className="card-rating">
                       <Star size={16} fill="currentColor" />
-                      <span>{vendor.ratingsAverage} ({vendor.ratingsCount} reviews)</span>
+                      <span>{vendor.ratingsAverage || 0} ({vendor.ratingsCount || 0} reviews)</span>
                     </div>
                   </div>
 
                   <div className="card-price">
-                    Starting from Rs. {vendor.startingPrice.toLocaleString()}
+                    Starting from Rs. {(vendor.startingPrice || 0).toLocaleString()}
                   </div>
 
                   <Link to={`/user/vendors/${vendor.slug}`} className="view-profile-btn">
@@ -227,6 +241,31 @@ const VendorSearch = () => {
             <div className="no-results">
               <h3>No vendors found matching your criteria</h3>
               <p>Try adjusting your filters to see more results.</p>
+            </div>
+          )}
+
+          {/* Pagination Controls */}
+          {pagination.pages > 1 && (
+            <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                disabled={pagination.page <= 1}
+                onClick={() => handlePageChange(pagination.page - 1)}
+                className="search-button"
+                style={{ width: 'auto' }}
+              >
+                Previous
+              </button>
+              <span style={{ alignSelf: 'center' }}>
+                Page {pagination.page} of {pagination.pages}
+              </span>
+              <button
+                disabled={pagination.page >= pagination.pages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+                className="search-button"
+                style={{ width: 'auto' }}
+              >
+                Next
+              </button>
             </div>
           )}
         </div>

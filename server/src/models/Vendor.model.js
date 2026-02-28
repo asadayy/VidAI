@@ -112,11 +112,12 @@ const vendorSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // Portfolio / gallery images
+    // Portfolio / gallery images and videos
     portfolio: [
       {
         url: { type: String, required: true },
         publicId: { type: String },
+        resourceType: { type: String, enum: ['image', 'video'], default: 'image' },
         caption: { type: String, default: '' },
       },
     ],

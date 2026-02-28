@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { vendorAPI } from '../../api/vendors';
 import { uploadAPI } from '../../api/upload';
 import Loading from '../../components/Loading';
@@ -8,11 +8,14 @@ import {
   Upload,
   Trash2,
   Image as ImageIcon,
+  Video,
   MapPin,
   Phone,
   Mail,
   Globe,
   Building2,
+  X,
+  Film,
 } from 'lucide-react';
 import './VendorProfile.css';
 
@@ -54,7 +57,12 @@ function VendorProfile() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [deletingItemId, setDeletingItemId] = useState(null);
+
+  const portfolioInputRef = useRef(null);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -127,87 +135,100 @@ function VendorProfile() {
     }
   };
 
-  // ── Cover image upload ──
+  // ── Cover image upload (uses dedicated endpoint — saves to DB) ──
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Cover image must be under 10 MB');
       return;
     }
 
-    setUploading(true);
+    setUploadingCover(true);
     try {
-      const { data } = await uploadAPI.uploadImage(file, 'vendors/covers');
-      const image = data.data.image || data.data;
-
-      await vendorAPI.updateProfile({
-        coverImage: { url: image.url, publicId: image.publicId },
-      });
-
-      await fetchProfile();
+      const { data } = await uploadAPI.uploadVendorCover(file);
+      // The backend saves it to MongoDB and returns the updated coverImage
+      setVendor((prev) => ({ ...prev, coverImage: data.data.coverImage }));
       toast.success('Cover image updated');
-    } catch {
-      toast.error('Failed to upload cover image');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to upload cover image';
+      toast.error(msg);
     } finally {
-      setUploading(false);
+      setUploadingCover(false);
+      e.target.value = '';
     }
   };
 
-  // ── Portfolio upload ──
+  // ── Portfolio upload (images + videos, saves to DB) ──
   const handlePortfolioUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    if (files.some((f) => f.size > 5 * 1024 * 1024)) {
-      toast.error('Each image must be under 5MB');
-      return;
+    // Validate sizes — images ≤ 10 MB, videos ≤ 100 MB
+    for (const f of files) {
+      const isVideo = f.type.startsWith('video/');
+      const limit = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (f.size > limit) {
+        toast.error(`${f.name} exceeds the ${isVideo ? '100 MB (video)' : '10 MB (image)'} limit`);
+        return;
+      }
     }
 
-    setUploading(true);
+    setUploadingPortfolio(true);
+    setUploadProgress(0);
     try {
-      const { data } = await uploadAPI.uploadMultiple(files, 'vendors/portfolio');
-      const uploaded = data.data.images || data.data;
-
-      const _newPortfolio = [
-        ...(vendor?.portfolio || []),
-        ...uploaded.map((img) => ({
-          url: img.url,
-          publicId: img.publicId,
-          caption: '',
-        })),
-      ];
-
-      // We can't directly push portfolio via updateProfile — need to send full array
-      // The backend allows coverImage but not portfolio directly in allowedFields.
-      // For now, toast a success with the uploaded URLs
-      // In production, we'd add a dedicated portfolio endpoint
-
-      toast.success(`${uploaded.length} image(s) uploaded`);
-      await fetchProfile();
-    } catch {
-      toast.error('Failed to upload images');
+      const { data } = await uploadAPI.uploadVendorPortfolio(
+        files,
+        '',
+        (evt) => {
+          if (evt.total) {
+            setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
+          }
+        }
+      );
+      // Backend returns the full updated portfolio array
+      setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
+      toast.success(`${data.data.added.length} item(s) added to portfolio`);
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to upload files';
+      toast.error(msg);
     } finally {
-      setUploading(false);
-      // Clear input
+      setUploadingPortfolio(false);
+      setUploadProgress(0);
       e.target.value = '';
+    }
+  };
+
+  // ── Delete a portfolio item ──
+  const handleDeletePortfolioItem = async (itemId) => {
+    setDeletingItemId(itemId);
+    try {
+      const { data } = await uploadAPI.deleteVendorPortfolioItem(itemId);
+      setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
+      toast.success('Item removed from portfolio');
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to remove item';
+      toast.error(msg);
+    } finally {
+      setDeletingItemId(null);
     }
   };
 
   if (loading) return <Loading fullScreen message="Loading profile..." />;
 
   const verificationBadge = vendor?.verificationStatus && (
-    <span className={`badge ${
-      vendor.verificationStatus === 'approved' ? 'badge-success' :
-      vendor.verificationStatus === 'rejected' ? 'badge-danger' :
-      'badge-warning'
-    }`}>
+    <span className={`badge ${vendor.verificationStatus === 'approved' ? 'badge-success' :
+        vendor.verificationStatus === 'rejected' ? 'badge-danger' :
+          'badge-warning'
+      }`}>
       {vendor.verificationStatus === 'approved' ? 'Verified' :
-       vendor.verificationStatus === 'rejected' ? 'Rejected' :
-       'Pending Verification'}
+        vendor.verificationStatus === 'rejected' ? 'Rejected' :
+          'Pending Verification'}
     </span>
   );
+
+  const portfolio = vendor?.portfolio || [];
 
   return (
     <div className="vendor-profile">
@@ -240,15 +261,15 @@ function VendorProfile() {
                 <span>Add a cover image</span>
               </div>
             )}
-            <label className="cover-upload-btn btn btn-outline btn-sm">
+            <label className={`cover-upload-btn btn btn-outline btn-sm ${uploadingCover ? 'loading' : ''}`}>
               <Upload size={14} />
-              {uploading ? 'Uploading...' : 'Change Cover'}
+              {uploadingCover ? 'Uploading...' : 'Change Cover'}
               <input
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 hidden
                 onChange={handleCoverUpload}
-                disabled={uploading}
+                disabled={uploadingCover}
               />
             </label>
           </div>
@@ -410,37 +431,93 @@ function VendorProfile() {
         </div>
       </form>
 
-      {/* ── Portfolio section (only if profile exists) ── */}
+      {/* ── Portfolio section (only when profile already exists) ── */}
       {!isNew && (
         <div className="card portfolio-section">
           <div className="card-header">
             <h3>
               <ImageIcon size={18} /> Portfolio Gallery
             </h3>
-            <label className="btn btn-outline btn-sm portfolio-upload-btn">
-              <Upload size={14} /> Upload Images
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                hidden
-                onChange={handlePortfolioUpload}
-                disabled={uploading}
-              />
-            </label>
+            <div className="portfolio-upload-actions">
+              <label
+                className={`btn btn-outline btn-sm portfolio-upload-btn ${uploadingPortfolio ? 'loading' : ''}`}
+              >
+                <Upload size={14} />
+                {uploadingPortfolio
+                  ? `Uploading${uploadProgress > 0 ? ` ${uploadProgress}%` : '...'}`
+                  : 'Upload Images / Videos'}
+                <input
+                  ref={portfolioInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/mpeg"
+                  multiple
+                  hidden
+                  onChange={handlePortfolioUpload}
+                  disabled={uploadingPortfolio}
+                />
+              </label>
+            </div>
           </div>
 
-          {(!vendor?.portfolio || vendor.portfolio.length === 0) ? (
+          {/* Upload hint */}
+          <p className="portfolio-hint">
+            Accepted: JPEG, PNG, WebP, GIF (≤ 10 MB) · MP4, MOV, AVI, WebM (≤ 100 MB)
+          </p>
+
+          {/* Upload progress bar */}
+          {uploadingPortfolio && uploadProgress > 0 && (
+            <div className="upload-progress-bar">
+              <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          )}
+
+          {portfolio.length === 0 ? (
             <div className="empty-state">
               <ImageIcon size={40} className="empty-icon" />
-              <p>No portfolio images yet. Upload photos of your work to attract customers.</p>
+              <p>No portfolio items yet. Upload photos or videos of your work to attract customers.</p>
             </div>
           ) : (
             <div className="portfolio-grid">
-              {vendor.portfolio.map((img, i) => (
-                <div key={img.publicId || i} className="portfolio-item">
-                  <img src={img.url} alt={img.caption || `Portfolio ${i + 1}`} />
-                  {img.caption && <span className="portfolio-caption">{img.caption}</span>}
+              {portfolio.map((item, i) => (
+                <div key={item._id || item.publicId || i} className="portfolio-item">
+                  {item.resourceType === 'video' ? (
+                    <video
+                      src={item.url}
+                      controls
+                      preload="metadata"
+                      className="portfolio-video"
+                    />
+                  ) : (
+                    <img src={item.url} alt={item.caption || `Portfolio ${i + 1}`} />
+                  )}
+
+                  {/* Media type badge */}
+                  <span className="portfolio-type-badge">
+                    {item.resourceType === 'video' ? (
+                      <><Film size={11} /> Video</>
+                    ) : (
+                      <><ImageIcon size={11} /> Photo</>
+                    )}
+                  </span>
+
+                  {item.caption && (
+                    <span className="portfolio-caption">{item.caption}</span>
+                  )}
+
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    className="portfolio-delete-btn"
+                    onClick={() => handleDeletePortfolioItem(item._id)}
+                    disabled={deletingItemId === item._id}
+                    title="Remove from portfolio"
+                  >
+                    {deletingItemId === item._id ? (
+                      <span className="spinner-xs" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                  </button>
                 </div>
               ))}
             </div>

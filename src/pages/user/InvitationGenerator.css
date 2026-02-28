@@ -1,0 +1,243 @@
+.invitation-generator-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+@media (max-width: 992px) {
+    .invitation-generator-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.generator-form-card {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.wizard-steps::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gray-200);
+    z-index: 1;
+}
+
+.step-indicator {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    position: relative;
+    z-index: 2;
+    color: var(--gray-500);
+    transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+    border-color: var(--pink);
+    background: var(--pink);
+    color: white;
+}
+
+.step-indicator.completed {
+    border-color: var(--pink);
+    background: white;
+    color: var(--pink);
+}
+
+.form-step-content {
+    min-height: 400px;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--gray-700);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--pink);
+    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.option-card {
+    padding: 1rem;
+    border: 2px solid var(--gray-100);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.option-card:hover {
+    border-color: var(--pink-light);
+}
+
+.option-card.selected {
+    border-color: var(--pink);
+    background: var(--pink-50);
+}
+
+.wizard-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray-100);
+}
+
+/* --- Preview Styles --- */
+.preview-container {
+    position: sticky;
+    top: 100px;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.invitation-preview {
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    aspect-ratio: 9/16;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem;
+    text-align: center;
+}
+
+.invitation-preview.landscape {
+    aspect-ratio: 16/9;
+}
+
+/* Theme: Modern Minimalist */
+.theme-modern_minimalist {
+    font-family: 'Inter', sans-serif;
+    border: 1px solid var(--gray-100);
+}
+
+/* Theme: Traditional/Ornate */
+.theme-traditional_ornate {
+    font-family: 'Playfair Display', serif;
+    border: 8px double var(--gray-200);
+    background-image: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+}
+
+/* Theme: Floral/Bohemian */
+.theme-floral_bohemian {
+    font-family: 'Cormorant Garamond', serif;
+    background-color: #fff9f9;
+}
+
+/* Theme: Whimsical */
+.theme-whimsical {
+    font-family: 'Outfit', sans-serif;
+    background-color: #f0f7ff;
+}
+
+.card-header {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.card-names {
+    font-size: 2.5rem;
+    margin: 1.5rem 0;
+    line-height: 1.2;
+}
+
+.card-body {
+    font-size: 1rem;
+    margin: 2rem 0;
+    line-height: 1.6;
+}
+
+.card-venue {
+    font-weight: 600;
+    margin-top: auto;
+}
+
+.card-date-time {
+    margin-top: 0.5rem;
+}
+
+.card-rsvp {
+    margin-top: 1.5rem;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.btn-generate {
+    background: var(--gradient);
+    color: white;
+    padding: 0.8rem 2rem;
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s;
+}
+
+.btn-generate:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+.btn-generate:disabled {
+    background: var(--gray-400);
+    cursor: not-allowed;
+    transform: none;
+}

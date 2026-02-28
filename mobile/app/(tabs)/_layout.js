@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
@@ -8,7 +8,7 @@ export default function TabsLayout() {
   const { logout } = useAuth();
 
   return (
-    <ProtectedRoute roles="user">
+    <View style={styles.container}>
       <Tabs
         screenOptions={{
           headerShown: true,
@@ -69,6 +69,12 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-    </ProtectedRoute>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

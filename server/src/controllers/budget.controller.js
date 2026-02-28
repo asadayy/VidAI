@@ -185,6 +185,7 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
         eventType: budget.eventType,
         currency: budget.currency,
         userId: req.user._id.toString(),
+        preferences: req.user.onboarding || {},
       }),
       signal: AbortSignal.timeout(200000), // 200 second timeout to match AI controller
     });

@@ -16,10 +16,10 @@ import Card from '../../components/Card';
 import Badge from '../../components/Badge';
 import Button from '../../components/Button';
 import EmptyState from '../../components/EmptyState';
-import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import * as WebBrowser from 'expo-web-browser';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function Bookings() {
   const router = useRouter();
@@ -142,71 +142,88 @@ export default function Bookings() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Filter Tabs */}
+    <ProtectedRoute roles="user">
+      <View style={styles.container}>
         <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterContainer}
-          contentContainerStyle={styles.filterContent}
+          style={styles.scrollView}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {['all', 'pending', 'approved', 'completed', 'cancelled'].map((status) => (
-            <TouchableOpacity
-              key={status}
-              style={[styles.filterTab, filter === status && styles.filterTabActive]}
-              onPress={() => setFilter(status)}
-            >
-              <Text
-                style={[
-                  styles.filterTabText,
-                  filter === status && styles.filterTabTextActive,
-                ]}
+          {/* Filter Tabs */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterContainer}
+            contentContainerStyle={styles.filterContent}
+          >
+            {['all', 'pending', 'approved', 'completed', 'cancelled'].map((status) => (
+              <TouchableOpacity
+                key={status}
+                style={[styles.filterTab, filter === status && styles.filterTabActive]}
+                onPress={() => setFilter(status)}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    filter === status && styles.filterTabTextActive,
+                  ]}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        {/* Bookings List */}
-        <View style={styles.bookingsList}>
-          {filteredBookings.length > 0 ? (
-            filteredBookings.map((booking) => (
-              <Card key={booking._id} style={styles.bookingCard}>
-                <View style={styles.bookingHeader}>
-                  <View style={styles.bookingInfo}>
-                    <Text style={styles.bookingVendor}>
-                      {booking.vendor?.businessName || 'Unknown Vendor'}
-                    </Text>
-                    <View style={styles.bookingDetails}>
-                      <View style={styles.bookingDetailRow}>
-                        <Ionicons name="calendar" size={14} color={theme.colors.textSecondary} />
-                        <Text style={styles.bookingDetailText}>
-                          {formatDate(booking.eventDate)}
-                        </Text>
-                      </View>
-                      <View style={styles.bookingDetailRow}>
-                        <Ionicons name="people" size={14} color={theme.colors.textSecondary} />
-                        <Text style={styles.bookingDetailText}>
-                          {booking.guestCount} guests
-                        </Text>
+          {/* Bookings List */}
+          <View style={styles.bookingsList}>
+            {filteredBookings.length > 0 ? (
+              filteredBookings.map((booking) => (
+                <Card key={booking._id} style={styles.bookingCard}>
+                  <View style={styles.bookingHeader}>
+                    <View style={styles.bookingInfo}>
+                      <Text style={styles.bookingVendor}>
+                        {booking.vendor?.businessName || 'Unknown Vendor'}
+                      </Text>
+                      <View style={styles.bookingDetails}>
+                        <View style={styles.bookingDetailRow}>
+                          <Ionicons name="calendar" size={14} color={theme.colors.textSecondary} />
+                          <Text style={styles.bookingDetailText}>
+                            {formatDate(booking.eventDate)}
+                          </Text>
+                        </View>
+                        <View style={styles.bookingDetailRow}>
+                          <Ionicons name="people" size={14} color={theme.colors.textSecondary} />
+                          <Text style={styles.bookingDetailText}>
+                            {booking.guestCount} guests
+                          </Text>
+                        </View>
                       </View>
                     </View>
+                    <Badge text={booking.status} variant={getStatusVariant(booking.status)} />
                   </View>
-                  <Badge text={booking.status} variant={getStatusVariant(booking.status)} />
-                </View>
 
-                {booking.amount && (
-                  <Text style={styles.bookingAmount}>{formatCurrency(booking.amount)}</Text>
-                )}
+                  {booking.amount && (
+                    <Text style={styles.bookingAmount}>{formatCurrency(booking.amount)}</Text>
+                  )}
 
-                <View style={styles.bookingActions}>
-                  {booking.status === 'pending' && (
-                    <>
+                  <View style={styles.bookingActions}>
+                    {booking.status === 'pending' && (
+                      <>
+                        <Button
+                          title="Pay Now"
+                          onPress={() => handlePayNow(booking._id)}
+                          loading={payingBookingId === booking._id}
+                          variant="primary"
+                          style={styles.actionButton}
+                        />
+                        <Button
+                          title="Cancel"
+                          onPress={() => setCancelModal({ open: true, bookingId: booking._id })}
+                          variant="outline"
+                          style={styles.actionButton}
+                        />
+                      </>
+                    )}
+                    {booking.status === 'approved' && (
                       <Button
                         title="Pay Now"
                         onPress={() => handlePayNow(booking._id)}
@@ -214,73 +231,58 @@ export default function Bookings() {
                         variant="primary"
                         style={styles.actionButton}
                       />
-                      <Button
-                        title="Cancel"
-                        onPress={() => setCancelModal({ open: true, bookingId: booking._id })}
-                        variant="outline"
-                        style={styles.actionButton}
-                      />
-                    </>
-                  )}
-                  {booking.status === 'approved' && (
-                    <Button
-                      title="Pay Now"
-                      onPress={() => handlePayNow(booking._id)}
-                      loading={payingBookingId === booking._id}
-                      variant="primary"
-                      style={styles.actionButton}
-                    />
-                  )}
-                </View>
-              </Card>
-            ))
-          ) : (
-            <EmptyState
-              icon={
-                <Ionicons name="calendar-outline" size={48} color={theme.colors.textSecondary} />
-              }
-              title="No bookings found"
-              message={
-                filter === 'all'
-                  ? "You haven't made any bookings yet"
-                  : `No ${filter} bookings found`
-              }
-            />
-          )}
-        </View>
-      </ScrollView>
+                    )}
+                  </View>
+                </Card>
+              ))
+            ) : (
+              <EmptyState
+                icon={
+                  <Ionicons name="calendar-outline" size={48} color={theme.colors.textSecondary} />
+                }
+                title="No bookings found"
+                message={
+                  filter === 'all'
+                    ? "You haven't made any bookings yet"
+                    : `No ${filter} bookings found`
+                }
+              />
+            )}
+          </View>
+        </ScrollView>
 
-      {/* Cancel Confirmation Modal */}
-      <Modal
-        visible={cancelModal.open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCancelModal({ open: false, bookingId: null })}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cancel Booking</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to cancel this booking? This action cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <Button
-                title="No"
-                onPress={() => setCancelModal({ open: false, bookingId: null })}
-                variant="outline"
-                style={styles.modalButton}
-              />
-              <Button
-                title="Yes, Cancel"
-                onPress={handleCancelBooking}
-                variant="primary"
-                style={styles.modalButton}
-              />
+        {/* Cancel Confirmation Modal */}
+        <Modal
+          visible={cancelModal.open}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setCancelModal({ open: false, bookingId: null })}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Cancel Booking</Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </Text>
+              <View style={styles.modalActions}>
+                <Button
+                  title="No"
+                  onPress={() => setCancelModal({ open: false, bookingId: null })}
+                  variant="outline"
+                  style={styles.modalButton}
+                />
+                <Button
+                  title="Yes, Cancel"
+                  onPress={handleCancelBooking}
+                  variant="primary"
+                  style={styles.modalButton}
+                />
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </ProtectedRoute>
   );
 }
 

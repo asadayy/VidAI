@@ -5,21 +5,35 @@ import { logger } from '../config/logger.js';
  * Helper: call AI microservice
  */
 const callAIService = async (endpoint, body) => {
-  const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';  // Read inside function for env changes
-  
-  const response = await fetch(`${AI_SERVICE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(200000), // 200 second timeout for Ollama inference (increased from 120s)
-  });
+  const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'AI service error');
+  logger.info(`Calling AI service at ${AI_SERVICE_URL}${endpoint}`);
+
+  try {
+    const response = await fetch(`${AI_SERVICE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(200000),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      logger.error(`AI service error (${response.status}):`, errorData);
+      throw new Error(errorData.detail || `AI service error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    logger.info(`AI service responded successfully from ${endpoint}`);
+    return data;
+  } catch (error) {
+    if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+      logger.error(`AI service timeout at ${endpoint}`);
+    } else {
+      logger.error(`Failed to call AI service at ${endpoint}:`, error.message);
+    }
+    throw error;
   }
-
-  return response.json();
 };
 
 /**

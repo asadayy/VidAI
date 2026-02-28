@@ -20,6 +20,12 @@ class Settings:
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
     OLLAMA_TIMEOUT: int = int(os.getenv("OLLAMA_TIMEOUT", "60"))
 
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
+    MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/vidai")
+    DB_NAME: str = os.getenv("DB_NAME", "vidai")
+
     CORS_ORIGINS: list[str] = [
         origin.strip()
         for origin in os.getenv(
