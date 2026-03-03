@@ -48,8 +48,8 @@ app.use(cors({
     if (!origin) return callback(null, true);
     // Allow any Vercel deployment URL
     if (/\.vercel\.app$/.test(origin)) return callback(null, true);
-    // Allow any ngrok tunnel
-    if (/\.ngrok(-free)?\.app$/.test(origin) || /\.ngrok\.io$/.test(origin)) return callback(null, true);
+    // Allow any ngrok tunnel (.app, .dev, .io)
+    if (/\.ngrok(-free)?\.(app|dev)$/.test(origin) || /\.ngrok\.io$/.test(origin)) return callback(null, true);
     // Allow explicitly whitelisted origins
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origin '${origin}' not allowed`));

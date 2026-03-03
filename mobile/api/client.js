@@ -9,14 +9,12 @@ export const setNavigation = (nav) => {
   navigation = nav;
 };
 
-// On web (browser), bypass ngrok entirely — hit the backend directly on localhost.
-// ngrok's free tier blocks CORS preflight from browser origins; native apps are unaffected.
+const NGROK_URL = 'https://cyetic-feetless-bridgette.ngrok-free.dev/api/v1';
+
 const API_BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:5000/api/v1'
-    : (Constants.expoConfig?.extra?.apiUrl ||
-       process.env.EXPO_PUBLIC_API_URL ||
-       'http://localhost:5000/api/v1');
+  Constants.expoConfig?.extra?.apiUrl ||
+  process.env.EXPO_PUBLIC_API_URL ||
+  NGROK_URL;
 
 const client = axios.create({
   baseURL: API_BASE_URL,
