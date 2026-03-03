@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 import VendorLayout from './components/vendor/VendorLayout';
 import AdminLayout from './components/admin/AdminLayout';
 import VendorLanding from './pages/VendorLanding';
@@ -11,11 +12,13 @@ import VendorDashboard from './pages/vendor/VendorDashboard';
 import VendorServices from './pages/vendor/VendorServices';
 import VendorBookings from './pages/vendor/VendorBookings';
 import VendorProfile from './pages/vendor/VendorProfile';
+import VendorOnboarding from './pages/vendor/VendorOnboarding';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminVendors from './pages/admin/AdminVendors';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminSystemHealth from './pages/admin/AdminSystemHealth';
+import AdminBookings from './pages/admin/AdminBookings';
 import UserLayout from './components/user/UserLayout';
 import VendorSearch from './pages/user/VendorSearch';
 import VendorDetails from './pages/user/VendorDetails';
@@ -43,7 +46,26 @@ function App() {
           {/* ── Public routes ── */}
           <Route path="/" element={<Home />} />
           <Route path="/vendor-landing" element={<VendorLanding />} />
-          <Route path="/admin" element={<AdminLogin />} />
+          {/* ── Admin login (public) ── */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+
+          {/* ── Admin portal (separate admin auth) ── */}
+          <Route
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="vendors" element={<AdminVendors />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="bookings" element={<AdminBookings />} />
+            <Route path="logs" element={<AdminLogs />} />
+            <Route path="system" element={<AdminSystemHealth />} />
+          </Route>
 
           {/* ── User portal (guest-accessible parts) ── */}
           <Route path="/user" element={<UserLayout />}>
@@ -67,6 +89,16 @@ function App() {
             </Route>
           </Route>
 
+          {/* ── Vendor onboarding (role: vendor, no layout chrome) ── */}
+          <Route
+            path="/vendor/onboarding"
+            element={
+              <ProtectedRoute roles="vendor" redirectTo="/">
+                <VendorOnboarding />
+              </ProtectedRoute>
+            }
+          />
+
           {/* ── Vendor portal (role: vendor) ── */}
           <Route
             path="/vendor"
@@ -80,23 +112,6 @@ function App() {
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
             <Route path="profile" element={<VendorProfile />} />
-          </Route>
-
-          {/* ── Admin portal (role: admin) ── */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute roles="admin" redirectTo="/">
-                <AdminLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="vendors" element={<AdminVendors />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="logs" element={<AdminLogs />} />
-            <Route path="system" element={<AdminSystemHealth />} />
           </Route>
 
           {/* ── Catch-all ── */}

@@ -104,6 +104,17 @@ const vendorSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    googleMapLink: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    socialMedia: {
+      instagram: { type: String, trim: true, default: '' },
+      facebook: { type: String, trim: true, default: '' },
+      tiktok: { type: String, trim: true, default: '' },
+      youtube: { type: String, trim: true, default: '' },
+    },
     // Service packages offered by this vendor
     packages: [servicePackageSchema],
     // Starting price (auto-calculated or manual)

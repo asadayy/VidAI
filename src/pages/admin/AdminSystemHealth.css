@@ -1,109 +1,357 @@
-/* ── Admin System Health ── */
+/* ── Admin System Health  (ash-* prefix) ─────────────────────────────── */
 
-/* Service cards */
-.health-services {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
+.ash-page { padding-bottom: 2rem; }
 
-@media (max-width: 768px) {
-  .health-services {
-    grid-template-columns: 1fr;
-  }
-}
-
-.health-service-card {
-  background: #ffffff;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.health-service-header {
+/* Header */
+.ash-header {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  color: var(--gray-700);
-  font-weight: 500;
-  font-size: 0.92rem;
-  margin-bottom: 0.85rem;
-}
-
-.health-service-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.health-status-text {
-  font-weight: 600;
-  font-size: 0.88rem;
-  text-transform: capitalize;
-}
-
-.health-ok {
-  color: #16a34a;
-}
-
-.health-err {
-  color: #dc2626;
-}
-
-.health-icon-ok {
-  color: #22c55e;
-}
-
-.health-icon-err {
-  color: #ef4444;
-}
-
-/* Info grid */
-.health-details {
-  margin-bottom: 1.5rem;
-}
-
-.health-info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
-.health-info-item {
+.ash-header-left {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  color: var(--gray-500);
+  align-items: center;
+  gap: 0.8rem;
 }
 
-.health-info-item > div {
+.ash-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.65rem;
+  background: linear-gradient(135deg, #475569, #1e293b);
+  color: #fff;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(71,85,105,0.3);
+  flex-shrink: 0;
 }
 
-.health-info-label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: var(--gray-500);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.ash-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
 }
 
-.health-info-value {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--gray-800);
+.ash-subtitle {
+  font-size: 0.82rem;
+  color: #64748b;
   margin-top: 0.1rem;
 }
 
-/* Spin animation for refresh */
-@keyframes health-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.ash-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.health-spin {
-  animation: health-rotate 0.8s linear infinite;
+.ash-last-checked {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
+
+.ash-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.ash-refresh-btn:hover:not(:disabled) { background: #f8fafc; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.ash-refresh-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Overall status banner */
+.ash-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.ash-banner-ok  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.ash-banner-warn { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+
+/* Service cards */
+.ash-services {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .ash-services { grid-template-columns: 1fr; }
+}
+
+.ash-service-card {
+  background: #fff;
+  border-radius: 0.9rem;
+  padding: 1.35rem 1.25rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.ash-service-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+}
+
+.ash-card-ok  { border-top: 3px solid #22c55e; }
+.ash-card-err { border-top: 3px solid #ef4444; }
+
+.ash-service-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.ash-service-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ash-icon-ok  { background: #f0fdf4; color: #16a34a; }
+.ash-icon-err { background: #fff5f5; color: #dc2626; }
+
+/* Animated pulse dot */
+.ash-pulse-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+}
+
+.ash-dot-ok {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34,197,94,0.5);
+  animation: ash-pulse-ok 2s ease-out infinite;
+}
+
+.ash-dot-err {
+  background: #ef4444;
+  box-shadow: 0 0 0 0 rgba(239,68,68,0.5);
+  animation: ash-pulse-err 2s ease-out infinite;
+}
+
+@keyframes ash-pulse-ok {
+  0%   { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+@keyframes ash-pulse-err {
+  0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+  70%  { box-shadow: 0 0 0 7px rgba(239,68,68,0); }
+  100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+}
+
+.ash-service-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.15rem;
+}
+
+.ash-service-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 0.75rem;
+}
+
+.ash-service-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ash-badge-ok  { background: #dcfce7; color: #166534; }
+.ash-badge-err { background: #fee2e2; color: #991b1b; }
+
+/* Metrics grid */
+.ash-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.ash-metric-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 1.1rem 1.15rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.ash-metric-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 640px) {
+  .ash-metric-wide { grid-column: span 1; }
+}
+
+.ash-metric-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ash-metric-icon {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ash-metric-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+.ash-metric-pct {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+}
+
+.ash-metric-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  margin-bottom: 0.2rem;
+}
+
+.ash-metric-value-sm {
+  font-size: 1rem;
+}
+
+.ash-metric-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.ash-metric-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+}
+
+/* Progress bar for heap usage */
+.ash-progress-bar {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.ash-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease;
+}
+
+/* Spin animation for refresh icon */
+@keyframes ash-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.ash-spin { animation: ash-spin 0.7s linear infinite; }
+
+/* ── Dark Theme Overrides ───────────────────────────────── */
+.ash-title    { color: #f1f5f9; }
+.ash-subtitle { color: #64748b; }
+
+.ash-refresh-btn {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.1);
+  color: #94a3b8;
+  box-shadow: none;
+}
+.ash-refresh-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.16);
+  color: #e2e8f0;
+}
+
+/* Banner */
+.ash-banner-ok   { background: rgba(34,197,94,0.08);  color: #4ade80; border-color: rgba(34,197,94,0.2);  }
+.ash-banner-warn { background: rgba(245,158,11,0.08); color: #fbbf24; border-color: rgba(245,158,11,0.2); }
+
+/* Service cards */
+.ash-service-card {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+.ash-service-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.35); }
+
+.ash-icon-ok  { background: rgba(34,197,94,0.12);  color: #4ade80; }
+.ash-icon-err { background: rgba(239,68,68,0.12);  color: #f87171; }
+
+.ash-service-name { color: #e2e8f0; }
+.ash-service-desc { color: #64748b; }
+
+.ash-badge-ok  { background: rgba(34,197,94,0.12);  color: #4ade80; }
+.ash-badge-err { background: rgba(239,68,68,0.12);  color: #f87171; }
+
+/* Metric cards */
+.ash-metric-card {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+
+.ash-metric-label { color: #64748b; }
+.ash-metric-value { color: #f1f5f9; }
+.ash-metric-sub   { color: #475569; }
+
+.ash-metric-pct {
+  background: rgba(255,255,255,0.07);
+  color: #94a3b8;
+}
+
+.ash-progress-bar { background: rgba(255,255,255,0.08); }
+

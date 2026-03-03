@@ -100,7 +100,10 @@ const client = axios.create({
 // Request interceptor — attach JWT token
 client.interceptors.request.use(
   async (config) => {
-    const token = isReactNative ? await storage.getItem('vidai_access_token') : storage.getItem('vidai_access_token');
+    // Use admin token for admin routes, user token for everything else
+    const isAdminRoute = config.url && config.url.startsWith('/admin');
+    const tokenKey = isAdminRoute ? 'vidai_admin_token' : 'vidai_access_token';
+    const token = isReactNative ? await storage.getItem(tokenKey) : storage.getItem(tokenKey);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

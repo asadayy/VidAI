@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a0a10"
     },
     "ios": {
       "supportsTablet": true,
@@ -24,9 +24,14 @@
       },
       "package": "com.vidai.app",
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "READ_MEDIA_IMAGES",
+        "READ_MEDIA_VIDEO",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -34,7 +39,17 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow VidAI to save invitation images to your gallery.",
+          "savePhotosPermission": "Allow VidAI to save invitation images to your gallery.",
+          "isAccessMediaLocationEnabled": true,
+          "isAudioEnabled": false
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "apiUrl": "https://cyetic-feetless-bridgette.ngrok-free.dev/api/v1",

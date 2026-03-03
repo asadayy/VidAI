@@ -1,8 +1,10 @@
 import User from '../models/User.model.js';
 import Vendor from '../models/Vendor.model.js';
+import Budget from '../models/Budget.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { sendEmail } from '../config/email.js';
+import { logger } from '../config/logger.js';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 
@@ -148,6 +150,7 @@ export const login = asyncHandler(async (req, res) => {
         role: user.role,
         phone: user.phone,
         avatar: user.avatar,
+        onboarding: user.onboarding,
       },
       vendorProfile,
       accessToken,
@@ -181,6 +184,7 @@ export const getMe = asyncHandler(async (req, res) => {
         avatar: user.avatar,
         isEmailVerified: user.isEmailVerified,
         createdAt: user.createdAt,
+        onboarding: user.onboarding,
       },
       vendorProfile,
     },
@@ -398,7 +402,15 @@ export const refreshToken = asyncHandler(async (req, res) => {
  * @access  Private
  */
 export const completeOnboarding = asyncHandler(async (req, res) => {
-  const { firstName, lastName, weddingLocation, eventDate, guestCount, lookingFor, eventTypes, budgets } = req.body;
+  const {
+    firstName, lastName, phone,
+    eventTypes, eventDate, weddingLocation,
+    venueType, guestCount, foodPreference,
+    totalBudget,
+    // legacy fields (still accepted for backward compat)
+    lookingFor, budgets
+  } = req.body;
+
   const user = await User.findById(req.user._id);
 
   if (!user) {
@@ -411,17 +423,51 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     isComplete: true,
     firstName,
     lastName,
-    weddingLocation,
-    eventDate,
-    guestCount,
-    lookingFor,
+    phone,
     eventTypes,
+    eventDate,
+    weddingLocation,
+    venueType,
+    guestCount,
+    foodPreference,
+    totalBudget: totalBudget || 0,
+    lookingFor,
     budgets
   };
+
+  // Update top-level phone if provided and not already set
+  if (phone && !user.phone) {
+    user.phone = phone;
+  }
 
   // If the user's name is just the email prefix or empty, we can update it
   if (!user.name || user.name === user.email.split('@')[0]) {
     user.name = `${firstName} ${lastName}`.trim();
+  }
+
+  // Auto-create or update the Budget record so the Budget Planner shows the amount
+  if (totalBudget && Number(totalBudget) > 0) {
+    try {
+      let budget = await Budget.findOne({ user: user._id });
+      if (budget) {
+        budget.totalBudget = Number(totalBudget);
+        await budget.save();
+        logger.info(`Budget updated during onboarding for user ${user._id}: ${totalBudget}`);
+      } else {
+        await Budget.create({
+          user: user._id,
+          totalBudget: Number(totalBudget),
+          eventType: (eventTypes && eventTypes.length > 0)
+            ? eventTypes[0].toLowerCase().replace(/[- ]/g, '_')
+            : 'full_wedding',
+          items: [],
+        });
+        logger.info(`Budget created during onboarding for user ${user._id}: ${totalBudget}`);
+      }
+    } catch (budgetErr) {
+      logger.error(`Failed to create/update budget during onboarding: ${budgetErr.message}`);
+      // Don't block onboarding completion if budget creation fails
+    }
   }
 
   await user.save();

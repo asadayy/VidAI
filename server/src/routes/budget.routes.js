@@ -6,6 +6,7 @@ import {
   addBudgetItem,
   deleteBudgetItem,
   generateAIPlan,
+  recommendVendors,
 } from '../controllers/budget.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
@@ -17,5 +18,6 @@ router.post('/items', protect, authorize('user'), addBudgetItem);
 router.put('/items/:itemId', protect, authorize('user'), updateBudgetItem);
 router.delete('/items/:itemId', protect, authorize('user'), deleteBudgetItem);
 router.post('/ai-plan', protect, authorize('user'), generateAIPlan);
+router.post('/vendor-picks', protect, authorize('user'), recommendVendors);
 
 export default router;

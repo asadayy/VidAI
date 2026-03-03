@@ -22,13 +22,15 @@ const router = express.Router();
 router.get('/', getVendors);
 router.get('/search', searchVendors);
 router.get('/slug/:slug', getVendorBySlug);
-router.get('/:id', getVendorById);
-router.get('/:id/reviews', getReviews);
 
-// Protected vendor routes
+// Protected vendor routes (must be before /:id to avoid shadowing)
 router.post('/profile', protect, authorize('vendor'), validateVendorProfile, createVendorProfile);
 router.get('/me/profile', protect, authorize('vendor'), getMyVendorProfile);
 router.put('/me/profile', protect, authorize('vendor'), validateVendorProfile, updateVendorProfile);
+
+// Parameterised public routes (keep after named routes)
+router.get('/:id', getVendorById);
+router.get('/:id/reviews', getReviews);
 
 // Review management
 router.post('/:id/reviews', protect, authorize('user', 'admin'), addReview);

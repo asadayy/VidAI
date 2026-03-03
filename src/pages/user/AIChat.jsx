@@ -1,94 +1,224 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Sparkles, Bot, User, RefreshCw, ChevronDown } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
 import client from '../../api/client';
 import './AIChat.css';
 
+const SUGGESTIONS = [
+  'What vendors do I need for my wedding?',
+  'Help me create a wedding budget plan',
+  'How do I choose the perfect venue?',
+  'Give me a wedding planning checklist',
+];
+
+function fmtTime(date) {
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+const SESSION_KEY = 'vidai_chat_history';
+
+const INITIAL_MSG = {
+  role: 'assistant',
+  content: "Hello! I'm your AI wedding planner 💍 I can help with venues, budgets, vendor selection, timelines, and more. What would you like to plan today?",
+  time: new Date(),
+};
+
+function loadSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return [INITIAL_MSG];
+    const parsed = JSON.parse(raw);
+    // Rehydrate time strings back to Date objects
+    return parsed.map((m) => ({ ...m, time: new Date(m.time) }));
+  } catch {
+    return [INITIAL_MSG];
+  }
+}
+
+function saveSession(msgs) {
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(msgs));
+  } catch { /* quota exceeded — ignore */ }
+}
+
 const AIChat = () => {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Hello! I'm your AI wedding planner. How can I help you today?" }
-  ]);
+  const [messages, setMessages] = useState(() => loadSession());
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesEndRef = useRef(null);
+  const listRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior = 'smooth') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+  // Persist to sessionStorage whenever messages change
+  useEffect(() => { saveSession(messages); }, [messages]);
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  useEffect(() => { scrollToBottom(); }, [messages, isTyping]);
 
-    const userMessage = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
+  const handleScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 120);
+  };
+
+  const handleSend = async (text) => {
+    const content = (text ?? input).trim();
+    if (!content) return;
+
+    const userMsg = { role: 'user', content, time: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
+    inputRef.current?.focus();
 
     try {
-      // The API likely expects the conversation history *excluding* the latest user message 
-      // if we were appending it inside the backend, but usually we send the whole history.
-      // The prompt says: client.post('/ai/chat', { message, conversationHistory: messages })
-      // "message" being the current input, and "conversationHistory" being the previous messages.
-      
       const response = await client.post('/ai/chat', {
-        message: userMessage.content,
-        conversationHistory: messages
+        message: content,
+        conversationHistory: messages,
       });
-
-      // Backend returns: { success: true, data: { response: "..." } }
-      const assistantMessage = { 
-        role: 'assistant', 
-        content: response.data.data?.response || response.data.response || "I'm not sure how to respond to that." 
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Chat error:', error);
+      const reply =
+        response.data.data?.response ||
+        response.data.response ||
+        "I'm not sure how to respond to that.";
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply, time: new Date() }]);
+    } catch {
       toast.error('Failed to get response from AI assistant');
-      // Optionally remove the user message if it failed, but better to just show error.
     } finally {
       setIsTyping(false);
     }
   };
 
+  const handleSubmit = (e) => { e.preventDefault(); handleSend(); };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
+
+  const handleReset = () => {
+    const fresh = [{ ...INITIAL_MSG, time: new Date() }];
+    setMessages(fresh);
+    saveSession(fresh);
+  };
+
+  const showSuggestions = messages.length === 1;
+
   return (
-    <div className="chat-container">
-      <div className="chat-header">
-        <h2 className="chat-title">Wedding Assistant</h2>
+    <div className="ac-page">
+
+      {/* Header */}
+      <div className="ac-header">
+        <div className="ac-header-left">
+          <div className="ac-avatar ac-avatar--ai">
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <h1 className="ac-header-title">Wedding AI Assistant</h1>
+            <span className="ac-status">
+              <span className="ac-status-dot" />
+              Online &amp; ready to help
+            </span>
+          </div>
+        </div>
+        <button className="ac-reset-btn" onClick={handleReset} title="New conversation">
+          <RefreshCw size={15} />
+          <span>New chat</span>
+        </button>
       </div>
 
-      <div className="messages-list">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`message-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`}
-          >
-            {msg.content}
-          </div>
-        ))}
+      {/* Messages */}
+      <div className="ac-messages" ref={listRef} onScroll={handleScroll}>
+        {messages.map((msg, i) => {
+          const isUser = msg.role === 'user';
+          return (
+            <div key={i} className={`ac-row ${isUser ? 'ac-row--user' : 'ac-row--ai'}`}>
+              {!isUser && (
+                <div className="ac-avatar ac-avatar--ai ac-avatar--sm"><Bot size={14} /></div>
+              )}
+              <div className="ac-bubble-wrap">
+                <div className={`ac-bubble ${isUser ? 'ac-bubble--user' : 'ac-bubble--ai'}`}>
+                  {isUser ? msg.content : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p:      ({ children }) => <p className="ac-md-p">{children}</p>,
+                        strong: ({ children }) => <strong className="ac-md-strong">{children}</strong>,
+                        em:     ({ children }) => <em className="ac-md-em">{children}</em>,
+                        ul:     ({ children }) => <ul className="ac-md-ul">{children}</ul>,
+                        ol:     ({ children }) => <ol className="ac-md-ol">{children}</ol>,
+                        li:     ({ children }) => <li className="ac-md-li">{children}</li>,
+                        h1:     ({ children }) => <h1 className="ac-md-h">{children}</h1>,
+                        h2:     ({ children }) => <h2 className="ac-md-h ac-md-h2">{children}</h2>,
+                        h3:     ({ children }) => <h3 className="ac-md-h ac-md-h3">{children}</h3>,
+                        code:   ({ inline, children }) => inline
+                          ? <code className="ac-md-code">{children}</code>
+                          : <pre className="ac-md-pre"><code>{children}</code></pre>,
+                        hr:     () => <hr className="ac-md-hr" />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  )}
+                </div>
+                <span className="ac-time">{fmtTime(msg.time)}</span>
+              </div>
+              {isUser && (
+                <div className="ac-avatar ac-avatar--user ac-avatar--sm"><User size={14} /></div>
+              )}
+            </div>
+          );
+        })}
+
         {isTyping && (
-          <div className="message-bubble assistant typing">
-            Typing...
+          <div className="ac-row ac-row--ai">
+            <div className="ac-avatar ac-avatar--ai ac-avatar--sm"><Bot size={14} /></div>
+            <div className="ac-bubble ac-bubble--ai ac-bubble--typing">
+              <span className="ac-dot" />
+              <span className="ac-dot" />
+              <span className="ac-dot" />
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form className="input-area" onSubmit={handleSend}>
-        <input
-          type="text"
-          className="chat-input"
-          placeholder="Ask about venues, budget, or ideas..."
+      {/* Scroll to bottom */}
+      {showScrollBtn && (
+        <button className="ac-scroll-btn" onClick={() => scrollToBottom()}>
+          <ChevronDown size={18} />
+        </button>
+      )}
+
+      {/* Suggestions */}
+      {showSuggestions && (
+        <div className="ac-suggestions">
+          {SUGGESTIONS.map((s, i) => (
+            <button key={i} className="ac-suggestion" onClick={() => handleSend(s)}>
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <form className="ac-input-bar" onSubmit={handleSubmit}>
+        <textarea
+          ref={inputRef}
+          className="ac-input"
+          rows={1}
+          placeholder="Ask about venues, budget, vendors…"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
           disabled={isTyping}
         />
-        <button type="submit" className="send-button" disabled={!input.trim() || isTyping}>
-          <Send className="send-icon" />
+        <button type="submit" className="ac-send-btn" disabled={!input.trim() || isTyping} aria-label="Send">
+          <Send size={18} />
         </button>
       </form>
     </div>

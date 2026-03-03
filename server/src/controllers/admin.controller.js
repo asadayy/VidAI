@@ -278,6 +278,15 @@ export const getActivityLogs = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.action) filter.action = req.query.action;
   if (req.query.resourceType) filter.resourceType = req.query.resourceType;
+  if (req.query.dateFrom || req.query.dateTo) {
+    filter.createdAt = {};
+    if (req.query.dateFrom) filter.createdAt.$gte = new Date(req.query.dateFrom);
+    if (req.query.dateTo) {
+      const dateTo = new Date(req.query.dateTo);
+      dateTo.setHours(23, 59, 59, 999);
+      filter.createdAt.$lte = dateTo;
+    }
+  }
 
   const [logs, total] = await Promise.all([
     ActivityLog.find(filter)
@@ -293,6 +302,49 @@ export const getActivityLogs = asyncHandler(async (req, res) => {
     success: true,
     data: {
       logs,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    },
+  });
+});
+
+/**
+ * @route   GET /api/v1/admin/bookings
+ * @desc    Get all bookings (admin view, paginated + filterable)
+ * @access  Private (Admin)
+ */
+export const getAllBookings = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const filter = {};
+  if (req.query.status) filter.status = req.query.status;
+  if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
+  if (req.query.eventType) filter.eventType = req.query.eventType;
+  if (req.query.search) {
+    const esc = req.query.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter['$or'] = [
+      { eventType: { $regex: esc, $options: 'i' } },
+      { eventLocation: { $regex: esc, $options: 'i' } },
+      { packageName: { $regex: esc, $options: 'i' } },
+    ];
+  }
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate('user', 'name email')
+      .populate('vendor', 'businessName category')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Booking.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      bookings,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     },
   });

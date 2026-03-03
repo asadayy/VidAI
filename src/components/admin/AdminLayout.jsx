@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { getAdminUser, clearAdminAuth } from '../../pages/AdminLogin';
 import {
   LayoutDashboard,
   Store,
   Users,
+  CalendarCheck,
   ScrollText,
   Activity,
   LogOut,
@@ -12,20 +13,21 @@ import {
 import './AdminLayout.css';
 
 const NAV_ITEMS = [
-  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/vendors', icon: Store, label: 'Vendors' },
-  { to: '/admin/users', icon: Users, label: 'Users' },
-  { to: '/admin/logs', icon: ScrollText, label: 'Activity Logs' },
-  { to: '/admin/system', icon: Activity, label: 'System Health' },
+  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard'    },
+  { to: '/admin/vendors',   icon: Store,           label: 'Vendors'      },
+  { to: '/admin/users',     icon: Users,           label: 'Users'        },
+  { to: '/admin/bookings',  icon: CalendarCheck,   label: 'Bookings'     },
+  { to: '/admin/logs',      icon: ScrollText,      label: 'Activity Logs'},
+  { to: '/admin/system',    icon: Activity,        label: 'System Health'},
 ];
 
 function AdminLayout() {
-  const { user, logout } = useAuth();
+  const user = getAdminUser();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/admin');
+  const handleLogout = () => {
+    clearAdminAuth();
+    navigate('/admin/login');
   };
 
   return (

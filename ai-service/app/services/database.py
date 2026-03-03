@@ -11,9 +11,14 @@ class DatabaseClient:
 
     def connect(self):
         try:
-            self.client = AsyncIOMotorClient(settings.MONGODB_URI)
+            self.client = AsyncIOMotorClient(
+                settings.MONGODB_URI,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=10000,
+            )
             self.db = self.client[settings.DB_NAME]
-            logger.info(f"Connected to MongoDB at {settings.MONGODB_URI.split('@')[-1] if '@' in settings.MONGODB_URI else 'localhost'} - DB: {settings.DB_NAME}")
+            logger.info(f"Connected to MongoDB - DB: {settings.DB_NAME}")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
 
@@ -23,39 +28,43 @@ class DatabaseClient:
             logger.info("MongoDB connection closed")
 
     async def get_all_vendors(self):
-        """Fetch all approved and active vendors from the database."""
+        """Fetch all approved and active vendors from the vendors collection."""
         if self.db is None:
             self.connect()
+        if self.db is None:
+            return []
         try:
-            # Assuming vendors are stored in 'users' collection with role='vendor'
-            cursor = self.db.users.find({"role": "vendor", "isApproved": True})
-            vendors = await cursor.to_list(length=1000)
-            
-            # Need to fetch services too, maybe from 'services' or embedded
+            # Vendors live in their own 'vendors' collection
+            cursor = self.db.vendors.find(
+                {"verificationStatus": "approved", "isActive": True},
+                {
+                    "businessName": 1,
+                    "category": 1,
+                    "city": 1,
+                    "description": 1,
+                    "startingPrice": 1,
+                    "ratingsAverage": 1,
+                    "packages": 1,
+                }
+            ).limit(50)  # cap to avoid huge context
+            vendors = await cursor.to_list(length=50)
+
             result = []
             for v in vendors:
-                v_id = v.get("_id")
-                
-                # Fetch services linked to this vendor
-                services_cursor = self.db.services.find({"vendor": v_id})
-                services = await services_cursor.to_list(length=100)
-                
+                packages = [
+                    {"name": p.get("name"), "price": p.get("price")}
+                    for p in (v.get("packages") or [])[:3]
+                    if p.get("isActive", True)
+                ]
                 result.append({
-                    "id": str(v_id),
-                    "businessName": v.get("businessName", v.get("name")),
-                    "city": v.get("city"),
-                    "servicesOffered": v.get("servicesOffered", []),
-                    "services": [
-                        {
-                            "id": str(s.get("_id")),
-                            "title": s.get("title"),
-                            "description": s.get("description"),
-                            "price": s.get("price"),
-                            "priceUnit": s.get("priceUnit"),
-                            "category": s.get("category"),
-                            "city": s.get("city")
-                        } for s in services
-                    ]
+                    "id": str(v.get("_id", "")),
+                    "businessName": v.get("businessName", ""),
+                    "category": v.get("category", ""),
+                    "city": v.get("city", ""),
+                    "description": (v.get("description") or "")[:200],
+                    "startingPrice": v.get("startingPrice"),
+                    "rating": v.get("ratingsAverage"),
+                    "packages": packages,
                 })
             return result
         except Exception as e:

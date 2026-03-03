@@ -1,26 +1,62 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    SafeAreaView, Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import Button from '../../components/Button';
 import { useOnboarding } from './_layout';
 
+const EVENT_TYPES = ['Baraat', 'Walima', 'Mehndi', 'Nikkah', 'Engagement', 'Dholki', 'Other'];
+const LOCATIONS = ['Islamabad', 'Rawalpindi'];
+
 export default function Step2() {
     const router = useRouter();
     const { onboardingData, updateOnboardingData } = useOnboarding();
-    const [selectedDate, setSelectedDate] = useState(onboardingData.eventDate ? new Date(onboardingData.eventDate).getDate() : 24);
 
-    const daysInMonth = Array.from({ length: 28 }, (_, i) => i + 1);
+    const [eventTypes, setEventTypes] = useState(onboardingData.eventTypes || []);
+    const [eventDate, setEventDate] = useState(
+        onboardingData.eventDate ? new Date(onboardingData.eventDate) : null
+    );
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [location, setLocation] = useState(onboardingData.weddingLocation || '');
+    const [errors, setErrors] = useState({});
 
-    const handleContinue = () => {
-        // For MVP, just save a mocked 2026-02 date
-        const finalDate = new Date(2026, 1, selectedDate);
-        updateOnboardingData({ eventDate: finalDate });
-        router.push('/onboarding/step3');
+    const toggleEventType = (item) => {
+        setEventTypes(prev =>
+            prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
+        );
+        setErrors(prev => ({ ...prev, eventTypes: null }));
     };
 
-    const handleSkip = () => {
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(Platform.OS === 'ios');
+        if (selectedDate) setEventDate(selectedDate);
+    };
+
+    const formatDate = (date) => {
+        if (!date) return 'Select date';
+        return date.toLocaleDateString('en-PK', { day: 'numeric', month: 'long', year: 'numeric' });
+    };
+
+    const handleContinue = () => {
+        const newErrors = {};
+        if (eventTypes.length === 0) newErrors.eventTypes = 'Please select at least one event';
+        if (!location) newErrors.location = 'Please select a location';
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        updateOnboardingData({
+            eventTypes,
+            eventDate: eventDate ? eventDate.toISOString() : '',
+            weddingLocation: location,
+        });
         router.push('/onboarding/step3');
     };
 
@@ -28,7 +64,7 @@ export default function Step2() {
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scroll}>
-                    {/* Header */}
+                    {/* Back */}
                     <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                         <Feather name="chevron-left" size={24} color="#000" />
                     </TouchableOpacity>
@@ -39,48 +75,85 @@ export default function Step2() {
                     </View>
 
                     <View style={styles.header}>
-                        <Text style={styles.title}>When's the Big Day?</Text>
-                        <Text style={styles.subtitle}>Get deals & discounts tailor-made for your wedding day</Text>
+                        <Text style={styles.stepLabel}>Step 2 of 4</Text>
+                        <Text style={styles.title}>🎉 What are you planning?</Text>
+                        <Text style={styles.subtitle}>
+                            Tell us about your event so we can find the best vendors for you.
+                        </Text>
                     </View>
 
-                    {/* Calendar Box */}
-                    <View style={styles.calendarCard}>
-                        <View style={styles.calendarHeader}>
-                            <TouchableOpacity>
-                                <Feather name="chevron-left" size={20} color="#cbd5e1" />
-                            </TouchableOpacity>
-                            <Text style={styles.monthText}>February 2026</Text>
-                            <TouchableOpacity>
-                                <Feather name="chevron-right" size={20} color="#0f172a" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.daysGrid}>
-                            {daysInMonth.map((day) => {
-                                const isSelected = selectedDate === day;
-                                return (
-                                    <TouchableOpacity
-                                        key={day}
-                                        style={[styles.dayCell, isSelected && styles.dayCellSelected]}
-                                        onPress={() => setSelectedDate(day)}
-                                    >
-                                        <Text style={[styles.dayText, isSelected && styles.dayTextSelected]}>
-                                            {day}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
+                    {/* Event Types */}
+                    <Text style={styles.label}>What event(s) are you planning? *</Text>
+                    <View style={styles.chipGrid}>
+                        {EVENT_TYPES.map((evt) => {
+                            const active = eventTypes.includes(evt);
+                            return (
+                                <TouchableOpacity
+                                    key={evt}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => toggleEventType(evt)}
+                                >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                        {evt}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+                    {errors.eventTypes && <Text style={styles.errorText}>{errors.eventTypes}</Text>}
 
-                </ScrollView>
-                <View style={styles.footer}>
-                    <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-                        <Text style={styles.skipBtnText}>Skip</Text>
+                    {/* Event Date */}
+                    <Text style={[styles.label, { marginTop: theme.spacing.lg }]}>
+                        When's the big day?
+                    </Text>
+                    <TouchableOpacity
+                        style={styles.dateBtn}
+                        onPress={() => setShowDatePicker(true)}
+                    >
+                        <Feather name="calendar" size={18} color={eventDate ? theme.colors.primary : theme.colors.textSecondary} />
+                        <Text style={[styles.dateBtnText, eventDate && styles.dateBtnTextActive]}>
+                            {formatDate(eventDate)}
+                        </Text>
                     </TouchableOpacity>
-                    <View style={styles.continueBtnWrapper}>
-                        <Button title="Continue" onPress={handleContinue} />
+
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={eventDate || new Date()}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                            minimumDate={new Date()}
+                            onChange={handleDateChange}
+                        />
+                    )}
+
+                    {/* Location */}
+                    <Text style={[styles.label, { marginTop: theme.spacing.lg }]}>
+                        Preferred Location *
+                    </Text>
+                    <View style={styles.chipGrid}>
+                        {LOCATIONS.map((loc) => {
+                            const active = location === loc;
+                            return (
+                                <TouchableOpacity
+                                    key={loc}
+                                    style={[styles.chip, styles.chipWide, active && styles.chipActive]}
+                                    onPress={() => {
+                                        setLocation(loc);
+                                        setErrors(prev => ({ ...prev, location: null }));
+                                    }}
+                                >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                        {loc}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+                    {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
+                </ScrollView>
+
+                <View style={styles.footer}>
+                    <Button title="Continue" onPress={handleContinue} />
                 </View>
             </View>
         </SafeAreaView>
@@ -88,19 +161,10 @@ export default function Step2() {
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    container: {
-        flex: 1,
-    },
-    scroll: {
-        padding: theme.spacing.lg,
-    },
-    backBtn: {
-        marginBottom: theme.spacing.md,
-    },
+    safeArea: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
+    scroll: { padding: theme.spacing.lg },
+    backBtn: { marginBottom: theme.spacing.md },
     progressContainer: {
         height: 6,
         backgroundColor: '#e5e7eb',
@@ -113,8 +177,12 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         borderRadius: 3,
     },
-    header: {
-        marginBottom: theme.spacing.xl,
+    header: { marginBottom: theme.spacing.xl },
+    stepLabel: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.primary,
+        fontWeight: '600',
+        marginBottom: theme.spacing.xs,
     },
     title: {
         ...theme.typography.h2,
@@ -125,69 +193,65 @@ const styles = StyleSheet.create({
         ...theme.typography.body,
         color: theme.colors.textSecondary,
     },
-    calendarCard: {
-        backgroundColor: '#fff',
-        borderRadius: theme.borderRadius.lg,
-        padding: theme.spacing.lg,
-        ...theme.shadows.md,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-    },
-    calendarHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.lg,
-    },
-    monthText: {
+    label: {
         ...theme.typography.body,
         fontWeight: 'bold',
-    },
-    daysGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'flex-start',
-    },
-    dayCell: {
-        width: `${100 / 7}%`,
-        aspectRatio: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
         marginBottom: theme.spacing.sm,
     },
-    dayCellSelected: {
+    chipGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing.sm,
+    },
+    chip: {
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.borderRadius.full,
         borderWidth: 1,
-        borderColor: '#0f172a',
-        borderRadius: 20,
+        borderColor: '#e5e7eb',
+        marginBottom: theme.spacing.xs,
     },
-    dayText: {
-        ...theme.typography.body,
-        color: '#94a3b8',
+    chipWide: {
+        paddingHorizontal: theme.spacing.xl,
     },
-    dayTextSelected: {
-        color: '#0f172a',
+    chipActive: {
+        backgroundColor: theme.colors.primary,
+        borderColor: theme.colors.primary,
+    },
+    chipText: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.textSecondary,
+    },
+    chipTextActive: {
+        color: '#fff',
         fontWeight: 'bold',
     },
-    footer: {
+    dateBtn: {
         flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        padding: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: theme.borderRadius.md,
+        backgroundColor: '#fafafa',
+    },
+    dateBtnText: {
+        ...theme.typography.body,
+        color: theme.colors.textSecondary,
+    },
+    dateBtnTextActive: {
+        color: theme.colors.text,
+        fontWeight: '500',
+    },
+    errorText: {
+        color: theme.colors.danger,
+        fontSize: theme.typography.bodySmall.fontSize,
+        marginTop: theme.spacing.xs,
+    },
+    footer: {
         padding: theme.spacing.lg,
         borderTopWidth: 1,
         borderTopColor: '#f3f4f6',
-        alignItems: 'center',
     },
-    skipBtn: {
-        paddingVertical: theme.spacing.sm,
-        paddingHorizontal: theme.spacing.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.primary,
-        borderRadius: theme.borderRadius.full,
-        marginRight: theme.spacing.md,
-    },
-    skipBtnText: {
-        color: theme.colors.primary,
-        fontWeight: '600',
-    },
-    continueBtnWrapper: {
-        flex: 1,
-    }
 });

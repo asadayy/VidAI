@@ -25,13 +25,18 @@ from app.models.schemas import (
     RecommendationRequest,
     RecommendationResponse,
     RecommendationResponseData,
+    VendorPickRequest,
+    VendorPickResponse,
+    VendorPickResponseData,
+    VendorPickItem,
 )
 from app.services.ollama_service import ollama_service
+from app.services.gemini_service import gemini_service
 from app.services.database import db_client
 from app.services.prompts import (
     build_budget_prompt,
-    build_chat_messages,
     build_recommendation_prompt,
+    build_vendor_pick_prompt,
 )
 
 logger = logging.getLogger("vidai.router")
@@ -46,10 +51,10 @@ router = APIRouter(prefix="/api/v1", tags=["AI"])
 async def chat_with_ai(request: ChatRequest):
     """
     Chat with the VidAI wedding planning assistant.
-    Sends conversation to Ollama and returns the assistant's reply.
+    Uses Gemini AI for responses.
     """
     try:
-        # Fetch vendors from DB
+        # Fetch vendors from DB for context
         try:
             vendors = await db_client.get_all_vendors()
             vendors_context = json.dumps(vendors, indent=2) if vendors else ""
@@ -57,19 +62,17 @@ async def chat_with_ai(request: ChatRequest):
             logger.error("Failed to fetch vendors context for chat: %r", e)
             vendors_context = ""
 
-        # Build message history for Ollama
         history_dicts = [
             {"role": msg.role, "content": msg.content}
             for msg in request.conversationHistory
         ]
-        messages = build_chat_messages(
-            request.message, 
-            history_dicts, 
-            vendors_context=vendors_context
-        )
 
-        # Call Ollama
-        ai_reply = await ollama_service.chat(messages)
+        # Use Gemini for chat
+        ai_reply = await gemini_service.chat(
+            user_message=request.message,
+            conversation_history=history_dicts,
+            vendors_context=vendors_context,
+        )
 
         # Build updated conversation history
         updated_history = list(request.conversationHistory) + [
@@ -83,13 +86,6 @@ async def chat_with_ai(request: ChatRequest):
                 conversationHistory=updated_history,
             )
         )
-
-    except httpx.TimeoutException as exc:
-        logger.error("Chat endpoint timeout: %r", exc)
-        raise HTTPException(
-            status_code=503,
-            detail="AI service timed out. Ollama may be busy — please try again.",
-        ) from exc
 
     except Exception as exc:
         logger.error("Chat endpoint error: %r", exc)
@@ -267,6 +263,84 @@ async def get_budget_plan(request: BudgetPlanRequest):
 
 
 # ── Fallback Budget Plan ─────────────────────────────────────────────
+
+
+# ── Vendor Picks Endpoint ───────────────────────────────────────────
+
+
+@router.post("/vendor-picks", response_model=VendorPickResponse)
+async def get_vendor_picks(request: VendorPickRequest):
+    """
+    AI-powered vendor category matching.
+    Returns one recommended vendorCategory per requested category.
+    Node.js backend does the actual DB lookup.
+    """
+    try:
+        # Fetch vendors for context
+        try:
+            vendors = await db_client.get_all_vendors()
+            vendors_context = json.dumps(vendors, indent=2) if vendors else ""
+        except Exception as e:
+            logger.error("Failed to fetch vendors context for picks: %r", e)
+            vendors_context = ""
+
+        categories_with_pct = [
+            {"name": c.name, "percentage": c.percentage}
+            for c in request.categoriesWithPercentages
+        ]
+
+        messages = build_vendor_pick_prompt(
+            total_budget=request.totalBudget,
+            categories_with_pct=categories_with_pct,
+            preferences=request.preferences,
+            vendors_context=vendors_context,
+        )
+
+        result = await ollama_service.generate_json(messages)
+
+        raw_picks = result.get("picks", [])
+        picks = []
+        for p in raw_picks:
+            picks.append(
+                VendorPickItem(
+                    category=p.get("category", ""),
+                    vendorCategory=p.get("vendorCategory", ""),
+                    reasoning=p.get("reasoning", ""),
+                    keyFeatures=p.get("keyFeatures", []),
+                )
+            )
+
+        return VendorPickResponse(data=VendorPickResponseData(picks=picks))
+
+    except (ValueError, httpx.TimeoutException) as exc:
+        logger.warning("Vendor picks failed (%s), returning category defaults", exc)
+        # Fallback: echo back input categories with best-guess DB enums
+        CATEGORY_ENUM_MAP = {
+            "venue": "venue",
+            "catering": "caterer",
+            "photography": "photographer",
+            "makeup/mehndi": "makeup_artist",
+            "decoration": "decorator",
+        }
+        fallback_picks = []
+        for cat in request.categoriesWithPercentages:
+            enum = CATEGORY_ENUM_MAP.get(cat.name.lower(), "other")
+            fallback_picks.append(
+                VendorPickItem(
+                    category=cat.name,
+                    vendorCategory=enum,
+                    reasoning="AI unavailable — using default category mapping.",
+                    keyFeatures=[],
+                )
+            )
+        return VendorPickResponse(data=VendorPickResponseData(picks=fallback_picks))
+
+    except Exception as exc:
+        logger.error("Vendor picks endpoint error: %r", exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service unavailable: {type(exc).__name__}: {exc or 'connection error'}",
+        ) from exc
 
 
 def _build_fallback_budget(

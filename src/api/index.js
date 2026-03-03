@@ -17,6 +17,7 @@ export const adminAPI = {
   toggleUserStatus: (id) => client.patch(`/admin/users/${id}/toggle-status`),
   getActivityLogs: (params) => client.get('/admin/activity-logs', { params }),
   getSystemHealth: () => client.get('/admin/system-health'),
+  getBookings: (params) => client.get('/admin/bookings', { params }),
 };
 
 export const uploadAPI = {

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    SafeAreaView, TextInput, KeyboardAvoidingView, Platform
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
@@ -8,63 +11,56 @@ import { useOnboarding } from './_layout';
 import { useAuth } from '../../contexts/AuthContext';
 import Toast from 'react-native-toast-message';
 
-const BUDGET_OPTIONS = [
-    'Under 10,000',
-    '10,000 - 25,000',
-    '25,000 - 50,000',
-    'Above 50,000'
-];
+const QUICK_PICKS = [200000, 500000, 1000000, 2000000, 5000000];
+
+const formatPKR = (val) => {
+    if (!val) return '';
+    const num = parseInt(String(val).replace(/,/g, ''), 10);
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-PK');
+};
 
 export default function Step4() {
     const router = useRouter();
     const { completeOnboarding } = useAuth();
     const { onboardingData, updateOnboardingData } = useOnboarding();
-    const [budgets, setBudgets] = useState(onboardingData.budgets || {});
+    const [totalBudget, setTotalBudget] = useState(
+        onboardingData.totalBudget ? String(onboardingData.totalBudget) : ''
+    );
     const [loading, setLoading] = useState(false);
-
-    const lookingForList = onboardingData.lookingFor?.length > 0 ? onboardingData.lookingFor : ['General Event'];
-
-    const toggleBudget = (category, value) => {
-        setBudgets(prev => ({
-            ...prev,
-            [category]: value
-        }));
-    };
 
     const handleFinish = async () => {
         setLoading(true);
         try {
-            const finalData = { ...onboardingData, budgets };
-            updateOnboardingData({ budgets });
-
-            // Save to backend
+            const finalData = {
+                ...onboardingData,
+                totalBudget: totalBudget ? parseInt(totalBudget.replace(/,/g, ''), 10) : 0,
+            };
+            updateOnboardingData({ totalBudget: finalData.totalBudget });
             await completeOnboarding(finalData);
-            Toast.show({ type: 'success', text1: 'Onboarding complete!' });
+            Toast.show({ type: 'success', text1: 'Setup complete! Welcome to VidAI 🎉' });
             router.replace('/(tabs)/dashboard');
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error saving details' });
-            const finalData = { ...onboardingData, budgets };
-            // Fallback redirect even if offline
+        } catch {
+            Toast.show({ type: 'error', text1: 'Error saving details. Please try again.' });
             router.replace('/(tabs)/dashboard');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSkip = async () => {
-        handleFinish();
-    };
+    const numericBudget = parseInt(totalBudget.replace(/,/g, ''), 10);
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
-                <ScrollView contentContainerStyle={styles.scroll}>
-                    {/* Header */}
-                    <View style={styles.topRow}>
-                        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                            <Feather name="chevron-left" size={24} color="#000" />
-                        </TouchableOpacity>
-                    </View>
+            <KeyboardAvoidingView
+                style={styles.container}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            >
+                <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+                    {/* Back */}
+                    <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                        <Feather name="chevron-left" size={24} color="#000" />
+                    </TouchableOpacity>
 
                     {/* Progress Bar */}
                     <View style={styles.progressContainer}>
@@ -72,64 +68,73 @@ export default function Step4() {
                     </View>
 
                     <View style={styles.header}>
-                        <Text style={styles.title}>Let's Get Some Estimates</Text>
-                        <Text style={styles.subtitle}>Tell us your budget so we can find the perfect match.</Text>
+                        <Text style={styles.stepLabel}>Step 4 of 4</Text>
+                        <Text style={styles.title}>💰 What's your budget?</Text>
+                        <Text style={styles.subtitle}>
+                            Set a total budget for your event. You can always adjust it later in the Budget Planner.
+                        </Text>
                     </View>
 
-                    {/* Budgets for each selected item */}
-                    {lookingForList.map((category) => (
-                        <View key={category} style={styles.categorySection}>
-                            <Text style={styles.categoryTitle}>{category} Budget</Text>
-                            <View style={styles.chipContainer}>
-                                {BUDGET_OPTIONS.map((val) => {
-                                    const isActive = budgets[category] === val;
-                                    return (
-                                        <TouchableOpacity
-                                            key={val}
-                                            style={[styles.chip, isActive && styles.chipActive]}
-                                            onPress={() => toggleBudget(category, val)}
-                                        >
-                                            <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{val}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    ))}
+                    {/* Budget Input */}
+                    <Text style={styles.label}>Total Event Budget (PKR)</Text>
+                    <View style={styles.budgetInputRow}>
+                        <Text style={styles.currencyPrefix}>Rs.</Text>
+                        <TextInput
+                            style={styles.budgetInput}
+                            value={totalBudget}
+                            onChangeText={(t) => setTotalBudget(t.replace(/[^0-9]/g, ''))}
+                            placeholder="e.g. 500000"
+                            keyboardType="number-pad"
+                        />
+                    </View>
+                    {totalBudget !== '' && !isNaN(numericBudget) && numericBudget > 0 && (
+                        <Text style={styles.budgetDisplay}>Rs. {formatPKR(numericBudget)}</Text>
+                    )}
 
+                    {/* Quick Picks */}
+                    <Text style={[styles.label, { marginTop: theme.spacing.lg }]}>Quick pick:</Text>
+                    <View style={styles.chipGrid}>
+                        {QUICK_PICKS.map((amt) => {
+                            const active = numericBudget === amt;
+                            return (
+                                <TouchableOpacity
+                                    key={amt}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => setTotalBudget(String(amt))}
+                                >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                                        Rs. {formatPKR(amt)}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
                 </ScrollView>
+
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+                    <TouchableOpacity
+                        style={styles.skipBtn}
+                        onPress={() => {
+                            setTotalBudget('');
+                            handleFinish();
+                        }}
+                    >
                         <Text style={styles.skipBtnText}>Skip</Text>
                     </TouchableOpacity>
-                    <View style={styles.continueBtnWrapper}>
-                        <Button title="Finish" onPress={handleFinish} loading={loading} />
+                    <View style={styles.finishBtnWrapper}>
+                        <Button title="Finish Setup" onPress={handleFinish} loading={loading} />
                     </View>
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    container: {
-        flex: 1,
-    },
-    scroll: {
-        padding: theme.spacing.lg,
-    },
-    topRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing.md,
-    },
-    backBtn: {
-        padding: theme.spacing.xs,
-    },
+    safeArea: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
+    scroll: { padding: theme.spacing.lg },
+    backBtn: { marginBottom: theme.spacing.md },
     progressContainer: {
         height: 6,
         backgroundColor: '#e5e7eb',
@@ -142,8 +147,12 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         borderRadius: 3,
     },
-    header: {
-        marginBottom: theme.spacing.xl,
+    header: { marginBottom: theme.spacing.xl },
+    stepLabel: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.primary,
+        fontWeight: '600',
+        marginBottom: theme.spacing.xs,
     },
     title: {
         ...theme.typography.h2,
@@ -154,15 +163,40 @@ const styles = StyleSheet.create({
         ...theme.typography.body,
         color: theme.colors.textSecondary,
     },
-    categorySection: {
-        marginBottom: theme.spacing.xl,
-    },
-    categoryTitle: {
+    label: {
         ...theme.typography.body,
         fontWeight: 'bold',
-        marginBottom: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
     },
-    chipContainer: {
+    budgetInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: theme.borderRadius.md,
+        paddingHorizontal: theme.spacing.md,
+        backgroundColor: '#fafafa',
+    },
+    currencyPrefix: {
+        ...theme.typography.body,
+        fontWeight: 'bold',
+        color: theme.colors.textSecondary,
+        marginRight: theme.spacing.sm,
+    },
+    budgetInput: {
+        flex: 1,
+        height: 52,
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#000',
+    },
+    budgetDisplay: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.primary,
+        fontWeight: '600',
+        marginTop: theme.spacing.xs,
+    },
+    chipGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: theme.spacing.sm,
@@ -173,7 +207,7 @@ const styles = StyleSheet.create({
         borderRadius: theme.borderRadius.full,
         borderWidth: 1,
         borderColor: '#e5e7eb',
-        alignItems: 'center',
+        marginBottom: theme.spacing.xs,
     },
     chipActive: {
         backgroundColor: theme.colors.primary,
@@ -206,7 +240,5 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
         fontWeight: '600',
     },
-    continueBtnWrapper: {
-        flex: 1,
-    }
+    finishBtnWrapper: { flex: 1 },
 });

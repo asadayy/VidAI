@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { vendorAPI } from '../../api/vendors';
 import { uploadAPI } from '../../api/upload';
 import Loading from '../../components/Loading';
@@ -8,35 +8,27 @@ import {
   Upload,
   Trash2,
   Image as ImageIcon,
-  Video,
   MapPin,
   Phone,
   Mail,
   Globe,
   Building2,
-  X,
   Film,
+  Instagram,
+  Youtube,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Camera,
 } from 'lucide-react';
 import './VendorProfile.css';
 
 const CATEGORIES = [
-  { value: 'venue', label: 'Venue' },
+  { value: 'venue',        label: 'Venue' },
   { value: 'photographer', label: 'Photographer' },
-  { value: 'videographer', label: 'Videographer' },
-  { value: 'caterer', label: 'Caterer' },
-  { value: 'decorator', label: 'Decorator' },
-  { value: 'makeup_artist', label: 'Makeup Artist' },
-  { value: 'mehndi_artist', label: 'Mehndi Artist' },
-  { value: 'dj_music', label: 'DJ / Music' },
-  { value: 'wedding_planner', label: 'Wedding Planner' },
-  { value: 'invitation_cards', label: 'Invitation Cards' },
-  { value: 'bridal_wear', label: 'Bridal Wear' },
-  { value: 'groom_wear', label: 'Groom Wear' },
-  { value: 'jewelry', label: 'Jewelry' },
-  { value: 'transport', label: 'Transport' },
-  { value: 'florist', label: 'Florist' },
-  { value: 'cake', label: 'Cake' },
-  { value: 'other', label: 'Other' },
+  { value: 'caterer',      label: 'Caterer' },
+  { value: 'decorator',    label: 'Decorator' },
+  { value: 'makeup_artist',label: 'Makeup Artist' },
 ];
 
 const INITIAL_FORM = {
@@ -49,18 +41,37 @@ const INITIAL_FORM = {
   whatsapp: '',
   email: '',
   website: '',
+  googleMapLink: '',
+  socialMedia: { instagram: '', facebook: '', tiktok: '', youtube: '' },
 };
 
+const VERIFICATION_CONFIG = {
+  approved: { icon: CheckCircle2, label: 'Verified',            color: '#10B981', bg: 'rgba(16,185,129,.1)' },
+  rejected: { icon: XCircle,      label: 'Rejected',            color: '#EF4444', bg: 'rgba(239,68,68,.1)'  },
+  pending:  { icon: Clock,        label: 'Pending Verification', color: '#F59E0B', bg: 'rgba(245,158,11,.1)' },
+};
+
+/* â”€â”€ Section divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function SectionHeader({ icon: Icon, label }) {
+  return (
+    <div className="vp-section-header">
+      <div className="vp-section-icon"><Icon size={15} /></div>
+      <span className="vp-section-label">{label}</span>
+    </div>
+  );
+}
+
+/* â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function VendorProfile() {
-  const [vendor, setVendor] = useState(null);
-  const [isNew, setIsNew] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [saving, setSaving] = useState(false);
-  const [uploadingCover, setUploadingCover] = useState(false);
+  const [vendor, setVendor]                     = useState(null);
+  const [isNew, setIsNew]                       = useState(false);
+  const [loading, setLoading]                   = useState(true);
+  const [form, setForm]                         = useState(INITIAL_FORM);
+  const [saving, setSaving]                     = useState(false);
+  const [uploadingCover, setUploadingCover]     = useState(false);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [deletingItemId, setDeletingItemId] = useState(null);
+  const [uploadProgress, setUploadProgress]     = useState(0);
+  const [deletingItemId, setDeletingItemId]     = useState(null);
 
   const portfolioInputRef = useRef(null);
 
@@ -71,49 +82,47 @@ function VendorProfile() {
       setVendor(v);
       setForm({
         businessName: v.businessName || '',
-        category: v.category || '',
-        description: v.description || '',
-        city: v.city || '',
-        address: v.address || '',
-        phone: v.phone || '',
-        whatsapp: v.whatsapp || '',
-        email: v.email || '',
-        website: v.website || '',
+        category:     v.category     || '',
+        description:  v.description  || '',
+        city:         v.city         || '',
+        address:      v.address      || '',
+        phone:        v.phone        || '',
+        whatsapp:     v.whatsapp     || '',
+        email:        v.email        || '',
+        website:      v.website      || '',
+        googleMapLink: v.googleMapLink || '',
+        socialMedia: {
+          instagram: v.socialMedia?.instagram || '',
+          facebook:  v.socialMedia?.facebook  || '',
+          tiktok:    v.socialMedia?.tiktok    || '',
+          youtube:   v.socialMedia?.youtube   || '',
+        },
       });
     } catch (err) {
-      if (err.response?.status === 404) {
-        setIsNew(true);
-      } else {
-        toast.error('Failed to load profile');
-      }
+      if (err.response?.status === 404) setIsNew(true);
+      else toast.error('Failed to load profile');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   const updateField = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // ── Save / Create ──
+  const updateSocial = (platform) => (e) =>
+    setForm((prev) => ({
+      ...prev,
+      socialMedia: { ...prev.socialMedia, [platform]: e.target.value },
+    }));
+
+  /* â”€â”€ Save â”€â”€ */
   const handleSave = async (e) => {
     e.preventDefault();
-
-    if (!form.businessName.trim()) {
-      toast.error('Business name is required');
-      return;
-    }
-    if (!form.category) {
-      toast.error('Please select a category');
-      return;
-    }
-    if (!form.city.trim()) {
-      toast.error('City is required');
-      return;
-    }
+    if (!form.businessName.trim()) { toast.error('Business name is required'); return; }
+    if (!form.category)            { toast.error('Please select a category');  return; }
+    if (!form.city.trim())         { toast.error('City is required');           return; }
 
     setSaving(true);
     try {
@@ -128,44 +137,36 @@ function VendorProfile() {
         toast.success('Profile updated');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Save failed';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Save failed');
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Cover image upload (uses dedicated endpoint — saves to DB) ──
+  /* â”€â”€ Cover upload â”€â”€ */
   const handleCoverUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Cover image must be under 10 MB');
-      return;
-    }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Cover image must be under 10 MB'); return; }
 
     setUploadingCover(true);
     try {
       const { data } = await uploadAPI.uploadVendorCover(file);
-      // The backend saves it to MongoDB and returns the updated coverImage
       setVendor((prev) => ({ ...prev, coverImage: data.data.coverImage }));
       toast.success('Cover image updated');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to upload cover image';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Failed to upload cover image');
     } finally {
       setUploadingCover(false);
       e.target.value = '';
     }
   };
 
-  // ── Portfolio upload (images + videos, saves to DB) ──
+  /* â”€â”€ Portfolio upload â”€â”€ */
   const handlePortfolioUpload = async (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    if (!files.length) return;
 
-    // Validate sizes — images ≤ 10 MB, videos ≤ 100 MB
     for (const f of files) {
       const isVideo = f.type.startsWith('video/');
       const limit = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
@@ -178,21 +179,13 @@ function VendorProfile() {
     setUploadingPortfolio(true);
     setUploadProgress(0);
     try {
-      const { data } = await uploadAPI.uploadVendorPortfolio(
-        files,
-        '',
-        (evt) => {
-          if (evt.total) {
-            setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
-          }
-        }
-      );
-      // Backend returns the full updated portfolio array
+      const { data } = await uploadAPI.uploadVendorPortfolio(files, '', (evt) => {
+        if (evt.total) setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
+      });
       setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
       toast.success(`${data.data.added.length} item(s) added to portfolio`);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to upload files';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Failed to upload files');
     } finally {
       setUploadingPortfolio(false);
       setUploadProgress(0);
@@ -200,7 +193,7 @@ function VendorProfile() {
     }
   };
 
-  // ── Delete a portfolio item ──
+  /* â”€â”€ Delete portfolio item â”€â”€ */
   const handleDeletePortfolioItem = async (itemId) => {
     setDeletingItemId(itemId);
     try {
@@ -208,62 +201,69 @@ function VendorProfile() {
       setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
       toast.success('Item removed from portfolio');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to remove item';
-      toast.error(msg);
+      toast.error(err.response?.data?.message || 'Failed to remove item');
     } finally {
       setDeletingItemId(null);
     }
   };
 
-  if (loading) return <Loading fullScreen message="Loading profile..." />;
+  if (loading) return <Loading fullScreen message="Loading profileâ€¦" />;
 
-  const verificationBadge = vendor?.verificationStatus && (
-    <span className={`badge ${vendor.verificationStatus === 'approved' ? 'badge-success' :
-        vendor.verificationStatus === 'rejected' ? 'badge-danger' :
-          'badge-warning'
-      }`}>
-      {vendor.verificationStatus === 'approved' ? 'Verified' :
-        vendor.verificationStatus === 'rejected' ? 'Rejected' :
-          'Pending Verification'}
-    </span>
-  );
-
-  const portfolio = vendor?.portfolio || [];
+  const verStatus  = vendor?.verificationStatus || 'pending';
+  const verCfg     = VERIFICATION_CONFIG[verStatus] || VERIFICATION_CONFIG.pending;
+  const VerIcon    = verCfg.icon;
+  const portfolio  = vendor?.portfolio || [];
+  const completeness = vendor?.profileCompleteness ?? 0;
 
   return (
-    <div className="vendor-profile">
-      <div className="page-header">
-        <div>
-          <h1>{isNew ? 'Create Your Profile' : 'Edit Profile'}</h1>
-          <p className="page-subtitle">
-            {isNew
-              ? 'Set up your vendor profile to start receiving bookings'
-              : 'Keep your business information up to date'}
-          </p>
+    <div className="vp-page">
+
+      {/* ── Hero header ── */}
+      <div className="vp-hero">
+        <div className="vp-hero-glow" />
+        <div className="vp-hero-body">
+          <div className="vp-hero-icon-wrap">
+            <Building2 size={22} />
+          </div>
+          <div>
+            <h1 className="vp-title">{isNew ? 'Create Your Profile' : 'Edit Profile'}</h1>
+            <p className="vp-subtitle">
+              {isNew
+                ? 'Set up your vendor profile to start receiving bookings'
+                : 'Keep your business information up to date'}
+            </p>
+          </div>
         </div>
-        {verificationBadge}
+        {!isNew && vendor?.verificationStatus && (
+          <div className="vp-verification-badge" style={{ color: verCfg.color, background: verCfg.bg }}>
+            <VerIcon size={14} />
+            <span>{verCfg.label}</span>
+          </div>
+        )}
       </div>
 
-      {/* ── Cover image ── */}
+      {/* â”€â”€ Cover + completeness â”€â”€ */}
       {!isNew && (
-        <div className="profile-cover-section">
+        <div className="vp-cover-wrap">
           <div
-            className="profile-cover"
-            style={{
-              backgroundImage: vendor?.coverImage?.url
-                ? `url(${vendor.coverImage.url})`
-                : undefined,
-            }}
+            className="vp-cover"
+            style={vendor?.coverImage?.url ? { backgroundImage: `url(${vendor.coverImage.url})` } : undefined}
           >
             {!vendor?.coverImage?.url && (
-              <div className="cover-placeholder">
-                <ImageIcon size={32} />
-                <span>Add a cover image</span>
+              <div className="vp-cover-placeholder">
+                <div className="vp-cover-placeholder-icon"><Camera size={30} /></div>
+                <span className="vp-cover-placeholder-title">Add a Cover Image</span>
+                <span className="vp-cover-placeholder-hint">Attract more customers with a beautiful photo</span>
               </div>
             )}
-            <label className={`cover-upload-btn btn btn-outline btn-sm ${uploadingCover ? 'loading' : ''}`}>
-              <Upload size={14} />
-              {uploadingCover ? 'Uploading...' : 'Change Cover'}
+
+            {/* Gradient overlay when image exists */}
+            {vendor?.coverImage?.url && <div className="vp-cover-overlay" />}
+
+            {/* Upload button */}
+            <label className={`vp-cover-btn${uploadingCover ? ' vp-cover-btn--loading' : ''}`}>
+              <Camera size={15} />
+              <span>{uploadingCover ? 'Uploadingâ€¦' : 'Change Cover'}</span>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
@@ -275,16 +275,24 @@ function VendorProfile() {
           </div>
 
           {/* Profile completeness */}
-          {vendor?.profileCompleteness !== undefined && (
-            <div className="completeness-bar">
-              <div className="completeness-label">
-                <span>Profile Completeness</span>
-                <strong>{vendor.profileCompleteness}%</strong>
+          {completeness !== undefined && (
+            <div className="vp-completeness">
+              <div className="vp-completeness-row">
+                <span className="vp-completeness-label">Profile Completeness</span>
+                <strong
+                  className="vp-completeness-pct"
+                  style={{ color: completeness >= 80 ? '#10B981' : completeness >= 50 ? '#F59E0B' : '#EF4444' }}
+                >
+                  {completeness}%
+                </strong>
               </div>
-              <div className="completeness-track">
+              <div className="vp-completeness-track">
                 <div
-                  className="completeness-fill"
-                  style={{ width: `${vendor.profileCompleteness}%` }}
+                  className="vp-completeness-fill"
+                  style={{
+                    width: `${completeness}%`,
+                    background: completeness >= 80 ? '#10B981' : completeness >= 50 ? '#F59E0B' : '#EF4444',
+                  }}
                 />
               </div>
             </div>
@@ -292,17 +300,20 @@ function VendorProfile() {
         </div>
       )}
 
-      {/* ── Profile form ── */}
-      <form className="profile-form card" onSubmit={handleSave}>
-        <h3>
-          <Building2 size={18} /> Business Information
-        </h3>
+      {/* â•â• Profile form â•â• */}
+      <form className="vp-form-card" onSubmit={handleSave}>
+        <div className="vp-card-stripe" />
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="businessName">Business Name *</label>
+        {/* Business Info */}
+        <SectionHeader icon={Building2} label="Business Information" />
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="businessName">
+              Business Name <span className="vp-required">*</span>
+            </label>
             <input
               id="businessName"
+              className="vp-input"
               type="text"
               placeholder="e.g. Lahore Royal Events"
               value={form.businessName}
@@ -310,10 +321,13 @@ function VendorProfile() {
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="category">Category *</label>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="category">
+              Category <span className="vp-required">*</span>
+            </label>
             <select
               id="category"
+              className="vp-select"
               value={form.category}
               onChange={updateField('category')}
               required
@@ -326,28 +340,28 @@ function VendorProfile() {
           </div>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="description">Description</label>
+        <div className="vp-field">
+          <label className="vp-label" htmlFor="description">Description</label>
           <textarea
             id="description"
+            className="vp-textarea"
             rows={4}
-            placeholder="Tell customers about your services, experience, and what makes you unique..."
+            placeholder="Tell customers about your services, experience, and what makes you uniqueâ€¦"
             value={form.description}
             onChange={updateField('description')}
             maxLength={2000}
           />
-          <span className="form-help">{form.description.length}/2000 characters</span>
+          <span className="vp-char-count">{form.description.length} / 2000</span>
         </div>
 
-        <h3>
-          <MapPin size={18} /> Location
-        </h3>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="city">City *</label>
+        {/* Location */}
+        <SectionHeader icon={MapPin} label="Location" />
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="city">City <span className="vp-required">*</span></label>
             <input
               id="city"
+              className="vp-input"
               type="text"
               placeholder="e.g. Lahore"
               value={form.city}
@@ -355,10 +369,11 @@ function VendorProfile() {
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="address">Address</label>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="address">Address</label>
             <input
               id="address"
+              className="vp-input"
               type="text"
               placeholder="e.g. 123 Main Blvd, DHA Phase 5"
               value={form.address}
@@ -367,156 +382,237 @@ function VendorProfile() {
           </div>
         </div>
 
-        <h3>
-          <Phone size={18} /> Contact Details
-        </h3>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="phone">Phone</label>
+        <div className="vp-field">
+          <label className="vp-label" htmlFor="googleMapLink">Google Map Link</label>
+          <div className="vp-input-icon-wrap">
+            <MapPin size={15} className="vp-input-icon" />
             <input
-              id="phone"
-              type="tel"
-              placeholder="03xx-xxxxxxx"
-              value={form.phone}
-              onChange={updateField('phone')}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="whatsapp">WhatsApp</label>
-            <input
-              id="whatsapp"
-              type="tel"
-              placeholder="03xx-xxxxxxx"
-              value={form.whatsapp}
-              onChange={updateField('whatsapp')}
-            />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="email">
-              <Mail size={13} /> Business Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="info@yourbusiness.pk"
-              value={form.email}
-              onChange={updateField('email')}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="website">
-              <Globe size={13} /> Website
-            </label>
-            <input
-              id="website"
+              id="googleMapLink"
+              className="vp-input vp-input--with-icon"
               type="url"
-              placeholder="https://yourbusiness.pk"
-              value={form.website}
-              onChange={updateField('website')}
+              placeholder="https://maps.google.com/â€¦"
+              value={form.googleMapLink}
+              onChange={updateField('googleMapLink')}
             />
           </div>
         </div>
 
-        <div className="profile-form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            <Save size={16} />
+        {/* Contact */}
+        <SectionHeader icon={Phone} label="Contact Details" />
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="phone">Phone</label>
+            <div className="vp-input-icon-wrap">
+              <Phone size={15} className="vp-input-icon" />
+              <input
+                id="phone"
+                className="vp-input vp-input--with-icon"
+                type="tel"
+                placeholder="03xx-xxxxxxx"
+                value={form.phone}
+                onChange={updateField('phone')}
+              />
+            </div>
+          </div>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="whatsapp">WhatsApp</label>
+            <div className="vp-input-icon-wrap">
+              <Phone size={15} className="vp-input-icon" />
+              <input
+                id="whatsapp"
+                className="vp-input vp-input--with-icon"
+                type="tel"
+                placeholder="03xx-xxxxxxx"
+                value={form.whatsapp}
+                onChange={updateField('whatsapp')}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="email">Business Email</label>
+            <div className="vp-input-icon-wrap">
+              <Mail size={15} className="vp-input-icon" />
+              <input
+                id="email"
+                className="vp-input vp-input--with-icon"
+                type="email"
+                placeholder="info@yourbusiness.pk"
+                value={form.email}
+                onChange={updateField('email')}
+              />
+            </div>
+          </div>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="website">Website</label>
+            <div className="vp-input-icon-wrap">
+              <Globe size={15} className="vp-input-icon" />
+              <input
+                id="website"
+                className="vp-input vp-input--with-icon"
+                type="url"
+                placeholder="https://yourbusiness.pk"
+                value={form.website}
+                onChange={updateField('website')}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Social Media */}
+        <SectionHeader icon={Instagram} label="Social Media" />
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="instagram">
+              <span className="vp-social-tag vp-social-tag--ig">IG</span> Instagram
+            </label>
+            <input
+              id="instagram"
+              className="vp-input"
+              type="text"
+              placeholder="@username"
+              value={form.socialMedia.instagram}
+              onChange={updateSocial('instagram')}
+            />
+          </div>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="facebook">
+              <span className="vp-social-tag vp-social-tag--fb">FB</span> Facebook
+            </label>
+            <input
+              id="facebook"
+              className="vp-input"
+              type="text"
+              placeholder="@page"
+              value={form.socialMedia.facebook}
+              onChange={updateSocial('facebook')}
+            />
+          </div>
+        </div>
+        <div className="vp-form-row">
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="tiktok">
+              <span className="vp-social-tag vp-social-tag--tt">TT</span> TikTok
+            </label>
+            <input
+              id="tiktok"
+              className="vp-input"
+              type="text"
+              placeholder="@username"
+              value={form.socialMedia.tiktok}
+              onChange={updateSocial('tiktok')}
+            />
+          </div>
+          <div className="vp-field">
+            <label className="vp-label" htmlFor="youtube">
+              <Youtube size={13} style={{ color: '#EF4444' }} /> YouTube
+            </label>
+            <input
+              id="youtube"
+              className="vp-input"
+              type="text"
+              placeholder="@channel"
+              value={form.socialMedia.youtube}
+              onChange={updateSocial('youtube')}
+            />
+          </div>
+        </div>
+
+        {/* Save button */}
+        <div className="vp-form-footer">
+          <button type="submit" className="vp-btn vp-btn--primary" disabled={saving}>
+            <Save size={15} />
             {saving
-              ? (isNew ? 'Creating...' : 'Saving...')
+              ? (isNew ? 'Creatingâ€¦' : 'Savingâ€¦')
               : (isNew ? 'Create Profile' : 'Save Changes')}
           </button>
         </div>
       </form>
 
-      {/* ── Portfolio section (only when profile already exists) ── */}
+      {/* â•â• Portfolio section â•â• */}
       {!isNew && (
-        <div className="card portfolio-section">
-          <div className="card-header">
-            <h3>
-              <ImageIcon size={18} /> Portfolio Gallery
-            </h3>
-            <div className="portfolio-upload-actions">
-              <label
-                className={`btn btn-outline btn-sm portfolio-upload-btn ${uploadingPortfolio ? 'loading' : ''}`}
-              >
-                <Upload size={14} />
-                {uploadingPortfolio
-                  ? `Uploading${uploadProgress > 0 ? ` ${uploadProgress}%` : '...'}`
-                  : 'Upload Images / Videos'}
-                <input
-                  ref={portfolioInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/mpeg"
-                  multiple
-                  hidden
-                  onChange={handlePortfolioUpload}
-                  disabled={uploadingPortfolio}
-                />
-              </label>
+        <div className="vp-portfolio-card">
+          <div className="vp-portfolio-card-stripe" />
+          <div className="vp-portfolio-header">
+            <div className="vp-portfolio-title-wrap">
+              <div className="vp-portfolio-icon"><ImageIcon size={16} /></div>
+              <div>
+                <h3 className="vp-portfolio-title">Portfolio Gallery</h3>
+                <p className="vp-portfolio-subtitle">
+                  {portfolio.length} item{portfolio.length !== 1 ? 's' : ''} — photos &amp; videos of your work
+                </p>
+              </div>
             </div>
+
+            <label className={`vp-btn vp-btn--outline${uploadingPortfolio ? ' vp-btn--busy' : ''}`}>
+              <Upload size={14} />
+              {uploadingPortfolio
+                ? `Uploading${uploadProgress > 0 ? ` ${uploadProgress}%` : 'â€¦'}`
+                : 'Upload Media'}
+              <input
+                ref={portfolioInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/mpeg"
+                multiple
+                hidden
+                onChange={handlePortfolioUpload}
+                disabled={uploadingPortfolio}
+              />
+            </label>
           </div>
 
-          {/* Upload hint */}
-          <p className="portfolio-hint">
-            Accepted: JPEG, PNG, WebP, GIF (≤ 10 MB) · MP4, MOV, AVI, WebM (≤ 100 MB)
+          <p className="vp-portfolio-hint">
+            Images â‰¤ 10 MB (JPEG, PNG, WebP, GIF) Â· Videos â‰¤ 100 MB (MP4, MOV, AVI, WebM)
           </p>
 
-          {/* Upload progress bar */}
+          {/* Upload progress */}
           {uploadingPortfolio && uploadProgress > 0 && (
-            <div className="upload-progress-bar">
-              <div className="upload-progress-fill" style={{ width: `${uploadProgress}%` }} />
+            <div className="vp-upload-bar">
+              <div className="vp-upload-bar-fill" style={{ width: `${uploadProgress}%` }} />
             </div>
           )}
 
+          {/* Grid or empty state */}
           {portfolio.length === 0 ? (
-            <div className="empty-state">
-              <ImageIcon size={40} className="empty-icon" />
-              <p>No portfolio items yet. Upload photos or videos of your work to attract customers.</p>
+            <div className="vp-portfolio-empty">
+              <div className="vp-portfolio-empty-icon"><ImageIcon size={28} /></div>
+              <p className="vp-portfolio-empty-text">
+                Upload photos or videos of your work to attract more customers
+              </p>
             </div>
           ) : (
-            <div className="portfolio-grid">
+            <div className="vp-portfolio-grid">
               {portfolio.map((item, i) => (
-                <div key={item._id || item.publicId || i} className="portfolio-item">
+                <div key={item._id || item.publicId || i} className="vp-portfolio-item">
                   {item.resourceType === 'video' ? (
-                    <video
-                      src={item.url}
-                      controls
-                      preload="metadata"
-                      className="portfolio-video"
-                    />
+                    <video src={item.url} controls preload="metadata" className="vp-portfolio-media" />
                   ) : (
-                    <img src={item.url} alt={item.caption || `Portfolio ${i + 1}`} />
+                    <img src={item.url} alt={item.caption || `Portfolio ${i + 1}`} className="vp-portfolio-media" />
                   )}
 
-                  {/* Media type badge */}
-                  <span className="portfolio-type-badge">
-                    {item.resourceType === 'video' ? (
-                      <><Film size={11} /> Video</>
-                    ) : (
-                      <><ImageIcon size={11} /> Photo</>
-                    )}
+                  {/* Type badge */}
+                  <span className="vp-media-badge">
+                    {item.resourceType === 'video'
+                      ? <><Film size={10} /> Video</>
+                      : <><ImageIcon size={10} /> Photo</>}
                   </span>
 
-                  {item.caption && (
-                    <span className="portfolio-caption">{item.caption}</span>
-                  )}
+                  {/* Caption */}
+                  {item.caption && <span className="vp-media-caption">{item.caption}</span>}
 
-                  {/* Delete button */}
+                  {/* Delete overlay */}
                   <button
                     type="button"
-                    className="portfolio-delete-btn"
+                    className="vp-portfolio-delete"
                     onClick={() => handleDeletePortfolioItem(item._id)}
                     disabled={deletingItemId === item._id}
-                    title="Remove from portfolio"
+                    title="Remove"
                   >
-                    {deletingItemId === item._id ? (
-                      <span className="spinner-xs" />
-                    ) : (
-                      <Trash2 size={14} />
-                    )}
+                    {deletingItemId === item._id
+                      ? <span className="vp-spinner" />
+                      : <Trash2 size={13} />}
                   </button>
                 </div>
               ))}

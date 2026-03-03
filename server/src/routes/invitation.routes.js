@@ -1,6 +1,7 @@
 import express from 'express';
 import {
     generateInvitation,
+    generateInvitationImage,
     getMyInvitations,
     getInvitation,
     updateInvitation,
@@ -17,6 +18,7 @@ router.get('/:id/public', getInvitation); // Special route for public viewing wi
 router.use(protect);
 
 router.post('/generate', generateInvitation);
+router.post('/generate-image', generateInvitationImage);
 router.get('/', getMyInvitations);
 router.get('/:id', getInvitation);
 router.patch('/:id', updateInvitation);

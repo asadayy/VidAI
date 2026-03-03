@@ -1,0 +1,337 @@
+/* ── Vendor Onboarding ── */
+.vonboarding-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fb 0%, #eef0f5 100%);
+  padding: 2rem;
+}
+
+.vonboarding-container {
+  background: white;
+  padding: 2.5rem 3rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 640px;
+}
+
+/* Brand */
+.vonboarding-brand {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.vonboarding-brand-mark {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--primary-color, #E83E8C);
+}
+
+.vonboarding-brand-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Stepper ── */
+.vonboarding-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+
+.vonboarding-stepper .vdot {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #9ca3af;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.vonboarding-stepper .vdot.active {
+  background: var(--primary-color, #E83E8C);
+  color: #fff;
+  border-color: var(--primary-color, #E83E8C);
+}
+
+.vonboarding-stepper .vdot.current {
+  box-shadow: 0 0 0 4px rgba(232, 62, 140, 0.2);
+}
+
+.vonboarding-stepper .vline {
+  width: 60px;
+  height: 3px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+  margin: 0;
+  padding: 0;
+}
+
+.vonboarding-stepper .vline.done {
+  background: var(--primary-color, #E83E8C);
+}
+
+/* ── Step content ── */
+.vonboarding-step h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.4rem;
+  color: #111827;
+}
+
+.vonboarding-step p {
+  color: #6b7280;
+  margin-bottom: 1.8rem;
+  font-size: 0.95rem;
+}
+
+/* ── Category grid ── */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.category-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 1rem;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-card:hover {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+}
+
+.category-card.selected {
+  border-color: var(--primary-color, #E83E8C);
+  background: rgba(232, 62, 140, 0.06);
+  box-shadow: 0 0 0 3px rgba(232, 62, 140, 0.15);
+}
+
+.category-icon {
+  font-size: 2rem;
+}
+
+.category-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #374151;
+  text-align: center;
+}
+
+/* ── Form groups ── */
+.vform-group {
+  margin-bottom: 1.2rem;
+}
+
+.vform-group-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.vform-group-row .vform-group {
+  flex: 1;
+}
+
+.vform-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.vform-group input[type='text'],
+.vform-group input[type='email'],
+.vform-group input[type='tel'],
+.vform-group input[type='url'] {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.vform-group input:focus {
+  outline: none;
+  border-color: var(--primary-color, #E83E8C);
+  box-shadow: 0 0 0 3px rgba(232, 62, 140, 0.1);
+}
+
+/* ── Chips ── */
+.vchip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.vchip {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.vchip:hover {
+  background: #f3f4f6;
+}
+
+.vchip.active {
+  background: var(--primary-color, #E83E8C);
+  color: white;
+  border-color: var(--primary-color, #E83E8C);
+}
+
+/* ── Social media section ── */
+.vsocial-section {
+  margin-top: 1.5rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.vsocial-section h3 {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+.voptional-tag {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 0.4rem;
+}
+
+.vsocial-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.vsocial-input:focus-within {
+  border-color: var(--primary-color, #E83E8C);
+  box-shadow: 0 0 0 3px rgba(232, 62, 140, 0.1);
+}
+
+.vsocial-prefix {
+  padding: 0.7rem 0.6rem;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-right: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+.vsocial-input input {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  padding: 0.7rem 0.75rem !important;
+  box-shadow: none !important;
+  font-size: 0.9rem;
+}
+
+/* ── Actions ── */
+.vonboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.vbtn-primary {
+  background: var(--primary-color, #E83E8C);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.8rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.vbtn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vbtn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.vbtn-secondary {
+  background: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.vbtn-secondary:hover {
+  background: #f9fafb;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .vonboarding-container {
+    padding: 1.5rem;
+  }
+
+  .vform-group-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .vonboarding-step h2 {
+    font-size: 1.3rem;
+  }
+}

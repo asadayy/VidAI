@@ -1,6 +1,16 @@
 import Budget from '../models/Budget.model.js';
+import Vendor from '../models/Vendor.model.js';
+import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { logger } from '../config/logger.js';
+
+const CATEGORY_ENUM_MAP = {
+  Venue:         ['venue'],
+  Catering:      ['caterer'],
+  Photography:   ['photographer'],
+  'Makeup/Mehndi': ['makeup_artist', 'mehndi_artist'],
+  Decoration:    ['decorator'],
+};
 
 /**
  * @route   POST /api/v1/budget
@@ -33,6 +43,15 @@ export const createBudget = asyncHandler(async (req, res) => {
       items: items || [],
     });
   }
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: isNewBudget ? 'create_budget' : 'update_budget',
+    resourceType: 'Budget',
+    resourceId: budget._id,
+    details: `Budget ${isNewBudget ? 'created' : 'updated'} with total PKR ${totalBudget}`,
+  });
 
   res.status(isNewBudget ? 201 : 200).json({
     success: true,
@@ -246,4 +265,139 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
       data: { budget },
     });
   }
+});
+
+/**
+ * @route   POST /api/v1/budget/vendor-picks
+ * @desc    AI-powered vendor matching for user-selected categories with budget %
+ * @access  Private (User)
+ */
+export const recommendVendors = asyncHandler(async (req, res) => {
+  const { categories } = req.body;
+
+  if (!categories || !Array.isArray(categories) || categories.length === 0) {
+    const err = new Error('categories array is required.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const totalPct = categories.reduce((sum, c) => sum + Number(c.percentage || 0), 0);
+  if (totalPct > 100) {
+    const err = new Error(`Category percentages cannot exceed 100% (got ${totalPct}).`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Get user's total budget from their saved budget document
+  const budget = await Budget.findOne({ user: req.user._id });
+  if (!budget) {
+    const err = new Error('No budget found. Please create a budget first.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const totalBudget = budget.totalBudget;
+  const preferences = req.user.onboarding || {};
+
+  // Call AI service for category analysis
+  const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+  let aiPicks = [];
+
+  try {
+    const aiResponse = await fetch(`${aiServiceUrl}/api/v1/vendor-picks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        totalBudget,
+        categoriesWithPercentages: categories.map(c => ({ name: c.name, percentage: Number(c.percentage) })),
+        preferences,
+        userId: req.user._id.toString(),
+      }),
+    });
+
+    if (!aiResponse.ok) throw new Error(`AI service responded with ${aiResponse.status}`);
+    const aiData = await aiResponse.json();
+    aiPicks = aiData?.data?.picks || [];
+  } catch (aiErr) {
+    logger.warn('AI vendor-picks failed, using fallback: %s', aiErr.message);
+    // Fallback: use direct category map
+    aiPicks = categories.map(c => ({
+      category: c.name,
+      vendorCategory: (CATEGORY_ENUM_MAP[c.name] || ['other'])[0],
+      reasoning: 'AI unavailable — using default category mapping.',
+      keyFeatures: [],
+    }));
+  }
+
+  // For each AI pick, find the best matching vendor in the DB
+  const city = preferences.weddingLocation || '';
+  const picks = [];
+
+  for (const pick of aiPicks) {
+    const sourceCat = categories.find(c => c.name === pick.category);
+    if (!sourceCat) continue;
+
+    const pct = Number(sourceCat.percentage);
+    const budgetAmount = Math.round(totalBudget * pct / 100);
+    const categoryEnums = CATEGORY_ENUM_MAP[pick.category] || [pick.vendorCategory];
+
+    // Build vendor query with progressive fallback
+    const baseFilter = { category: { $in: categoryEnums }, verificationStatus: 'approved' };
+
+    let vendor = null;
+
+    // Try: city + within budget
+    if (city) {
+      vendor = await Vendor.findOne({ ...baseFilter, city: new RegExp(city, 'i'), startingPrice: { $lte: budgetAmount } })
+        .sort({ ratingsAverage: -1 })
+        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+    }
+
+    // Fallback: city only
+    if (!vendor && city) {
+      vendor = await Vendor.findOne({ ...baseFilter, city: new RegExp(city, 'i') })
+        .sort({ ratingsAverage: -1 })
+        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+    }
+
+    // Fallback: any city within budget
+    if (!vendor) {
+      vendor = await Vendor.findOne({ ...baseFilter, startingPrice: { $lte: budgetAmount } })
+        .sort({ ratingsAverage: -1 })
+        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+    }
+
+    // Fallback: any approved vendor in category
+    if (!vendor) {
+      vendor = await Vendor.findOne(baseFilter)
+        .sort({ ratingsAverage: -1 })
+        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+    }
+
+    if (!vendor) continue; // skip if truly no vendor exists for this category
+
+    picks.push({
+      category: pick.category,
+      percentage: pct,
+      budgetAmount,
+      reasoning: pick.reasoning,
+      keyFeatures: pick.keyFeatures || [],
+      vendor: {
+        _id: vendor._id,
+        businessName: vendor.businessName,
+        slug: vendor.slug,
+        city: vendor.city,
+        startingPrice: vendor.startingPrice,
+        ratingsAverage: vendor.ratingsAverage,
+        coverImage: vendor.coverImage?.url || null,
+        category: vendor.category,
+      },
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: `Found ${picks.length} vendor pick(s).`,
+    data: { picks, totalBudget, currency: 'PKR' },
+  });
 });

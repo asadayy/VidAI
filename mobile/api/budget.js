@@ -7,4 +7,5 @@ export const budgetAPI = {
   updateItem: (itemId, data) => client.put(`/budget/items/${itemId}`, data),
   deleteItem: (itemId) => client.delete(`/budget/items/${itemId}`),
   generateAIPlan: () => client.post('/budget/ai-plan'),
+  recommendVendors: (categories) => client.post('/budget/vendor-picks', { categories }),
 };

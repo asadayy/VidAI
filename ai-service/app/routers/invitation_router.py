@@ -11,6 +11,13 @@ class InvitationRequest(BaseModel):
     tone: str
     userId: str
 
+class ImageRequest(BaseModel):
+    essentials: Dict[str, Any]
+    style: Dict[str, Any]
+    tone: str
+    generatedContent: Dict[str, Any]
+    userId: str
+
 @router.post("/generate")
 async def generate_invitation(request: InvitationRequest):
     try:
@@ -24,6 +31,22 @@ async def generate_invitation(request: InvitationRequest):
             "data": {
                 "generatedContent": content
             }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/generate-image")
+async def generate_invitation_image(request: ImageRequest):
+    try:
+        result = await gemini_service.generate_invitation_image(
+            request.essentials,
+            request.style,
+            request.tone,
+            request.generatedContent
+        )
+        return {
+            "success": True,
+            "data": result
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

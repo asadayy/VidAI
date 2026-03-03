@@ -1,4 +1,5 @@
 import Invitation from '../models/Invitation.model.js';
+import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { logger } from '../config/logger.js';
 
@@ -67,7 +68,7 @@ export const generateInvitation = asyncHandler(async (req, res) => {
             },
             style: {
                 theme: style.theme,
-                colorPalette: style.colorPalette,
+                // colorPalette uses schema defaults (object); user's text choice is stored in generatedContent
                 orientation: style.orientation,
                 imagery: style.imagery
             },
@@ -76,15 +77,62 @@ export const generateInvitation = asyncHandler(async (req, res) => {
             status: 'draft'
         });
 
+        // Log activity
+        await ActivityLog.create({
+            user: req.user._id,
+            action: 'create_invitation',
+            resourceType: 'Invitation',
+            resourceId: invitation._id,
+            details: `Digital invitation created: ${invitation.title}`,
+        });
+
         res.status(201).json({
             success: true,
             data: invitation
         });
     } catch (error) {
-        logger.error('Invitation Generation Error:', error.message);
+        logger.error(`Invitation Generation Error: ${error?.message || String(error)}`);
+        if (error?.stack) logger.error(error.stack);
         res.status(500).json({
             success: false,
-            message: 'Failed to generate invitation content.'
+            message: error?.message || 'Failed to generate invitation content.'
+        });
+    }
+});
+
+/**
+ * @route   POST /api/v1/invitations/generate-image
+ * @desc    Generate invitation image using HuggingFace FLUX.1-dev
+ * @access  Private
+ */
+export const generateInvitationImage = asyncHandler(async (req, res) => {
+    const { essentials, style, tone, generatedContent } = req.body;
+
+    if (!essentials || !style || !tone) {
+        const error = new Error('Parameters essentials, style, and tone are required.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    try {
+        const aiResponse = await callAIService('/api/v1/invitations/generate-image', {
+            essentials,
+            style,
+            tone,
+            generatedContent: generatedContent || {},
+            userId: req.user._id.toString(),
+        });
+
+        res.status(200).json({
+            success: true,
+            data: aiResponse.data,
+        });
+    } catch (error) {
+        logger.error(`Invitation Image Generation Error: ${error?.message || String(error)}`);
+        if (error?.stack) logger.error(error.stack);
+        res.status(500).json({
+            success: false,
+            message: error?.message || 'Failed to generate invitation image.'
         });
     }
 });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingAPI } from '../../api/bookings';
 import { paymentAPI } from '../../api/payments';
@@ -10,66 +11,110 @@ import {
   Users,
   DollarSign,
   Clock,
-  MoreVertical,
   XCircle,
-  CheckCircle,
+  CheckCircle2,
   AlertTriangle,
   ExternalLink,
   CreditCard,
-  Loader2
+  Loader2,
+  Sparkles,
+  Search,
 } from 'lucide-react';
 import './UserBookings.css';
 
+/* -- Config ----------------------------------------------- */
+const STATUS_CFG = {
+  pending:   { label: 'Pending',   cls: 'ub-badge--warn',    Icon: Clock        },
+  approved:  { label: 'Approved',  cls: 'ub-badge--success', Icon: CheckCircle2 },
+  completed: { label: 'Completed', cls: 'ub-badge--info',    Icon: CheckCircle2 },
+  cancelled: { label: 'Cancelled', cls: 'ub-badge--danger',  Icon: XCircle      },
+  rejected:  { label: 'Rejected',  cls: 'ub-badge--danger',  Icon: XCircle      },
+};
+
+const PAYMENT_CFG = {
+  unpaid:   { label: 'Unpaid',    cls: 'ub-pay--warn'    },
+  partial:  { label: 'Partial',   cls: 'ub-pay--partial' },
+  paid:     { label: 'Paid',      cls: 'ub-pay--success' },
+  refunded: { label: 'Refunded',  cls: 'ub-pay--info'    },
+};
+
+const FILTERS = ['all', 'pending', 'approved', 'completed', 'cancelled'];
+
+/* -- Helpers ---------------------------------------------- */
+const fmtDate = (ds) =>
+  new Date(ds).toLocaleDateString('en-PK', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+const fmtCurrency = (n) =>
+  new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 }).format(n || 0);
+
+/* -- Cancel Modal (portal) -------------------------------- */
+function CancelModal({ onConfirm, onClose }) {
+  return createPortal(
+    <div className="ub-overlay" onClick={onClose}>
+      <div className="ub-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="ub-modal-icon-wrap">
+          <AlertTriangle size={26} />
+        </div>
+        <h3 className="ub-modal-title">Cancel Booking?</h3>
+        <p className="ub-modal-body">
+          Are you sure you want to cancel this booking request?
+          This action <strong>cannot be undone</strong>.
+        </p>
+        <div className="ub-modal-actions">
+          <button className="ub-btn ub-btn--ghost" onClick={onClose}>Keep Booking</button>
+          <button className="ub-btn ub-btn--danger" onClick={onConfirm}>Yes, Cancel It</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* -- Main component --------------------------------------- */
 const UserBookings = () => {
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
-  const [cancelModal, setCancelModal] = useState({ open: false, bookingId: null });
-  const [payingBookingId, setPayingBookingId] = useState(null);
+  const [bookings, setBookings]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [filter, setFilter]             = useState('all');
+  const [cancelModal, setCancelModal]   = useState({ open: false, bookingId: null });
+  const [payingId, setPayingId]         = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
-      const response = await bookingAPI.getMyBookings();
-      setBookings(response.data.data.bookings || []);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
+      const res = await bookingAPI.getMyBookings();
+      setBookings(res.data.data.bookings || []);
+    } catch {
       toast.error('Failed to load bookings');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  useEffect(() => { fetchBookings(); }, []);
 
-  // Handle payment success/cancelled query params from Stripe redirect
   useEffect(() => {
-    const paymentStatus = searchParams.get('payment');
-    if (paymentStatus === 'success') {
+    const status = searchParams.get('payment');
+    if (status === 'success') {
       toast.success('Payment successful! Your booking is confirmed.', { duration: 5000 });
-      searchParams.delete('payment');
-      setSearchParams(searchParams, { replace: true });
-      fetchBookings(); // Refresh to show updated payment status
-    } else if (paymentStatus === 'cancelled') {
+      fetchBookings();
+    } else if (status === 'cancelled') {
       toast.error('Payment was cancelled. You can try again anytime.', { duration: 5000 });
+    }
+    if (status) {
       searchParams.delete('payment');
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
-  const handleCancelBooking = async () => {
+  const handleCancel = async () => {
     if (!cancelModal.bookingId) return;
-
     try {
       await bookingAPI.cancel(cancelModal.bookingId, { reason: 'User cancelled' });
-      toast.success('Booking cancelled successfully');
-      fetchBookings(); // Refresh list
-    } catch (error) {
-      console.error('Error cancelling booking:', error);
-      toast.error(error.response?.data?.message || 'Failed to cancel booking');
+      toast.success('Booking cancelled');
+      fetchBookings();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel booking');
     } finally {
       setCancelModal({ open: false, bookingId: null });
     }
@@ -77,214 +122,153 @@ const UserBookings = () => {
 
   const handlePayNow = async (bookingId) => {
     try {
-      setPayingBookingId(bookingId);
-      const response = await paymentAPI.createCheckout(bookingId);
-      const { url } = response.data.data;
-      if (url) {
-        window.location.href = url; // Redirect to Stripe Checkout
-      } else {
-        toast.error('Could not create payment session. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      const msg = error.response?.data?.message || 'Failed to initiate payment';
-      toast.error(msg);
+      setPayingId(bookingId);
+      const res = await paymentAPI.createCheckout(bookingId);
+      const { url } = res.data.data;
+      if (url) window.location.href = url;
+      else toast.error('Could not create payment session. Please try again.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to initiate payment');
     } finally {
-      setPayingBookingId(null);
+      setPayingId(null);
     }
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    if (filter === 'all') return true;
-    return booking.status === filter;
-  });
+  if (loading) return <Loading fullScreen message="Loading bookings…" />;
 
-  const getStatusBadge = (status) => {
-    const config = {
-      pending: { label: 'Pending', icon: Clock, className: 'badge-warning' },
-      approved: { label: 'Approved', icon: CheckCircle, className: 'badge-success' },
-      rejected: { label: 'Rejected', icon: XCircle, className: 'badge-danger' },
-      cancelled: { label: 'Cancelled', icon: XCircle, className: 'badge-danger' },
-      completed: { label: 'Completed', icon: CheckCircle, className: 'badge-info' }
-    };
-    const { label, icon: Icon, className } = config[status] || config.pending;
+  const counts = FILTERS.reduce((acc, f) => {
+    acc[f] = f === 'all' ? bookings.length : bookings.filter((b) => b.status === f).length;
+    return acc;
+  }, {});
 
-    return (
-      <span className={`status-badge ${className}`}>
-        <Icon size={14} />
-        {label}
-      </span>
-    );
-  };
-
-  const getPaymentBadge = (paymentStatus) => {
-    const config = {
-      unpaid: { label: 'Unpaid', className: 'payment-unpaid' },
-      partial: { label: 'Partial', className: 'payment-partial' },
-      paid: { label: 'Paid', className: 'payment-paid' },
-      refunded: { label: 'Refunded', className: 'payment-refunded' },
-    };
-    const { label, className } = config[paymentStatus] || config.unpaid;
-
-    return (
-      <span className={`payment-badge ${className}`}>
-        <CreditCard size={13} />
-        {label}
-      </span>
-    );
-  };
-
-  const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('en-PK', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      maximumFractionDigits: 0
-    }).format(amount || 0);
-  };
-
-  if (loading) return <Loading fullScreen message="Loading bookings..." />;
+  const filtered = filter === 'all' ? bookings : bookings.filter((b) => b.status === filter);
 
   return (
-    <div className="user-bookings-page">
-      <div className="page-header">
-        <h1>My Bookings</h1>
-        <p>Manage and track all your vendor bookings</p>
+    <div className="ub-page">
+
+      {/* Hero */}
+      <div className="ub-hero">
+        <div className="ub-hero-glow" />
+        <div className="ub-hero-body">
+          <div className="ub-hero-icon"><Calendar size={22} /></div>
+          <div>
+            <h1 className="ub-title">My Bookings</h1>
+            <p className="ub-subtitle">Track and manage all your vendor bookings</p>
+          </div>
+        </div>
+        <div className="ub-hero-count">
+          <span className="ub-hero-count-num">{bookings.length}</span>
+          <span className="ub-hero-count-lbl">Total</span>
+        </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="filter-tabs">
-        {['all', 'pending', 'approved', 'completed', 'cancelled'].map(status => (
+      {/* Filter pills */}
+      <div className="ub-filters">
+        {FILTERS.map((f) => (
           <button
-            key={status}
-            className={`filter-tab ${filter === status ? 'active' : ''}`}
-            onClick={() => setFilter(status)}
+            key={f}
+            className={`ub-filter ${filter === f ? 'ub-filter--active' : ''}`}
+            onClick={() => setFilter(f)}
           >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {counts[f] > 0 && <span className="ub-filter-count">{counts[f]}</span>}
           </button>
         ))}
       </div>
 
-      {/* Bookings List */}
-      <div className="bookings-container">
-        {filteredBookings.length > 0 ? (
-          filteredBookings.map(booking => (
-            <div key={booking._id} className="booking-card">
-              <div className="booking-header">
-                <div className="vendor-info">
-                  <h3>{booking.vendor?.businessName || 'Unknown Vendor'}</h3>
-                  <span className="service-type">{booking.vendor?.vendorType}</span>
-                </div>
-                <div className="booking-badges">
-                  {getStatusBadge(booking.status)}
-                  {getPaymentBadge(booking.paymentStatus)}
-                </div>
-              </div>
+      {/* Cards */}
+      <div className="ub-list">
+        {filtered.length > 0 ? filtered.map((b) => {
+          const scfg = STATUS_CFG[b.status] || STATUS_CFG.pending;
+          const pcfg = PAYMENT_CFG[b.paymentStatus] || PAYMENT_CFG.unpaid;
+          const { Icon: SIcon } = scfg;
+          const initial = (b.vendor?.businessName || '?')[0].toUpperCase();
 
-              <div className="booking-details">
-                <div className="detail-item">
-                  <Calendar size={18} />
-                  <span>{formatDate(booking.eventDate)}</span>
-                </div>
-                <div className="detail-item">
-                  <Users size={18} />
-                  <span>{booking.guestCount || 0} Guests</span>
-                </div>
-                <div className="detail-item">
-                  <DollarSign size={18} />
-                  <span>{formatCurrency(booking.agreedPrice || booking.totalAmount)}</span>
-                </div>
-                {booking.vendor?.location && (
-                  <div className="detail-item">
-                    <MapPin size={18} />
-                    <span>{booking.vendor.location.city}</span>
+          return (
+            <div key={b._id} className={`ub-card ub-card--${b.status}`}>
+              <div className={`ub-card-accent ub-accent--${b.status}`} />
+
+              <div className="ub-card-main">
+                {/* Top row */}
+                <div className="ub-card-top">
+                  <div className="ub-vendor-row">
+                    <div className={`ub-vendor-avatar ub-avatar--${b.status}`}>{initial}</div>
+                    <div>
+                      <span className="ub-vendor-name">{b.vendor?.businessName || 'Unknown Vendor'}</span>
+                      {b.vendor?.category && (
+                        <span className="ub-vendor-cat">{b.vendor.category.replace(/_/g, ' ')}</span>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="ub-badges">
+                    <span className={`ub-badge ${scfg.cls}`}><SIcon size={11} />{scfg.label}</span>
+                    <span className={`ub-pay-badge ${pcfg.cls}`}><CreditCard size={11} />{pcfg.label}</span>
+                  </div>
+                </div>
 
-              <div className="booking-actions">
-                <Link to={`/user/vendors/${booking.vendor?.slug || booking.vendor?._id}`} className="btn-secondary">
-                  <ExternalLink size={16} />
-                  View Vendor
-                </Link>
+                {/* Detail chips */}
+                <div className="ub-details">
+                  <span className="ub-detail"><Calendar size={13} />{fmtDate(b.eventDate)}</span>
+                  <span className="ub-detail"><Users size={13} />{b.guestCount || 0} guests</span>
+                  <span className="ub-detail"><DollarSign size={13} />{fmtCurrency(b.agreedPrice || b.totalAmount)}</span>
+                  {b.vendor?.city && <span className="ub-detail"><MapPin size={13} />{b.vendor.city}</span>}
+                </div>
 
-                {/* Pay Now — only for approved bookings that are unpaid */}
-                {booking.status === 'approved' && booking.paymentStatus === 'unpaid' && (
-                  <button
-                    className="btn-pay-now"
-                    onClick={() => handlePayNow(booking._id)}
-                    disabled={payingBookingId === booking._id}
+                {/* Actions */}
+                <div className="ub-actions">
+                  <Link
+                    to={`/user/vendors/${b.vendor?.slug || b.vendor?._id}`}
+                    className="ub-btn ub-btn--ghost"
                   >
-                    {payingBookingId === booking._id ? (
-                      <>
-                        <Loader2 size={16} className="spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard size={16} />
-                        Pay Now
-                      </>
-                    )}
-                  </button>
-                )}
+                    <ExternalLink size={14} /> View Vendor
+                  </Link>
 
-                {booking.status === 'pending' && (
-                  <button
-                    className="btn-danger-outline"
-                    onClick={() => setCancelModal({ open: true, bookingId: booking._id })}
-                  >
-                    Cancel Request
-                  </button>
-                )}
+                  {b.status === 'approved' && b.paymentStatus === 'unpaid' && (
+                    <button
+                      className="ub-btn ub-btn--pay"
+                      onClick={() => handlePayNow(b._id)}
+                      disabled={payingId === b._id}
+                    >
+                      {payingId === b._id
+                        ? <><Loader2 size={14} className="ub-spin" /> Processing…</>
+                        : <><CreditCard size={14} /> Pay Now</>}
+                    </button>
+                  )}
+
+                  {b.status === 'pending' && (
+                    <button
+                      className="ub-btn ub-btn--cancel"
+                      onClick={() => setCancelModal({ open: true, bookingId: b._id })}
+                    >
+                      <XCircle size={14} /> Cancel
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          ))
-        ) : (
-          <div className="empty-state">
-            <Calendar size={48} className="empty-icon" />
-            <h3>No bookings found</h3>
-            <p>You haven't made any bookings with this status yet.</p>
-            <Link to="/user/vendors" className="btn-primary">
-              Browse Vendors
+          );
+        }) : (
+          <div className="ub-empty">
+            <div className="ub-empty-icon"><Search size={28} /></div>
+            <p className="ub-empty-title">No bookings found</p>
+            <p className="ub-empty-sub">
+              {filter === 'all'
+                ? "You haven't made any bookings yet."
+                : `No ${filter} bookings at the moment.`}
+            </p>
+            <Link to="/user/vendors" className="ub-btn ub-btn--primary">
+              <Sparkles size={14} /> Browse Vendors
             </Link>
           </div>
         )}
       </div>
 
-      {/* Cancel Confirmation Modal */}
+      {/* Cancel modal */}
       {cancelModal.open && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <AlertTriangle className="text-warning" size={32} />
-              <h3>Cancel Booking?</h3>
-            </div>
-            <p>Are you sure you want to cancel this booking request? This action cannot be undone.</p>
-            <div className="modal-actions">
-              <button
-                className="btn-secondary"
-                onClick={() => setCancelModal({ open: false, bookingId: null })}
-              >
-                Keep Booking
-              </button>
-              <button
-                className="btn-danger"
-                onClick={handleCancelBooking}
-              >
-                Yes, Cancel It
-              </button>
-            </div>
-          </div>
-        </div>
+        <CancelModal
+          onConfirm={handleCancel}
+          onClose={() => setCancelModal({ open: false, bookingId: null })}
+        />
       )}
     </div>
   );

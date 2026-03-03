@@ -16,7 +16,7 @@ const invitationSchema = new mongoose.Schema(
     content: {
       names: { type: String, required: true }, // e.g., "Ahmad & Sarah" or with parents
       date: { type: Date, required: true },
-      time: { type: String, required: true },
+      time: { type: String, default: '' },
       venue: {
         name: { type: String, required: true },
         city: { type: String, required: true },

@@ -1,15 +1,71 @@
-.vendor-bookings {
-  max-width: 900px;
+﻿/* â”€â”€ Page layout â”€â”€ */
+.vb-page {
+  width: 100%;
 }
 
-.page-subtitle {
-  font-size: 0.9rem;
-  color: var(--gray-500);
-  margin-top: 0.2rem;
+/* â”€â”€ Header â”€â”€ */
+.vb-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
 }
 
-/* ── Filter tabs ── */
-.filter-tabs {
+.vb-header-text {}
+
+.vb-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0 0 0.2rem;
+}
+
+.vb-subtitle {
+  font-size: 0.88rem;
+  color: var(--gray-400);
+  margin: 0;
+}
+
+/* â”€â”€ Stats row â”€â”€ */
+.vb-stats {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vb-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.65rem 1.1rem;
+  background: #fff;
+  border: 1.5px solid #eee;
+  border-radius: 10px;
+  min-width: 80px;
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.vb-stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  line-height: 1;
+}
+
+.vb-stat-label {
+  font-size: 0.73rem;
+  font-weight: 500;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* â”€â”€ Filter bar â”€â”€ */
+.vb-filter-bar {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -17,131 +73,288 @@
   flex-wrap: wrap;
 }
 
-.filter-icon {
-  color: var(--gray-400);
-  margin-right: 0.25rem;
-}
-
-.filter-tab {
-  padding: 0.35rem 0.85rem;
-  border-radius: var(--radius-pill);
+.vb-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.9rem;
+  border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 500;
   background: var(--gray-100);
   color: var(--gray-600);
-  border: none;
+  border: 1.5px solid transparent;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
-.filter-tab:hover {
+.vb-tab:hover {
   background: var(--gray-200);
   color: var(--gray-800);
 }
 
-.filter-tab-active {
-  background: var(--gray-900);
-  color: #ffffff;
+.vb-tab--active {
+  background: #D7385E;
+  color: #fff;
+  border-color: #D7385E;
 }
 
-/* ── Booking list ── */
-.bookings-list {
+/* â”€â”€ Booking list â”€â”€ */
+.vb-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
-.booking-card {
+/* â”€â”€ Booking card â”€â”€ */
+.vb-card {
+  display: flex;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.vb-card:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+.vb-card-strip {
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--card-accent, #ccc);
+}
+
+.vb-card-body {
+  flex: 1;
   padding: 1rem 1.25rem;
-}
-
-.booking-card-top {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
-.booking-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.booking-customer {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.92rem;
-  color: var(--gray-800);
-}
-
-.booking-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.booking-meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.84rem;
-  color: var(--gray-600);
-}
-
-.booking-package {
-  font-size: 0.86rem;
-  color: var(--gray-600);
-}
-
-.booking-notes {
+/* â”€â”€ Card head: customer + badge â”€â”€ */
+.vb-card-head {
   display: flex;
   align-items: flex-start;
-  gap: 0.35rem;
-  font-size: 0.84rem;
-  color: var(--gray-500);
-  padding: 0.4rem 0.6rem;
-  background: var(--gray-50);
-  border-radius: var(--radius-sm);
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
-.booking-notes span {
-  flex: 1;
+.vb-customer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
-.booking-response {
-  font-size: 0.84rem;
+.vb-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #D7385E 0%, #B82A4D 100%);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+.vb-customer-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vb-customer-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vb-customer-email {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* â”€â”€ Status badge â”€â”€ */
+.vb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* â”€â”€ Meta row â”€â”€ */
+.vb-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+
+.vb-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.83rem;
   color: var(--gray-600);
+}
+
+.vb-meta-item.vb-price {
+  font-weight: 600;
+  color: #D7385E;
+}
+
+.capitalize { text-transform: capitalize; }
+
+/* â”€â”€ Package â”€â”€ */
+.vb-package {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.83rem;
+  color: var(--gray-600);
+}
+
+/* â”€â”€ Notes â”€â”€ */
+.vb-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--gray-500);
+  padding: 0.4rem 0.65rem;
+  background: var(--gray-50);
+  border-radius: 6px;
+}
+
+.vb-notes span { flex: 1; }
+
+/* â”€â”€ Vendor response â”€â”€ */
+.vb-response {
+  font-size: 0.82rem;
+  color: var(--gray-500);
   font-style: italic;
+  padding: 0.3rem 0.65rem;
+  background: #f8fafc;
+  border-left: 3px solid #10B981;
+  border-radius: 0 6px 6px 0;
 }
 
-.capitalize {
-  text-transform: capitalize;
-}
-
-/* ── Actions ── */
-.booking-actions {
+/* â”€â”€ Card footer â”€â”€ */
+.vb-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.75rem;
-  padding-top: 0.65rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--gray-100);
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.booking-date-label {
-  font-size: 0.78rem;
+.vb-received {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.77rem;
   color: var(--gray-400);
 }
 
-.booking-btns {
+/* â”€â”€ Action buttons â”€â”€ */
+.vb-actions {
   display: flex;
   gap: 0.4rem;
 }
 
-/* ── Pagination ── */
-.pagination {
+.vb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.vb-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.vb-btn:active { transform: translateY(0); }
+
+.vb-btn-approve {
+  background: #10B981;
+  color: #fff;
+}
+
+.vb-btn-reject {
+  background: #EF4444;
+  color: #fff;
+}
+
+.vb-btn-cancel {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+}
+
+/* â”€â”€ Empty state â”€â”€ */
+.vb-empty {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  background: #fff;
+  border: 1px dashed #ddd;
+  border-radius: 14px;
+}
+
+.vb-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #fdf2f5;
+  color: #D7385E;
+  margin-bottom: 1rem;
+}
+
+.vb-empty h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin: 0 0 0.4rem;
+}
+
+.vb-empty p {
+  font-size: 0.88rem;
+  color: var(--gray-400);
+  margin: 0;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* â”€â”€ Pagination â”€â”€ */
+.vb-pagination {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,42 +362,236 @@
   margin-top: 1.25rem;
 }
 
-.pagination-info {
-  font-size: 0.85rem;
-  color: var(--gray-500);
+.vb-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  background: #fff;
+  color: var(--gray-700);
+  border: 1.5px solid var(--gray-200);
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-/* ── Respond modal ── */
-.respond-modal {
+.vb-page-btn:hover:not(:disabled) {
+  border-color: #D7385E;
+  color: #D7385E;
+}
+
+.vb-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vb-page-info {
+  font-size: 0.84rem;
+  color: var(--gray-400);
+}
+
+/* â”€â”€ Modal backdrop â”€â”€ */
+.vb-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  animation: vbFadeIn 0.18s ease;
+}
+
+@keyframes vbFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* â”€â”€ Modal box â”€â”€ */
+.vb-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
   max-width: 460px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  overflow: hidden;
+  animation: vbSlideUp 0.2s ease;
 }
 
-.respond-summary {
+@keyframes vbSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.vb-modal--approve { border-top: 4px solid #10B981; }
+.vb-modal--reject  { border-top: 4px solid #EF4444; }
+
+/* â”€â”€ Modal header â”€â”€ */
+.vb-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem 1.25rem 0.75rem;
+}
+
+.vb-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vb-modal-icon--approve { background: #ECFDF5; color: #10B981; }
+.vb-modal-icon--reject  { background: #FEF2F2; color: #EF4444; }
+
+.vb-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0 0 0.15rem;
+}
+
+.vb-modal-sub {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+  margin: 0;
+}
+
+.vb-modal-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-400);
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  transition: background 0.15s, color 0.15s;
+}
+
+.vb-modal-close:hover { background: var(--gray-100); color: var(--gray-700); }
+
+/* â”€â”€ Modal summary â”€â”€ */
+.vb-modal-summary {
+  margin: 0 1.25rem 0.75rem;
   background: var(--gray-50);
+  border-radius: 10px;
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vb-summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+
+.vb-summary-label {
+  width: 70px;
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--gray-500);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vb-summary-val {
+  color: var(--gray-800);
   font-size: 0.88rem;
 }
 
-.respond-summary p {
-  margin: 0.2rem 0;
+/* â”€â”€ Modal field â”€â”€ */
+.vb-modal-field {
+  padding: 0 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.vb-modal-label {
+  font-size: 0.84rem;
+  font-weight: 600;
   color: var(--gray-700);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
-.respond-modal textarea {
+.vb-modal-label-hint {
+  font-weight: 400;
+  color: var(--gray-400);
+  font-size: 0.78rem;
+}
+
+.vb-modal-textarea {
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: var(--gray-800);
   resize: vertical;
-  min-height: 70px;
+  min-height: 72px;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
 }
 
-.modal-actions {
+.vb-modal-textarea:focus {
+  outline: none;
+  border-color: #D7385E;
+  box-shadow: 0 0 0 3px rgba(215,56,94,0.1);
+}
+
+/* â”€â”€ Modal actions â”€â”€ */
+.vb-modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  padding: 0.75rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--gray-100);
 }
 
-.empty-icon {
-  color: var(--gray-300);
-  margin-bottom: 0.5rem;
+.vb-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
 }
+
+.vb-modal-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.vb-modal-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+.vb-modal-btn--cancel {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1.5px solid var(--gray-200);
+}
+
+.vb-modal-btn--approve {
+  background: #10B981;
+  color: #fff;
+}
+
+.vb-modal-btn--reject {
+  background: #EF4444;
+  color: #fff;
+}
+

@@ -2,6 +2,7 @@ import Booking from '../models/Booking.model.js';
 import Vendor from '../models/Vendor.model.js';
 import Notification from '../models/Notification.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
+import Budget from '../models/Budget.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { sendEmail } from '../config/email.js';
 
@@ -272,6 +273,28 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
   if (status === 'approved') {
     vendor.totalBookings += 1;
     await vendor.save({ validateBeforeSave: false });
+
+    // Auto-add a budget item for the user when booking is confirmed
+    try {
+      const userBudget = await Budget.findOne({ user: booking.user._id });
+      if (userBudget) {
+        const categoryLabel = vendor.category
+          ? vendor.category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+          : 'Vendor';
+        userBudget.items.push({
+          category: categoryLabel,
+          notes: `Booked: ${vendor.businessName}`,
+          allocatedAmount: booking.agreedPrice || 0,
+          spentAmount: booking.agreedPrice || 0,
+          vendorId: vendor._id,
+          bookingId: booking._id,
+        });
+        await userBudget.save();
+      }
+    } catch (budgetErr) {
+      // Non-fatal — log but don't block booking approval
+      console.error('Budget auto-update failed:', budgetErr.message);
+    }
   }
 
   // Notify user
@@ -290,6 +313,15 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
     to: booking.user.email,
     subject: `VidAI - Booking ${status === 'approved' ? 'Approved' : 'Rejected'}`,
     text: `Your booking with ${vendor.businessName} has been ${status}.`,
+  });
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: status === 'approved' ? 'accept_booking' : 'reject_booking',
+    resourceType: 'Booking',
+    resourceId: booking._id,
+    details: `Vendor ${vendor.businessName} ${status} booking #${booking._id}`,
   });
 
   res.status(200).json({
@@ -338,6 +370,15 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   // Decrement vendor's totalBookings counter
   await Vendor.findByIdAndUpdate(booking.vendor._id, { $inc: { totalBookings: -1 } });
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'cancel_booking',
+    resourceType: 'Booking',
+    resourceId: booking._id,
+    details: `Booking cancelled by ${booking.cancelledBy}${booking.cancellationReason ? ': ' + booking.cancellationReason : ''}`,
+  });
 
   res.status(200).json({
     success: true,

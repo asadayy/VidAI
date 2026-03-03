@@ -8,13 +8,21 @@ import {
   toggleUserStatus,
   getActivityLogs,
   getSystemHealth,
+  getAllBookings,
 } from '../controllers/admin.controller.js';
-import { protect, authorize } from '../middleware/auth.middleware.js';
+import { loginAdmin, getAdminMe } from '../controllers/admin-auth.controller.js';
+import { protectAdmin } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-// All admin routes require admin role
-router.use(protect, authorize('admin'));
+// ── Admin auth (public) ──
+router.post('/auth/login', loginAdmin);
+
+// ── Admin auth (protected) ──
+router.get('/auth/me', protectAdmin, getAdminMe);
+
+// ── All remaining admin routes require admin token ──
+router.use(protectAdmin);
 
 router.get('/dashboard', getDashboardStats);
 router.get('/users', getAllUsers);
@@ -24,5 +32,6 @@ router.patch('/vendors/:id/reject', rejectVendor);
 router.patch('/users/:id/toggle-status', toggleUserStatus);
 router.get('/activity-logs', getActivityLogs);
 router.get('/system-health', getSystemHealth);
+router.get('/bookings', getAllBookings);
 
 export default router;

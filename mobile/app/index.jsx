@@ -16,6 +16,6 @@ export default function Index() {
     return <Redirect href="/(tabs)/dashboard" />;
   }
 
-  // Guests are redirected to the vendors listing
-  return <Redirect href="/(tabs)/vendors" />;
+  // Unauthenticated — go to login
+  return <Redirect href="/(auth)/login" />;
 }

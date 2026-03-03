@@ -1,4 +1,6 @@
 import Vendor from '../models/Vendor.model.js';
+import User from '../models/User.model.js';
+import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import slugify from 'slugify';
 import Review from '../models/Review.model.js';
@@ -185,6 +187,7 @@ export const createVendorProfile = asyncHandler(async (req, res) => {
   const {
     businessName, category, description, city, address,
     phone, whatsapp, email, website,
+    googleMapLink, socialMedia, personalDetails,
   } = req.body;
 
   const slug = slugify(businessName, { lower: true, strict: true }) + '-' + Date.now().toString(36);
@@ -201,6 +204,40 @@ export const createVendorProfile = asyncHandler(async (req, res) => {
     whatsapp,
     email: email || req.user.email,
     website,
+    googleMapLink: googleMapLink || '',
+    socialMedia: socialMedia || {},
+  });
+
+  // Update user record with personal details from onboarding
+  const user = await User.findById(req.user._id);
+  if (user) {
+    if (personalDetails) {
+      const fullName = `${personalDetails.firstName || ''} ${personalDetails.lastName || ''}`.trim();
+      if (fullName && (!user.name || user.name === user.email.split('@')[0])) {
+        user.name = fullName;
+      }
+      if (personalDetails.phone && !user.phone) {
+        user.phone = personalDetails.phone;
+      }
+    }
+    // Mark vendor onboarding as complete
+    user.onboarding = {
+      ...user.onboarding,
+      isComplete: true,
+      firstName: personalDetails?.firstName || '',
+      lastName: personalDetails?.lastName || '',
+      phone: personalDetails?.phone || '',
+    };
+    await user.save({ validateBeforeSave: false });
+  }
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'create_vendor_profile',
+    resourceType: 'Vendor',
+    resourceId: vendor._id,
+    details: `Vendor profile created: ${vendor.businessName}`,
   });
 
   res.status(201).json({
@@ -248,6 +285,7 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
   const allowedFields = [
     'businessName', 'category', 'description', 'city', 'address',
     'phone', 'whatsapp', 'email', 'website', 'coverImage', 'location',
+    'googleMapLink', 'socialMedia',
   ];
 
   allowedFields.forEach((field) => {
@@ -262,6 +300,15 @@ export const updateVendorProfile = asyncHandler(async (req, res) => {
   }
 
   await vendor.save();
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_vendor_profile',
+    resourceType: 'Vendor',
+    resourceId: vendor._id,
+    details: `Vendor profile updated: ${vendor.businessName}`,
+  });
 
   res.status(200).json({
     success: true,
@@ -390,6 +437,15 @@ export const addReview = asyncHandler(async (req, res) => {
       rating: Number(rating),
       title,
       comment
+    });
+
+    // Log activity
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'leave_review',
+      resourceType: 'Review',
+      resourceId: review._id,
+      details: `User left a ${rating}-star review for vendor ${vendor.businessName}`,
     });
 
     res.status(201).json({

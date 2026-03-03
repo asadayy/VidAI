@@ -42,11 +42,19 @@ const userSchema = new mongoose.Schema(
       isComplete: { type: Boolean, default: false },
       firstName: String,
       lastName: String,
-      weddingLocation: String,
-      eventDate: Date,
-      guestCount: Number,
-      lookingFor: [String],
+      phone: String,
+      // Event planning
       eventTypes: [String],
+      eventDate: Date,
+      weddingLocation: String,
+      // Venue & guest preferences
+      venueType: String,
+      guestCount: Number,
+      foodPreference: String,
+      // Budget (single total amount in PKR, shared with Budget Planner)
+      totalBudget: { type: Number, default: 0 },
+      // Legacy fields kept for backward compat
+      lookingFor: [String],
       budgets: {
         type: Map,
         of: String

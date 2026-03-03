@@ -34,6 +34,7 @@ app.use(helmet());
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://localhost:8081',
   'http://10.1.146.230:5173',
   'http://192.168.2.102:5173',
 ];

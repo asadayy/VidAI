@@ -23,7 +23,7 @@ const PUBLIC_NAV_ITEMS = [
 ];
 
 const PRIVATE_NAV_ITEMS = [
-  { to: '/user', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/user', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/user/bookings', icon: Calendar, label: 'Bookings' },
   { to: '/user/budget', icon: Calculator, label: 'Budget' },
   { to: '/user/chat', icon: MessageCircle, label: 'Chat' },
@@ -52,7 +52,7 @@ function UserLayout() {
   };
 
   const navItems = isAuthenticated
-    ? [...PUBLIC_NAV_ITEMS.slice(0, 1), ...PRIVATE_NAV_ITEMS, PUBLIC_NAV_ITEMS[1]]
+    ? [PUBLIC_NAV_ITEMS[0], PRIVATE_NAV_ITEMS[0], PUBLIC_NAV_ITEMS[1], ...PRIVATE_NAV_ITEMS.slice(1)]
     : PUBLIC_NAV_ITEMS;
 
   return (
@@ -66,10 +66,11 @@ function UserLayout() {
 
           {/* Desktop Navigation */}
           <nav className="user-nav-desktop">
-            {navItems.map(({ to, icon: NavIcon, label }) => (
+            {navItems.map(({ to, icon: NavIcon, label, end }) => (
               <NavLink
                 key={to}
                 to={to}
+                end={end}
                 className={({ isActive }) =>
                   `user-nav-link ${isActive ? 'active' : ''}`
                 }
@@ -117,10 +118,11 @@ function UserLayout() {
         {/* Mobile Navigation Menu */}
         {isMobileMenuOpen && (
           <nav className="user-nav-mobile">
-            {navItems.map(({ to, icon: NavIcon, label }) => (
+            {navItems.map(({ to, icon: NavIcon, label, end }) => (
               <NavLink
                 key={to}
                 to={to}
+                end={end}
                 className={({ isActive }) =>
                   `user-nav-link-mobile ${isActive ? 'active' : ''}`
                 }

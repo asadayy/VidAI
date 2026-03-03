@@ -1,243 +1,723 @@
-.invitation-generator-container {
-    max-width: 1200px;
+/* ─────────────────────────────────────────────────────
+   InvitationGenerator   ig-* namespace
+───────────────────────────────────────────────────── */
+
+/* Layout */
+.ig-page {
+    max-width: 1160px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 2rem 1.5rem;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 420px;
     gap: 2rem;
+    align-items: start;
 }
 
-@media (max-width: 992px) {
-    .invitation-generator-container {
-        grid-template-columns: 1fr;
-    }
-}
-
-.generator-form-card {
-    background: white;
+/* ── Form Card ─────────────────────────────────────── */
+.ig-form-card {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 32px rgba(0,0,0,.07);
     padding: 2rem;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
+    border: 1px solid #f0e6ea;
 }
 
-.wizard-steps {
+/* ── Stepper ───────────────────────────────────────── */
+.ig-stepper {
     display: flex;
+    align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 2rem;
     position: relative;
+    margin-bottom: 2.25rem;
 }
 
-.wizard-steps::before {
-    content: '';
+.ig-stepper-line {
     position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
+    top: 17px;
+    left: 12%;
+    right: 12%;
     height: 2px;
-    background: var(--gray-200);
-    z-index: 1;
+    background: #f3e4e9;
+    z-index: 0;
 }
 
-.step-indicator {
-    width: 35px;
-    height: 35px;
+.ig-stepper-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 1;
+    flex: 1;
+}
+
+.ig-stepper-dot {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: white;
-    border: 2px solid var(--gray-200);
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 0.8rem;
     font-weight: 700;
-    position: relative;
-    z-index: 2;
-    color: var(--gray-500);
-    transition: all 0.3s ease;
+    background: #f3e4e9;
+    color: #c9a0ac;
+    border: 2px solid #f3e4e9;
+    transition: all .25s;
 }
 
-.step-indicator.active {
-    border-color: var(--pink);
-    background: var(--pink);
-    color: white;
+.ig-stepper-dot--active {
+    background: #D7385E;
+    color: #fff;
+    border-color: #D7385E;
+    box-shadow: 0 0 0 4px rgba(215,56,94,.15);
 }
 
-.step-indicator.completed {
-    border-color: var(--pink);
-    background: white;
-    color: var(--pink);
+.ig-stepper-dot--done {
+    background: #fff;
+    color: #D7385E;
+    border-color: #D7385E;
 }
 
-.form-step-content {
-    min-height: 400px;
+.ig-stepper-label {
+    font-size: 0.72rem;
+    color: #b0a0a5;
+    font-weight: 500;
+    text-align: center;
 }
 
-.form-group {
-    margin-bottom: 1.5rem;
+.ig-stepper-label--active {
+    color: #D7385E;
+    font-weight: 700;
 }
 
-.form-group label {
-    display: block;
+/* ── Step content ──────────────────────────────────── */
+.ig-step {
+    min-height: 360px;
+}
+
+.ig-step-head {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid #faeaed;
+}
+
+.ig-step-icon {
+    color: #D7385E;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.ig-step-title {
+    margin: 0 0 .2rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.ig-step-sub {
+    margin: 0;
+    font-size: .82rem;
+    color: #888;
+}
+
+.ig-field {
+    margin-bottom: 1.25rem;
+}
+
+.ig-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: .82rem;
     font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--gray-700);
+    color: #555;
+    margin-bottom: .45rem;
 }
 
-.form-input,
-.form-select,
-.form-textarea {
+.ig-optional {
+    font-weight: 400;
+    color: #aaa;
+    margin-left: 4px;
+}
+
+.ig-input {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid var(--gray-300);
-    border-radius: var(--radius-md);
-    font-size: 0.95rem;
+    padding: .6rem .85rem;
+    border: 1.5px solid #e8d5da;
+    border-radius: 10px;
+    font-size: .9rem;
+    color: #222;
+    background: #fffbfc;
+    transition: border-color .2s, box-shadow .2s;
+    box-sizing: border-box;
 }
 
-.form-input:focus,
-.form-select:focus {
+.ig-input:focus {
     outline: none;
-    border-color: var(--pink);
-    box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
+    border-color: #D7385E;
+    box-shadow: 0 0 0 3px rgba(215,56,94,.1);
 }
 
-.options-grid {
+.ig-row-2 {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
 }
 
-.option-card {
-    padding: 1rem;
-    border: 2px solid var(--gray-100);
-    border-radius: var(--radius-md);
+/* ── Theme option cards ────────────────────────────── */
+.ig-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+}
+
+.ig-opt-card {
+    border: 2px solid #f0e6ea;
+    border-radius: 14px;
+    padding: .85rem .9rem;
     cursor: pointer;
-    text-align: center;
-    transition: all 0.2s;
+    background: #fff;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    position: relative;
+    transition: border-color .2s, box-shadow .2s, transform .15s;
 }
 
-.option-card:hover {
-    border-color: var(--pink-light);
+.ig-opt-card:hover {
+    border-color: #f472b6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(215,56,94,.1);
 }
 
-.option-card.selected {
-    border-color: var(--pink);
-    background: var(--pink-50);
+.ig-opt-card--sel {
+    border-color: #D7385E;
+    background: linear-gradient(135deg, #fff5f7, #fff);
+    box-shadow: 0 4px 16px rgba(215,56,94,.14);
 }
 
-.wizard-actions {
+.ig-opt-emoji  { font-size: 1.4rem; }
+.ig-opt-name   { font-size: .85rem; font-weight: 700; color: #222; }
+.ig-opt-desc   { font-size: .73rem; color: #888; line-height: 1.4; }
+
+.ig-opt-check {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    color: #D7385E;
+}
+
+/* ── Orientation btns ──────────────────────────────── */
+.ig-orient-btn {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .65rem 1rem;
+    border: 2px solid #f0e6ea;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    font-size: .85rem;
+    font-weight: 600;
+    color: #555;
+    transition: border-color .2s, background .2s;
+}
+
+.ig-orient-btn:hover    { border-color: #f472b6; }
+.ig-orient-btn--sel     { border-color: #D7385E; background: #fff5f7; color: #D7385E; }
+
+.ig-orient-icon {
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    opacity: .6;
+}
+
+.ig-orient-icon--portrait  { width: 14px; height: 20px; }
+.ig-orient-icon--landscape { width: 20px; height: 14px; }
+
+/* ── Tone List ─────────────────────────────────────── */
+.ig-tone-list {
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+    margin-bottom: 2rem;
+}
+
+.ig-tone-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    border: 2px solid #f0e6ea;
+    border-radius: 14px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.ig-tone-card:hover   { border-color: #f472b6; }
+.ig-tone-card--sel    { border-color: #D7385E; background: #fff5f7; box-shadow: 0 3px 12px rgba(215,56,94,.12); }
+
+.ig-tone-emoji { font-size: 1.5rem; flex-shrink: 0; }
+
+.ig-tone-body {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    flex: 1;
+}
+
+.ig-tone-name { font-size: .9rem; font-weight: 700; color: #222; }
+.ig-tone-desc { font-size: .78rem; color: #888; }
+
+.ig-tone-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #e0d0d4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .2s;
+}
+
+.ig-tone-dot--sel {
+    background: #D7385E;
+    border-color: #D7385E;
+    color: #fff;
+}
+
+/* ── Generate ──────────────────────────────────────── */
+.ig-generate-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    margin-top: .5rem;
+}
+
+.ig-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .85rem 2.2rem;
+    background: linear-gradient(135deg, #D7385E, #f472b6);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 6px 24px rgba(215,56,94,.35);
+    transition: opacity .2s, transform .2s;
+}
+
+.ig-generate-btn:hover:not(:disabled) {
+    opacity: .9;
+    transform: translateY(-2px);
+}
+
+.ig-generate-btn:disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.ig-generate-note {
+    font-size: .75rem;
+    color: #aaa;
+    margin: 0;
+}
+
+/* ── Spinner ───────────────────────────────────────── */
+@keyframes igSpin { to { transform: rotate(360deg); } }
+.ig-spin { animation: igSpin .9s linear infinite; }
+
+/* ── Nav buttons ───────────────────────────────────── */
+.ig-nav {
     display: flex;
     justify-content: space-between;
     margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--gray-100);
+    padding-top: 1.25rem;
+    border-top: 1px solid #faeaed;
 }
 
-/* --- Preview Styles --- */
-.preview-container {
+.ig-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .6rem 1.4rem;
+    border-radius: 10px;
+    font-size: .875rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.ig-nav-btn--back {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.ig-nav-btn--back:hover:not(:disabled) { background: #ececec; }
+.ig-nav-btn--back:disabled { opacity: .4; cursor: not-allowed; }
+
+.ig-nav-btn--next {
+    background: linear-gradient(135deg, #D7385E, #f472b6);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(215,56,94,.3);
+}
+
+.ig-nav-btn--next:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ── Step 4 Result ─────────────────────────────────── */
+.ig-step--result {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: .5rem;
+}
+
+.ig-result-badge {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D7385E, #f472b6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    box-shadow: 0 6px 20px rgba(215,56,94,.3);
+}
+
+.ig-result-title {
+    margin: 0 0 .25rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1a1a2e;
+}
+
+.ig-result-sub {
+    font-size: .82rem;
+    color: #aaa;
+    margin: 0 0 1.5rem;
+}
+
+/* Image display */
+.ig-image-wrap {
+    position: relative;
+    display: inline-block;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    margin-bottom: 1.5rem;
+}
+
+.ig-invite-img {
+    display: block;
+    width: 240px;
+    max-height: 480px;
+    object-fit: cover;
+}
+
+.ig-img-download {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .6rem 1.4rem;
+    background: rgba(0,0,0,.75);
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: opacity .25s, transform .25s;
+    white-space: nowrap;
+}
+
+.ig-image-wrap:hover .ig-img-download {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.ig-img-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    padding: 2rem 1.5rem;
+    background: #fdf2f5;
+    border-radius: 14px;
+    margin-bottom: 1.5rem;
+    color: #c9a0ac;
+    min-width: 220px;
+}
+
+.ig-img-loading p {
+    margin: 0;
+    font-size: .9rem;
+    font-weight: 600;
+    color: #888;
+}
+
+.ig-img-loading span { font-size: .75rem; color: #bbb; }
+
+.ig-regen-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .82rem;
+    color: #aaa;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: .4rem .8rem;
+    border-radius: 8px;
+    transition: color .2s, background .2s;
+}
+
+.ig-regen-btn:hover { color: #D7385E; background: #fff0f3; }
+
+/* ══════════════════════════════════════════════════
+   Right: Preview Panel
+══════════════════════════════════════════════════ */
+.ig-preview-panel {
     position: sticky;
-    top: 100px;
-    height: fit-content;
+    top: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .75rem;
+}
+
+.ig-preview-label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .78rem;
+    font-weight: 700;
+    color: #D7385E;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.ig-preview-note {
+    font-size: .7rem;
+    color: #bbb;
+    text-align: center;
+    margin: 0;
+}
+
+/* Preview card wrapper with hover-download */
+.ig-preview-wrap {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-.invitation-preview {
-    width: 100%;
-    max-width: 400px;
-    background: white;
-    aspect-ratio: 9/16;
-    border-radius: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-    overflow: hidden;
-    position: relative;
+.ig-preview-dl {
     display: flex;
-    flex-direction: column;
-    padding: 2.5rem;
-    text-align: center;
+    align-items: center;
+    gap: .4rem;
+    margin-top: .75rem;
+    padding: .5rem 1.2rem;
+    background: #fff;
+    border: 1.5px solid #f0e6ea;
+    border-radius: 50px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: #D7385E;
+    cursor: pointer;
+    transition: background .2s, border-color .2s, box-shadow .2s;
 }
 
-.invitation-preview.landscape {
-    aspect-ratio: 16/9;
+.ig-preview-dl:hover {
+    background: #fff5f7;
+    border-color: #D7385E;
+    box-shadow: 0 3px 10px rgba(215,56,94,.15);
+}
+
+/* ── Invitation Preview Card ───────────────────────── */
+.ig-preview-card {
+    width: 260px;
+    min-height: 420px;
+    border-radius: 18px;
+    padding: 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .6rem;
+    text-align: center;
+    box-shadow: 0 8px 36px rgba(0,0,0,.13);
+    overflow: hidden;
+    position: relative;
+    transition: all .3s;
+}
+
+.ig-preview-card.landscape {
+    width: 340px;
+    min-height: 240px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    text-align: left;
+    align-items: flex-start;
 }
 
 /* Theme: Modern Minimalist */
 .theme-modern_minimalist {
-    font-family: 'Inter', sans-serif;
-    border: 1px solid var(--gray-100);
+    background: #fafafa;
+    font-family: 'Helvetica Neue', sans-serif;
+    border: 1px solid #e0e0e0;
 }
 
-/* Theme: Traditional/Ornate */
+.theme-modern_minimalist .ig-pc-names { color: #111; font-size: 1.4rem; }
+.theme-modern_minimalist .ig-pc-header { color: #888; font-size: .72rem; text-transform: uppercase; letter-spacing: .15em; }
+.theme-modern_minimalist .ig-pc-divider { border-color: #ddd; }
+
+/* Theme: Traditional */
 .theme-traditional_ornate {
-    font-family: 'Playfair Display', serif;
-    border: 8px double var(--gray-200);
-    background-image: url('https://www.transparenttextures.com/patterns/natural-paper.png');
+    background: linear-gradient(160deg, #fdf6e3, #f8edcc);
+    font-family: Georgia, serif;
+    border: 2px solid #c8a44a;
 }
 
-/* Theme: Floral/Bohemian */
+.theme-traditional_ornate .ig-pc-names { color: #7a5e1a; font-size: 1.5rem; font-style: italic; }
+.theme-traditional_ornate .ig-pc-header { color: #a07a2a; font-size: .8rem; }
+.theme-traditional_ornate .ig-pc-divider { border-color: #c8a44a; }
+
+/* Theme: Floral / Bohemian */
 .theme-floral_bohemian {
-    font-family: 'Cormorant Garamond', serif;
-    background-color: #fff9f9;
+    background: linear-gradient(160deg, #fdf2f7, #f7f0f7);
+    font-family: 'Georgia', serif;
+    border: 1.5px solid #e8a4c8;
 }
+
+.theme-floral_bohemian .ig-pc-names { color: #8b4d7b; font-size: 1.4rem; font-style: italic; }
+.theme-floral_bohemian .ig-pc-header { color: #c990b0; font-size: .78rem; }
+.theme-floral_bohemian .ig-pc-divider { border-color: #e8a4c8; }
 
 /* Theme: Whimsical */
 .theme-whimsical {
-    font-family: 'Outfit', sans-serif;
-    background-color: #f0f7ff;
+    background: linear-gradient(135deg, #e8f4fd, #fde8f5);
+    font-family: cursive;
+    border: 2px dashed #96c8e8;
 }
 
-.card-header {
-    font-size: 1.2rem;
-    font-weight: 500;
-    margin-bottom: 2rem;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+.theme-whimsical .ig-pc-names { color: #3a7ab5; font-size: 1.4rem; }
+.theme-whimsical .ig-pc-header { color: #6ab0d8; font-size: .8rem; }
+.theme-whimsical .ig-pc-divider { border-color: #96c8e8; }
+
+/* Card elements */
+.ig-pc-header {
+    font-size: .75rem;
+    font-weight: 600;
+    opacity: .8;
+    line-height: 1.4;
+    width: 100%;
 }
 
-.card-names {
-    font-size: 2.5rem;
-    margin: 1.5rem 0;
+.ig-pc-names {
+    font-size: 1.35rem;
+    font-weight: 800;
     line-height: 1.2;
+    width: 100%;
 }
 
-.card-body {
-    font-size: 1rem;
-    margin: 2rem 0;
-    line-height: 1.6;
-}
-
-.card-venue {
-    font-weight: 600;
-    margin-top: auto;
-}
-
-.card-date-time {
-    margin-top: 0.5rem;
-}
-
-.card-rsvp {
-    margin-top: 1.5rem;
-    font-size: 0.85rem;
-    font-style: italic;
-}
-
-.btn-generate {
-    background: var(--gradient);
-    color: white;
-    padding: 0.8rem 2rem;
-    border-radius: var(--radius-full);
-    font-weight: 600;
+.ig-pc-divider {
+    width: 60px;
     border: none;
-    cursor: pointer;
-    box-shadow: var(--shadow-lg);
-    transition: all 0.3s;
+    border-top: 1.5px solid;
+    opacity: .5;
+    margin: .2rem 0;
+    align-self: center;
 }
 
-.btn-generate:hover {
-    transform: scale(1.05);
-    opacity: 0.9;
+.ig-pc-body {
+    font-size: .75rem;
+    line-height: 1.6;
+    opacity: .75;
+    width: 100%;
 }
 
-.btn-generate:disabled {
-    background: var(--gray-400);
-    cursor: not-allowed;
-    transform: none;
+.ig-pc-venue {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .72rem;
+    font-weight: 600;
+    opacity: .8;
+    margin-top: .25rem;
 }
+
+.ig-pc-datetime {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .7rem;
+    opacity: .7;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ig-pc-sep { opacity: .4; }
+
+.ig-pc-footer {
+    font-size: .7rem;
+    opacity: .65;
+    font-style: italic;
+    line-height: 1.5;
+    margin-top: .25rem;
+    width: 100%;
+}
+
+.ig-pc-rsvp {
+    font-size: .68rem;
+    font-weight: 700;
+    opacity: .5;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-top: .2rem;
+}
+
+/* ── Responsive ────────────────────────────────────── */
+@media (max-width: 1040px) {
+    .ig-page {
+        grid-template-columns: 1fr;
+    }
+
+    .ig-preview-panel {
+        position: static;
+        order: -1;
+        border-radius: 20px;
+        background: #fff;
+        padding: 1.5rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,.06);
+    }
+}
+
+@media (max-width: 600px) {
+    .ig-cards-grid   { grid-template-columns: 1fr; }
+    .ig-row-2        { grid-template-columns: 1fr; }
+    .ig-preview-card { width: 220px; }
+    .ig-form-card    { padding: 1.25rem; }
+}
+
+
+

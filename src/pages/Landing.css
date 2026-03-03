@@ -204,15 +204,20 @@
   align-items: center;
   justify-content: center;
   z-index: 40;
+  padding: 1.5rem;
+  overflow-y: auto;
 }
 
 .modal-content {
   background: #ffffff;
   width: 100%;
   max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: 1.2rem;
   padding: 1.5rem 1.7rem 1.7rem;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+  margin: auto;
 }
 
 .modal-header {
@@ -278,11 +283,14 @@
   color: #4b5563;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   border-radius: 0.7rem;
   border: 1px solid rgba(148, 163, 184, 0.9);
   padding: 0.55rem 0.7rem;
   font-size: 0.9rem;
+  width: 100%;
+  background: #fff;
 }
 
 .form-footer {

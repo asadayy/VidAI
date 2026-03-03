@@ -1,63 +1,63 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import {
+    View, Text, StyleSheet, TouchableOpacity, ScrollView,
+    SafeAreaView, TextInput
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import Button from '../../components/Button';
 import { useOnboarding } from './_layout';
 
-const LOOKING_FOR_OPTIONS = [
-    'Wedding Venue', 'Photographer', 'Makeup Artist', 'Decor',
-    'Catering', 'Henna Artist', 'Car Rental', 'Wedding Stationery'
+const VENUE_TYPES = ['Banquet Hall', 'Outdoor Garden', 'Farmhouse', 'Marquee'];
+
+const FOOD_OPTIONS = [
+    'Full Buffet', 'Hi-Tea', 'Sit-down Dinner', 'Mixed / Fusion', 'No Preference'
 ];
 
-const EVENT_TYPES = [
-    'Baraat', 'Walima', 'Mehndi', 'Nikkah',
-    'Engagement', 'Home-based Event', 'Other'
-];
+const GUEST_PRESETS = [50, 100, 200, 500, 1000];
 
 export default function Step3() {
     const router = useRouter();
     const { onboardingData, updateOnboardingData } = useOnboarding();
 
-    const [guestCount, setGuestCount] = useState(onboardingData.guestCount || 200);
-    const [lookingFor, setLookingFor] = useState(onboardingData.lookingFor || []);
-    const [eventTypes, setEventTypes] = useState(onboardingData.eventTypes || []);
+    const [venueType, setVenueType] = useState(onboardingData.venueType || '');
+    const [guestCount, setGuestCount] = useState(
+        onboardingData.guestCount ? String(onboardingData.guestCount) : '200'
+    );
+    const [foodPreference, setFoodPreference] = useState(onboardingData.foodPreference || '');
+    const [errors, setErrors] = useState({});
 
-    const toggleLookingFor = (item) => {
-        setLookingFor(prev =>
-            prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
-        );
-    };
-
-    const toggleEventType = (item) => {
-        setEventTypes(prev =>
-            prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
-        );
-    };
+    const increment = () => setGuestCount(prev => String(Math.min(5000, (parseInt(prev) || 0) + 10)));
+    const decrement = () => setGuestCount(prev => String(Math.max(10, (parseInt(prev) || 10) - 10)));
 
     const handleContinue = () => {
-        updateOnboardingData({ guestCount, lookingFor, eventTypes });
+        const newErrors = {};
+        if (!venueType) newErrors.venueType = 'Please select a venue type';
+        const parsed = parseInt(guestCount);
+        if (!guestCount || isNaN(parsed) || parsed < 1) newErrors.guestCount = 'Please enter a valid guest count';
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
+            return;
+        }
+
+        updateOnboardingData({
+            venueType,
+            guestCount: parseInt(guestCount),
+            foodPreference,
+        });
         router.push('/onboarding/step4');
     };
-
-    const handleSkip = () => {
-        router.push('/onboarding/step4');
-    };
-
-    // Mock vertical wheel items near selected guestCount
-    const guestItems = [guestCount - 20, guestCount - 10, guestCount, guestCount + 10, guestCount + 20];
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <View style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scroll}>
-                    {/* Header */}
-                    <View style={styles.topRow}>
-                        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                            <Feather name="chevron-left" size={24} color="#000" />
-                        </TouchableOpacity>
-                    </View>
+                    {/* Back */}
+                    <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                        <Feather name="chevron-left" size={24} color="#000" />
+                    </TouchableOpacity>
 
                     {/* Progress Bar */}
                     <View style={styles.progressContainer}>
@@ -65,77 +65,92 @@ export default function Step3() {
                     </View>
 
                     <View style={styles.header}>
-                        <Text style={styles.title}>Your guests and preferences</Text>
-                        <Text style={styles.subtitle}>We'll find the best match for you based on these details</Text>
+                        <Text style={styles.stepLabel}>Step 3 of 4</Text>
+                        <Text style={styles.title}>🏛️ Venue & Guest Preferences</Text>
+                        <Text style={styles.subtitle}>Help us understand your ideal setup.</Text>
                     </View>
 
-                    {/* Number of Guests */}
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Number of guests</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.manualText}>+ Type manually</Text>
+                    {/* Venue Type */}
+                    <Text style={styles.label}>What kind of venue do you want? *</Text>
+                    <View style={styles.chipGrid}>
+                        {VENUE_TYPES.map((v) => {
+                            const active = venueType === v;
+                            return (
+                                <TouchableOpacity
+                                    key={v}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => {
+                                        setVenueType(v);
+                                        setErrors(prev => ({ ...prev, venueType: null }));
+                                    }}
+                                >
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{v}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                    {errors.venueType && <Text style={styles.errorText}>{errors.venueType}</Text>}
+
+                    {/* Guest Count */}
+                    <Text style={[styles.label, { marginTop: theme.spacing.lg }]}>
+                        How many guests do you expect?
+                    </Text>
+                    <View style={styles.guestRow}>
+                        <TouchableOpacity style={styles.counterBtn} onPress={decrement}>
+                            <Feather name="minus" size={20} color={theme.colors.primary} />
+                        </TouchableOpacity>
+                        <TextInput
+                            style={styles.guestInput}
+                            value={guestCount}
+                            onChangeText={(t) => {
+                                setGuestCount(t.replace(/[^0-9]/g, ''));
+                                setErrors(prev => ({ ...prev, guestCount: null }));
+                            }}
+                            keyboardType="number-pad"
+                            textAlign="center"
+                        />
+                        <TouchableOpacity style={styles.counterBtn} onPress={increment}>
+                            <Feather name="plus" size={20} color={theme.colors.primary} />
                         </TouchableOpacity>
                     </View>
+                    {/* Quick picks */}
+                    <View style={styles.presetRow}>
+                        {GUEST_PRESETS.map((n) => (
+                            <TouchableOpacity
+                                key={n}
+                                style={[styles.presetChip, String(n) === guestCount && styles.chipActive]}
+                                onPress={() => setGuestCount(String(n))}
+                            >
+                                <Text style={[styles.presetChipText, String(n) === guestCount && styles.chipTextActive]}>
+                                    {n}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                    {errors.guestCount && <Text style={styles.errorText}>{errors.guestCount}</Text>}
 
-                    <View style={styles.guestSelectorBox}>
-                        {guestItems.map((val) => {
-                            const isActive = val === guestCount;
+                    {/* Food Preference */}
+                    <Text style={[styles.label, { marginTop: theme.spacing.lg }]}>
+                        What kind of food do you want to serve?
+                    </Text>
+                    <View style={styles.chipGrid}>
+                        {FOOD_OPTIONS.map((f) => {
+                            const active = foodPreference === f;
                             return (
                                 <TouchableOpacity
-                                    key={val}
-                                    style={[styles.guestItem]}
-                                    onPress={() => setGuestCount(val)}
+                                    key={f}
+                                    style={[styles.chip, active && styles.chipActive]}
+                                    onPress={() => setFoodPreference(active ? '' : f)}
                                 >
-                                    <Text style={[styles.guestText, isActive && styles.guestTextActive]}>
-                                        {val}
-                                    </Text>
+                                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{f}</Text>
                                 </TouchableOpacity>
                             );
                         })}
                     </View>
-
-                    {/* Looking For */}
-                    <Text style={styles.sectionTitleOptions}>I'm looking for</Text>
-                    <View style={styles.chipContainer}>
-                        {LOOKING_FOR_OPTIONS.map((item) => {
-                            const isActive = lookingFor.includes(item);
-                            return (
-                                <TouchableOpacity
-                                    key={item}
-                                    style={[styles.chip, isActive && styles.chipActive]}
-                                    onPress={() => toggleLookingFor(item)}
-                                >
-                                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-
-                    {/* Event Type */}
-                    <Text style={styles.sectionTitleOptions}>Event Type</Text>
-                    <View style={styles.chipContainer}>
-                        {EVENT_TYPES.map((item) => {
-                            const isActive = eventTypes.includes(item);
-                            return (
-                                <TouchableOpacity
-                                    key={item}
-                                    style={[styles.chip, isActive && styles.chipActive]}
-                                    onPress={() => toggleEventType(item)}
-                                >
-                                    <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-
                 </ScrollView>
+
                 <View style={styles.footer}>
-                    <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-                        <Text style={styles.skipBtnText}>Skip</Text>
-                    </TouchableOpacity>
-                    <View style={styles.continueBtnWrapper}>
-                        <Button title="Continue" onPress={handleContinue} />
-                    </View>
+                    <Button title="Continue" onPress={handleContinue} />
                 </View>
             </View>
         </SafeAreaView>
@@ -143,24 +158,10 @@ export default function Step3() {
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    container: {
-        flex: 1,
-    },
-    scroll: {
-        padding: theme.spacing.lg,
-    },
-    topRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: theme.spacing.md,
-    },
-    backBtn: {
-        padding: theme.spacing.xs,
-    },
+    safeArea: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
+    scroll: { padding: theme.spacing.lg },
+    backBtn: { marginBottom: theme.spacing.md },
     progressContainer: {
         height: 6,
         backgroundColor: '#e5e7eb',
@@ -173,8 +174,12 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.primary,
         borderRadius: 3,
     },
-    header: {
-        marginBottom: theme.spacing.xl,
+    header: { marginBottom: theme.spacing.xl },
+    stepLabel: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.primary,
+        fontWeight: '600',
+        marginBottom: theme.spacing.xs,
     },
     title: {
         ...theme.typography.h2,
@@ -185,60 +190,15 @@ const styles = StyleSheet.create({
         ...theme.typography.body,
         color: theme.colors.textSecondary,
     },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.sm,
-    },
-    sectionTitle: {
-        ...theme.typography.body,
-        fontWeight: 'bold',
-    },
-    manualText: {
-        color: theme.colors.primary,
-        fontSize: theme.typography.bodySmall.fontSize,
-    },
-    sectionTitleOptions: {
+    label: {
         ...theme.typography.body,
         fontWeight: 'bold',
         marginBottom: theme.spacing.sm,
     },
-    guestSelectorBox: {
-        backgroundColor: '#fff',
-        borderRadius: theme.borderRadius.lg,
-        padding: theme.spacing.lg,
-        ...theme.shadows.sm,
-        borderWidth: 1,
-        borderColor: '#f1f5f9',
-        marginBottom: theme.spacing.xl,
-        alignItems: 'center',
-    },
-    guestItem: {
-        paddingVertical: theme.spacing.xs,
-        width: '100%',
-        alignItems: 'center',
-    },
-    guestText: {
-        fontSize: 16,
-        color: '#cbd5e1',
-        fontWeight: '600'
-    },
-    guestTextActive: {
-        fontSize: 24,
-        color: theme.colors.primary,
-        fontWeight: 'bold',
-        paddingVertical: 4,
-        paddingHorizontal: 20,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        borderRadius: theme.borderRadius.md,
-    },
-    chipContainer: {
+    chipGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: theme.spacing.sm,
-        marginBottom: theme.spacing.xl,
     },
     chip: {
         paddingVertical: theme.spacing.sm,
@@ -246,7 +206,7 @@ const styles = StyleSheet.create({
         borderRadius: theme.borderRadius.full,
         borderWidth: 1,
         borderColor: '#e5e7eb',
-        alignItems: 'center',
+        marginBottom: theme.spacing.xs,
     },
     chipActive: {
         backgroundColor: theme.colors.primary,
@@ -260,26 +220,58 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: 'bold',
     },
-    footer: {
+    guestRow: {
         flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+    },
+    counterBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    guestInput: {
+        flex: 1,
+        height: 44,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+        borderRadius: theme.borderRadius.md,
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#000',
+        textAlign: 'center',
+    },
+    presetRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing.sm,
+        marginBottom: theme.spacing.sm,
+    },
+    presetChip: {
+        paddingVertical: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.borderRadius.full,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    presetChipText: {
+        ...theme.typography.bodySmall,
+        color: theme.colors.textSecondary,
+    },
+    errorText: {
+        color: theme.colors.danger,
+        fontSize: theme.typography.bodySmall.fontSize,
+        marginTop: theme.spacing.xs,
+        marginBottom: theme.spacing.sm,
+    },
+    footer: {
         padding: theme.spacing.lg,
         borderTopWidth: 1,
         borderTopColor: '#f3f4f6',
-        alignItems: 'center',
     },
-    skipBtn: {
-        paddingVertical: theme.spacing.sm,
-        paddingHorizontal: theme.spacing.lg,
-        borderWidth: 1,
-        borderColor: theme.colors.primary,
-        borderRadius: theme.borderRadius.full,
-        marginRight: theme.spacing.md,
-    },
-    skipBtnText: {
-        color: theme.colors.primary,
-        fontWeight: '600',
-    },
-    continueBtnWrapper: {
-        flex: 1,
-    }
 });

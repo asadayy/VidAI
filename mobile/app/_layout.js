@@ -4,8 +4,11 @@ import Toast from 'react-native-toast-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setNavigation } from '../api/client';
+import AppSplash from '../components/AppSplash';
+import AppIntro, { INTRO_SEEN_KEY } from '../components/AppIntro';
 
 function NavigationSetup() {
   const router = useRouter();
@@ -21,19 +24,68 @@ function NavigationSetup() {
   return null;
 }
 
+function InnerLayout() {
+  const router = useRouter();
+  const [splashDone, setSplashDone] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+  const [introChecked, setIntroChecked] = useState(false);
+
+  // Check AsyncStorage immediately on mount (runs in parallel with splash animation)
+  // so introChecked is already true by the time splash finishes — no login flash.
+  useEffect(() => {
+    (async () => {
+      // DEV ONLY: clear flag so intro is always testable
+      if (__DEV__) {
+        await AsyncStorage.removeItem(INTRO_SEEN_KEY).catch(() => {});
+      }
+      try {
+        const seen = await AsyncStorage.getItem(INTRO_SEEN_KEY);
+        setShowIntro(!seen);
+      } catch {
+        setShowIntro(true);
+      } finally {
+        setIntroChecked(true);
+      }
+    })();
+  }, []);
+
+  const handleIntroRegister = () => {
+    setShowIntro(false);
+    router.replace('/(auth)/register');
+  };
+
+  const handleIntroLogin = () => {
+    setShowIntro(false);
+    router.replace('/(auth)/login');
+  };
+
+  return (
+    <>
+      <NavigationSetup />
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }} />
+      <Toast />
+      {/* AppIntro is mounted as soon as we know it's needed (while splash still covers it),
+          so it's already visible the instant the splash fade-out completes — no login flash. */}
+      {introChecked && showIntro && (
+        <AppIntro
+          onRegister={handleIntroRegister}
+          onLogin={handleIntroLogin}
+        />
+      )}
+      {!splashDone && (
+        <AppSplash onFinish={() => setSplashDone(true)} />
+      )}
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <NavigationSetup />
-          <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-            }}
-          />
-          <Toast />
+          <InnerLayout />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

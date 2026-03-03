@@ -4,9 +4,7 @@ import { asyncHandler } from '../middleware/error.middleware.js';
 import { configureCloudinary } from '../config/cloudinary.js';
 import { logger } from '../config/logger.js';
 import Vendor from '../models/Vendor.model.js';
-
-// Configure Cloudinary on startup
-configureCloudinary();
+import ActivityLog from '../models/ActivityLog.model.js';
 
 // ─── Multer setup ─────────────────────────────────────────────────────────────
 
@@ -42,6 +40,8 @@ export const upload = multer({
  * Upload a buffer to Cloudinary with appropriate settings for images vs videos.
  */
 const uploadToCloudinary = (buffer, folder, mimetype) => {
+  // Configure here so env vars are guaranteed to be loaded (avoids ES-module hoisting issue)
+  configureCloudinary();
   const isVideo = mimetype && mimetype.startsWith('video/');
 
   const uploadOptions = {
@@ -81,8 +81,10 @@ const uploadToCloudinary = (buffer, folder, mimetype) => {
 /**
  * Delete a resource from Cloudinary (works for both images and videos).
  */
-const destroyFromCloudinary = (publicId, resourceType = 'image') =>
-  cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+const destroyFromCloudinary = (publicId, resourceType = 'image') => {
+  configureCloudinary();
+  return cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+};
 
 // ─── Generic upload endpoints ─────────────────────────────────────────────────
 
@@ -333,6 +335,15 @@ export const uploadVendorPortfolio = [
     await vendor.save();
 
     logger.info(`${newItems.length} portfolio item(s) added for vendor ${vendor._id}`);
+
+    // Log activity
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'add_portfolio_image',
+      resourceType: 'Vendor',
+      resourceId: vendor._id,
+      details: `${newItems.length} portfolio item(s) uploaded by vendor ${vendor.businessName}`,
+    });
 
     res.status(200).json({
       success: true,

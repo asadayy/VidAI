@@ -4,9 +4,12 @@ Loads settings from environment variables with sensible defaults.
 """
 
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Resolve .env relative to this file so it works regardless of cwd
+_env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=_env_path)
 
 
 class Settings:
@@ -22,6 +25,7 @@ class Settings:
 
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    GEMINI_IMAGE_MODEL: str = os.getenv("GEMINI_IMAGE_MODEL", "gemini-2.5-flash-image")
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/vidai")
     DB_NAME: str = os.getenv("DB_NAME", "vidai")

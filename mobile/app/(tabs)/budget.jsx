@@ -1,58 +1,109 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Modal,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
+  Image,
+  Platform,
+  Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { budgetAPI } from '../../api/budget.js';
 import Loading from '../../components/Loading';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
 import EmptyState from '../../components/EmptyState';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
+// -- constants --
+
+const CATEGORY_COLOR = {
+  venue:        '#D7385E',
+  catering:     '#f59e0b',
+  photography:  '#6366f1',
+  videography:  '#8b5cf6',
+  decoration:   '#ec4899',
+  music:        '#3b82f6',
+  flowers:      '#10b981',
+  attire:       '#f97316',
+  transport:    '#14b8a6',
+  invitation:   '#64748b',
+  default:      '#94a3b8',
+};
+
+const PICKS_CATS = [
+  { name: 'Venue',         emoji: 'business-outline' },
+  { name: 'Catering',      emoji: 'restaurant-outline' },
+  { name: 'Photography',   emoji: 'camera-outline' },
+  { name: 'Makeup/Mehndi', emoji: 'color-palette-outline' },
+  { name: 'Decoration',    emoji: 'flower-outline' },
+];
+
+// -- helpers --
+
+function catColor(cat) {
+  const key = (cat || '').toLowerCase().split(' ')[0];
+  return CATEGORY_COLOR[key] || CATEGORY_COLOR.default;
+}
+
+function catInitial(cat) {
+  return (cat || '?').charAt(0).toUpperCase();
+}
+
+const fmtCurrency = (n) =>
+  new Intl.NumberFormat('en-PK', {
+    style: 'currency', currency: 'PKR', maximumFractionDigits: 0,
+  }).format(n || 0);
+
+// -- component --
+
 export default function Budget() {
+  const router = useRouter();
+
+  // data
   const [budget, setBudget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [createAmount, setCreateAmount] = useState('');
-  const [itemForm, setItemForm] = useState({
-    category: '',
-    notes: '',
-    allocatedAmount: '',
-    spentAmount: '',
-  });
 
-  useEffect(() => {
-    fetchBudget();
-  }, []);
+  // actions
+  const [aiLoading, setAiLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // create budget modal
+  const [createVisible, setCreateVisible] = useState(false);
+  const [createAmount, setCreateAmount] = useState('');
+
+  // add/edit item modal
+  const [itemModalVisible, setItemModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [itemForm, setItemForm] = useState({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+
+  // AI plan visibility
+  const [showAiPlan, setShowAiPlan] = useState(true);
+
+  // vendor picks
+  const [showPicksBuilder, setShowPicksBuilder] = useState(false);
+  const [picksCategories, setPicksCategories] = useState([]);
+  const [vendorPicks, setVendorPicks] = useState([]);
+  const [picksLoading, setPicksLoading] = useState(false);
+
+  useEffect(() => { fetchBudget(); }, []);
 
   const fetchBudget = async () => {
     try {
       setLoading(true);
       const response = await budgetAPI.getMine();
-      const budgetData = response.data?.data?.budget || response.data?.budget;
-      setBudget(budgetData);
-    } catch (error) {
-      if (error.response?.status !== 404) {
-        console.error('Error fetching budget:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Failed to load budget',
-        });
-      }
+      setBudget(response.data?.data?.budget || response.data?.budget || null);
+    } catch (err) {
+      if (err.response?.status !== 404) Toast.show({ type: 'error', text1: 'Failed to load budget' });
       setBudget(null);
     } finally {
       setLoading(false);
@@ -60,542 +111,1077 @@ export default function Budget() {
     }
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchBudget();
-  };
+  const onRefresh = () => { setRefreshing(true); fetchBudget(); };
 
   const handleCreateBudget = async () => {
     if (!createAmount || isNaN(createAmount) || Number(createAmount) <= 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter a valid amount',
-      });
+      Toast.show({ type: 'error', text1: 'Please enter a valid amount' });
       return;
     }
-
     try {
       await budgetAPI.create({ totalBudget: Number(createAmount) });
-      Toast.show({
-        type: 'success',
-        text1: 'Budget created successfully!',
-      });
-      setIsModalOpen(false);
+      Toast.show({ type: 'success', text1: 'Budget created!' });
+      setCreateVisible(false);
       setCreateAmount('');
       fetchBudget();
-    } catch (error) {
-      console.error('Error creating budget:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to create budget',
-      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to create budget' });
     }
   };
 
   const handleGenerateAI = async () => {
     try {
       setAiLoading(true);
-      Toast.show({
-        type: 'info',
-        text1: 'Generating AI budget plan...',
-      });
+      Toast.show({ type: 'info', text1: 'Generating AI budget plan...' });
       await budgetAPI.generateAIPlan();
-      Toast.show({
-        type: 'success',
-        text1: 'AI Plan generated!',
-      });
+      setShowAiPlan(true);
+      Toast.show({ type: 'success', text1: 'AI Plan generated!' });
       fetchBudget();
-    } catch (error) {
-      console.error('Error generating AI plan:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to generate AI plan',
-      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to generate AI plan' });
     } finally {
       setAiLoading(false);
     }
   };
 
-  const handleSaveItem = async () => {
-    if (!itemForm.category || !itemForm.allocatedAmount) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please fill in all required fields',
+  const openItemModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      setItemForm({
+        category: item.category || '',
+        notes: item.notes || '',
+        allocatedAmount: item.allocatedAmount?.toString() || '',
+        spentAmount: item.spentAmount?.toString() || '',
       });
+    } else {
+      setEditingItem(null);
+      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+    }
+    setItemModalVisible(true);
+  };
+
+  const closeItemModal = () => {
+    setItemModalVisible(false);
+    setEditingItem(null);
+    setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+  };
+
+  const handleSaveItem = async () => {
+    if (!itemForm.category.trim() || !itemForm.allocatedAmount) {
+      Toast.show({ type: 'error', text1: 'Category and estimated amount are required' });
       return;
     }
-
     try {
       const data = {
-        category: itemForm.category,
-        notes: itemForm.notes,
+        category: itemForm.category.trim(),
+        notes: itemForm.notes.trim(),
         allocatedAmount: Number(itemForm.allocatedAmount),
         spentAmount: Number(itemForm.spentAmount) || 0,
       };
-
       if (editingItem) {
         await budgetAPI.updateItem(editingItem._id, data);
-        Toast.show({
-          type: 'success',
-          text1: 'Budget item updated!',
-        });
+        Toast.show({ type: 'success', text1: 'Item updated!' });
       } else {
         await budgetAPI.addItem(data);
-        Toast.show({
-          type: 'success',
-          text1: 'Budget item added!',
-        });
+        Toast.show({ type: 'success', text1: 'Item added!' });
       }
-
-      setIsItemModalOpen(false);
-      setEditingItem(null);
-      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+      closeItemModal();
       fetchBudget();
-    } catch (error) {
-      console.error('Error saving item:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to save budget item',
-      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to save item' });
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
+  const handleDeleteItem = async () => {
+    if (!deleteTarget) return;
     try {
-      await budgetAPI.deleteItem(itemId);
-      Toast.show({
-        type: 'success',
-        text1: 'Budget item deleted!',
-      });
+      await budgetAPI.deleteItem(deleteTarget._id);
+      Toast.show({ type: 'success', text1: 'Item deleted' });
+      setDeleteTarget(null);
       fetchBudget();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to delete budget item',
-      });
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to delete item' });
     }
   };
 
-  const openEditModal = (item) => {
-    setEditingItem(item);
-    setItemForm({
-      category: item.category || '',
-      notes: item.notes || '',
-      allocatedAmount: item.allocatedAmount?.toString() || '',
-      spentAmount: item.spentAmount?.toString() || '',
+  // vendor picks helpers
+  const togglePicksCat = (name) => {
+    setPicksCategories(prev => {
+      const exists = prev.find(c => c.name === name);
+      return exists ? prev.filter(c => c.name !== name) : [...prev, { name, percentage: '' }];
     });
-    setIsItemModalOpen(true);
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      maximumFractionDigits: 0,
-    }).format(amount || 0);
+  const updatePicksPct = (name, value) => {
+    setPicksCategories(prev => prev.map(c => c.name === name ? { ...c, percentage: value } : c));
   };
 
-  if (loading) {
-    return <Loading fullScreen message="Loading budget..." />;
-  }
+  const picksTotal = picksCategories.reduce((s, c) => s + (Number(c.percentage) || 0), 0);
+  const picksValid = picksCategories.length > 0
+    && picksTotal > 0
+    && picksTotal <= 100
+    && picksCategories.every(c => Number(c.percentage) > 0);
 
+  const handleGetVendorPicks = async () => {
+    if (!picksValid) {
+      Toast.show({ type: 'error', text1: 'Each category needs a % > 0, total cannot exceed 100' });
+      return;
+    }
+    try {
+      setPicksLoading(true);
+      Toast.show({ type: 'info', text1: 'Finding best vendors...' });
+      const res = await budgetAPI.recommendVendors(
+        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) }))
+      );
+      const picks = res.data?.data?.picks || [];
+      setVendorPicks(picks);
+      if (picks.length === 0) {
+        Toast.show({ type: 'error', text1: 'No vendors found for these categories' });
+      } else {
+        Toast.show({ type: 'success', text1: `Found ${picks.length} vendor recommendation(s)!` });
+        setShowPicksBuilder(false);
+      }
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to get vendor recommendations' });
+    } finally {
+      setPicksLoading(false);
+    }
+  };
+
+  // -- derived values --
+  const totalAllocated = budget?.items?.reduce((s, i) => s + (i.allocatedAmount || 0), 0) || 0;
+  const totalSpent     = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
+  const remaining      = (budget?.totalBudget || 0) - totalSpent;
+  const spentPct       = budget?.totalBudget ? Math.min(100, (totalSpent / budget.totalBudget) * 100) : 0;
+  const allocPct       = budget?.totalBudget ? Math.min(100, (totalAllocated / budget.totalBudget) * 100) : 0;
+  const isOver         = remaining < 0;
+  const isWarning      = !isOver && spentPct >= 80;
+
+  if (loading) return <Loading fullScreen message="Loading budget..." />;
+
+  // -- setup screen --
   if (!budget) {
     return (
       <ProtectedRoute roles="user">
         <View style={styles.container}>
-          <ScrollView contentContainerStyle={styles.emptyContainer}>
-            <EmptyState
-              icon={<Ionicons name="wallet-outline" size={48} color={theme.colors.textSecondary} />}
-              title="No Budget Set"
-              message="Create a budget to start tracking your wedding expenses"
-            />
-            <Button
-              title="Create Budget"
-              onPress={() => setIsModalOpen(true)}
-              style={styles.createButton}
-            />
-          </ScrollView>
-
-          {/* Create Budget Modal */}
-          <Modal
-            visible={isModalOpen}
-            animationType="slide"
-            presentationStyle="pageSheet"
-            onRequestClose={() => setIsModalOpen(false)}
-          >
-            <View style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Create Budget</Text>
-                <TouchableOpacity onPress={() => setIsModalOpen(false)}>
-                  <Ionicons name="close" size={24} color={theme.colors.text} />
-                </TouchableOpacity>
+          <ScrollView contentContainerStyle={styles.setupWrap}>
+            <View style={styles.setupCard}>
+              <View style={styles.setupIconWrap}>
+                <Ionicons name="wallet" size={36} color={theme.colors.primary} />
               </View>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalLabel}>Total Budget (PKR) *</Text>
-                <TextInput
-                  style={styles.modalInput}
-                  placeholder="Enter total budget"
-                  keyboardType="numeric"
-                  value={createAmount}
-                  onChangeText={setCreateAmount}
-                />
-                <Button
-                  title="Create"
-                  onPress={handleCreateBudget}
-                  style={styles.modalButton}
-                />
-              </View>
+              <Text style={styles.setupTitle}>Set Your Wedding Budget</Text>
+              <Text style={styles.setupSub}>
+                Enter your total budget to start planning and tracking expenses.
+              </Text>
+              <Text style={styles.inputLabel}>Total Budget (PKR)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 2,500,000"
+                placeholderTextColor={theme.colors.textSecondary}
+                keyboardType="numeric"
+                value={createAmount}
+                onChangeText={setCreateAmount}
+              />
+              <TouchableOpacity style={styles.setupBtn} onPress={handleCreateBudget}>
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.setupBtnText}>Start Planning</Text>
+              </TouchableOpacity>
             </View>
-          </Modal>
+          </ScrollView>
         </View>
       </ProtectedRoute>
     );
   }
 
-  const totalBudget = budget.totalBudget || 0;
-  const totalSpent = budget.items?.reduce((sum, item) => sum + (item.spentAmount || 0), 0) || 0;
-  const remaining = totalBudget - totalSpent;
-
+  // -- main screen --
   return (
     <ProtectedRoute roles="user">
-      <ScrollView
-        style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View style={styles.content}>
-          {/* Budget Overview */}
-          <Card style={styles.overviewCard}>
-            <Text style={styles.cardTitle}>Budget Overview</Text>
-            <View style={styles.budgetStats}>
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetLabel}>Total Budget</Text>
-                <Text style={styles.budgetValue}>{formatCurrency(totalBudget)}</Text>
+      <View style={styles.container}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+        >
+          {/* hero */}
+          <View style={styles.hero}>
+            <View style={styles.heroTop}>
+              <View style={styles.heroIconWrap}>
+                <Ionicons name="bar-chart" size={20} color={theme.colors.primary} />
               </View>
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetLabel}>Spent</Text>
-                <Text style={styles.budgetValue}>{formatCurrency(totalSpent)}</Text>
-              </View>
-              <View style={styles.budgetStat}>
-                <Text style={styles.budgetLabel}>Remaining</Text>
-                <Text style={[styles.budgetValue, remaining < 0 && styles.budgetValueDanger]}>
-                  {formatCurrency(remaining)}
-                </Text>
+              <View>
+                <Text style={styles.heroTitle}>Budget Planner</Text>
+                <Text style={styles.heroSub}>{budget?.items?.length || 0} expense categories tracked</Text>
               </View>
             </View>
-            {totalBudget > 0 && (
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` },
-                  ]}
-                />
-              </View>
-            )}
-          </Card>
-
-          {/* Actions */}
-          <View style={styles.actions}>
-            <Button
-              title="Generate AI Plan"
-              onPress={handleGenerateAI}
-              loading={aiLoading}
-              variant="secondary"
-              style={styles.actionButton}
-            />
-            <Button
-              title="Add Item"
-              onPress={() => {
-                setEditingItem(null);
-                setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
-                setIsItemModalOpen(true);
-              }}
-              style={styles.actionButton}
-            />
-          </View>
-
-          {/* Budget Items */}
-          <View style={styles.itemsSection}>
-            <Text style={styles.sectionTitle}>Budget Items</Text>
-            {budget.items && budget.items.length > 0 ? (
-              budget.items.map((item) => (
-                <Card key={item._id} style={styles.itemCard}>
-                  <View style={styles.itemHeader}>
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemCategory}>
-                        {item.category?.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </Text>
-                      {item.notes && (
-                        <Text style={styles.itemNotes}>{item.notes}</Text>
-                      )}
-                    </View>
-                    <View style={styles.itemActions}>
-                      <TouchableOpacity onPress={() => openEditModal(item)}>
-                        <Ionicons name="pencil" size={20} color={theme.colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteItem(item._id)}>
-                        <Ionicons name="trash" size={20} color={theme.colors.danger} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.itemAmounts}>
-                    <View style={styles.itemAmount}>
-                      <Text style={styles.itemAmountLabel}>Allocated</Text>
-                      <Text style={styles.itemAmountValue}>
-                        {formatCurrency(item.allocatedAmount)}
-                      </Text>
-                    </View>
-                    <View style={styles.itemAmount}>
-                      <Text style={styles.itemAmountLabel}>Spent</Text>
-                      <Text style={styles.itemAmountValue}>
-                        {formatCurrency(item.spentAmount)}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              ))
-            ) : (
-              <EmptyState
-                icon={<Ionicons name="list-outline" size={48} color={theme.colors.textSecondary} />}
-                title="No budget items"
-                message="Add items to track your expenses"
-              />
-            )}
-          </View>
-        </View>
-
-        {/* Add/Edit Item Modal */}
-        <Modal
-          visible={isItemModalOpen}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setIsItemModalOpen(false)}
-        >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {editingItem ? 'Edit Item' : 'Add Budget Item'}
-              </Text>
+            <View style={styles.heroActions}>
               <TouchableOpacity
-                onPress={() => {
-                  setIsItemModalOpen(false);
-                  setEditingItem(null);
-                  setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
-                }}
+                style={[styles.heroBtnAI, aiLoading && styles.btnDisabled]}
+                onPress={handleGenerateAI}
+                disabled={aiLoading}
               >
-                <Ionicons name="close" size={24} color={theme.colors.text} />
+                {aiLoading
+                  ? <ActivityIndicator size={13} color="#fff" />
+                  : <Ionicons name="sparkles" size={13} color="#fff" />}
+                <Text style={styles.heroBtnAIText}>{aiLoading ? 'Generating...' : 'AI Plan'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.heroBtnPicks, showPicksBuilder && styles.heroBtnPicksActive]}
+                onPress={() => setShowPicksBuilder(b => !b)}
+              >
+                <Ionicons name="storefront-outline" size={13} color={showPicksBuilder ? '#fff' : theme.colors.primary} />
+                <Text style={[styles.heroBtnPicksText, showPicksBuilder && { color: '#fff' }]}>Picks</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.heroBtnAdd} onPress={() => openItemModal()}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.heroBtnAddText}>Add Item</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.modalContent}>
-              <Text style={styles.modalLabel}>Category *</Text>
+          </View>
+
+          {/* 4 stat tiles */}
+          <View style={styles.statsGrid}>
+            <View style={[styles.statTile, styles.statTileRose]}>
+              <Ionicons name="wallet-outline" size={18} color="#D7385E" />
+              <Text style={styles.statLabel}>Total Budget</Text>
+              <Text style={[styles.statValue, { color: '#D7385E' }]}>{fmtCurrency(budget.totalBudget)}</Text>
+            </View>
+            <View style={[styles.statTile, styles.statTileViolet]}>
+              <Ionicons name="flag-outline" size={18} color="#7c3aed" />
+              <Text style={styles.statLabel}>Estimated</Text>
+              <Text style={[styles.statValue, { color: '#7c3aed' }]}>{fmtCurrency(totalAllocated)}</Text>
+            </View>
+            <View style={[styles.statTile, styles.statTileAmber]}>
+              <Ionicons name="trending-down-outline" size={18} color="#d97706" />
+              <Text style={styles.statLabel}>Actual Spent</Text>
+              <Text style={[styles.statValue, { color: '#d97706' }]}>{fmtCurrency(totalSpent)}</Text>
+            </View>
+            <View style={[styles.statTile, isOver ? styles.statTileRed : isWarning ? styles.statTileAmber : styles.statTileGreen]}>
+              <Ionicons name={isOver ? 'trending-down-outline' : 'trending-up-outline'} size={18} color={isOver ? '#dc2626' : isWarning ? '#d97706' : '#059669'} />
+              <Text style={styles.statLabel}>Remaining</Text>
+              <Text style={[styles.statValue, { color: isOver ? '#dc2626' : isWarning ? '#d97706' : '#059669' }]}>
+                {fmtCurrency(remaining)}
+              </Text>
+            </View>
+          </View>
+
+          {/* progress card */}
+          <View style={styles.progressCard}>
+            <View style={styles.progressCardStripe} />
+            <View style={styles.progressHead}>
+              <Text style={styles.progressTitle}>Budget Overview</Text>
+              <Text style={[styles.progressPct, isOver && styles.progressPctOver]}>
+                {spentPct.toFixed(1)}% spent
+              </Text>
+            </View>
+            {/* dual-layer progress bar */}
+            <View style={styles.progressTrack}>
+              {/* allocated (lighter, behind) */}
+              <View style={[styles.progressAllocFill, { width: `${allocPct}%` }]} />
+              {/* spent (on top) */}
+              <View style={[
+                styles.progressSpentFill,
+                { width: `${spentPct}%` },
+                isOver && styles.progressSpentFillOver,
+                isWarning && styles.progressSpentFillWarn,
+              ]} />
+            </View>
+            <View style={styles.progressLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
+                <Text style={styles.legendText}>Spent</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#c4b5fd' }]} />
+                <Text style={styles.legendText}>Estimated</Text>
+              </View>
+            </View>
+            {isOver && (
+              <View style={styles.alertOver}>
+                <Ionicons name="warning" size={14} color="#dc2626" />
+                <Text style={styles.alertOverText}>
+                  Exceeded budget by {fmtCurrency(Math.abs(remaining))}
+                </Text>
+              </View>
+            )}
+            {isWarning && !isOver && (
+              <View style={styles.alertWarn}>
+                <Ionicons name="warning" size={14} color="#d97706" />
+                <Text style={styles.alertWarnText}>
+                  {spentPct.toFixed(0)}% of your budget has been spent — review your expenses.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* vendor picks builder */}
+          {showPicksBuilder && (
+            <View style={styles.picksBuilder}>
+              <View style={styles.picksBuilderStripe} />
+              <View style={styles.picksBuilderHead}>
+                <View style={styles.picksBuilderTitleRow}>
+                  <Ionicons name="storefront" size={18} color={theme.colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.picksBuilderTitle}>AI Vendor Picks</Text>
+                    <Text style={styles.picksBuilderSub}>
+                      Select categories and allocate % of your budget. AI finds the best match.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setShowPicksBuilder(false)}>
+                  <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {/* category toggles */}
+              <View style={styles.catToggleGrid}>
+                {PICKS_CATS.map(cat => {
+                  const sel = picksCategories.some(c => c.name === cat.name);
+                  return (
+                    <TouchableOpacity
+                      key={cat.name}
+                      style={[styles.catToggle, sel && styles.catToggleSel]}
+                      onPress={() => togglePicksCat(cat.name)}
+                    >
+                      <Ionicons name={cat.emoji} size={14} color={sel ? '#fff' : theme.colors.text} />
+                      <Text style={[styles.catToggleText, sel && styles.catToggleTextSel]}>{cat.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* percentage inputs */}
+              {picksCategories.length > 0 && (
+                <View style={styles.pctRows}>
+                  {picksCategories.map(cat => (
+                    <View key={cat.name} style={styles.pctRow}>
+                      <Text style={styles.pctLabel}>
+                        {PICKS_CATS.find(c => c.name === cat.name)?.emoji
+                          ? '' : ''}{cat.name}
+                      </Text>
+                      <View style={styles.pctInputWrap}>
+                        <TextInput
+                          style={styles.pctInput}
+                          keyboardType="numeric"
+                          placeholder="0"
+                          placeholderTextColor={theme.colors.textSecondary}
+                          value={cat.percentage}
+                          onChangeText={v => updatePicksPct(cat.name, v)}
+                          maxLength={3}
+                        />
+                        <Text style={styles.pctSymbol}>%</Text>
+                      </View>
+                    </View>
+                  ))}
+                  <Text style={[
+                    styles.pctSum,
+                    picksTotal > 100 ? styles.pctSumErr : picksTotal > 0 ? styles.pctSumOk : {},
+                  ]}>
+                    Allocated: {picksTotal}%
+                    {picksTotal > 100
+                      ? ' — exceeds 100%, please reduce'
+                      : picksTotal > 0 && picksTotal < 100
+                      ? ` — ${100 - picksTotal}% left`
+                      : picksTotal === 100 ? ' — fully allocated' : ''}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.picksSearchBtn, (!picksValid || picksLoading) && styles.btnDisabled]}
+                    onPress={handleGetVendorPicks}
+                    disabled={!picksValid || picksLoading}
+                  >
+                    {picksLoading
+                      ? <ActivityIndicator size={14} color="#fff" />
+                      : <Ionicons name="arrow-forward" size={14} color="#fff" />}
+                    <Text style={styles.picksSearchBtnText}>
+                      {picksLoading ? 'Finding vendors...' : 'Find Best Vendors'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* vendor picks results */}
+          {vendorPicks.length > 0 && (
+            <View style={styles.picksResults}>
+              <View style={styles.picksResultsHead}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.picksResultsTitle}>Your Vendor Picks</Text>
+                  <Text style={styles.picksResultsSub}>AI-matched vendors for your budget and preferences.</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.changePicksBtn}
+                  onPress={() => { setVendorPicks([]); setShowPicksBuilder(true); }}
+                >
+                  <Ionicons name="refresh" size={13} color={theme.colors.primary} />
+                  <Text style={styles.changePicksBtnText}>Change</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.picksGridContent}>
+                {vendorPicks.map((pick, i) => (
+                  <View key={i} style={styles.pickCard}>
+                    <View style={styles.pickStripe} />
+                    {pick.vendor?.coverImage ? (
+                      <Image source={{ uri: pick.vendor.coverImage }} style={styles.pickCover} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.pickCoverPlaceholder}>
+                        <Ionicons name="storefront" size={28} color={theme.colors.textSecondary} />
+                      </View>
+                    )}
+                    <View style={styles.pickBody}>
+                      <View style={styles.pickCatRow}>
+                        <View style={styles.pickCatBadge}>
+                          <Text style={styles.pickCatText}>{pick.category}</Text>
+                        </View>
+                        <Text style={styles.pickPct}>{pick.percentage}%</Text>
+                      </View>
+                      <Text style={styles.pickName} numberOfLines={1}>{pick.vendor?.businessName}</Text>
+                      <View style={styles.pickMeta}>
+                        {pick.vendor?.city && (
+                          <View style={styles.pickMetaRow}>
+                            <Ionicons name="location-outline" size={11} color={theme.colors.textSecondary} />
+                            <Text style={styles.pickMetaText}>{pick.vendor.city}</Text>
+                          </View>
+                        )}
+                        {pick.vendor?.ratingsAverage > 0 && (
+                          <View style={styles.pickMetaRow}>
+                            <Ionicons name="star" size={11} color="#f59e0b" />
+                            <Text style={styles.pickMetaText}>{pick.vendor.ratingsAverage.toFixed(1)}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.pickBudget}>
+                        <Text style={styles.pickBudgetLabel}>Your budget</Text>
+                        <Text style={styles.pickBudgetVal}>{fmtCurrency(pick.budgetAmount)}</Text>
+                      </View>
+                      {pick.vendor?.startingPrice > 0 && (
+                        <Text style={styles.pickStarting}>From {fmtCurrency(pick.vendor.startingPrice)}</Text>
+                      )}
+                      {pick.reasoning && (
+                        <Text style={styles.pickReason} numberOfLines={3}>{pick.reasoning}</Text>
+                      )}
+                      <TouchableOpacity
+                        style={styles.pickViewBtn}
+                        onPress={() => router.push(`/vendors/${pick.vendor?.slug}`)}
+                      >
+                        <Text style={styles.pickViewBtnText}>View Vendor</Text>
+                        <Ionicons name="arrow-forward" size={12} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* AI plan card */}
+          {budget.aiPlan?.allocations?.length > 0 && showAiPlan && (
+            <View style={styles.aiCard}>
+              <View style={styles.aiStripe} />
+              <View style={styles.aiHead}>
+                <Ionicons name="sparkles" size={20} color="#7c3aed" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.aiTitle}>AI Budget Recommendations</Text>
+                  {budget.aiPlan.summary && <Text style={styles.aiSummary}>{budget.aiPlan.summary}</Text>}
+                </View>
+                <TouchableOpacity onPress={() => setShowAiPlan(false)} style={styles.aiCloseBtn}>
+                  <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.aiAllocsGrid}>
+                {budget.aiPlan.allocations.map((a, i) => (
+                  <View key={i} style={styles.aiAllocBlock}>
+                    <Text style={styles.aiAllocCat}>{a.category.replace(/_/g, ' ')}</Text>
+                    <Text style={styles.aiAllocAmt}>{fmtCurrency(a.amount)}</Text>
+                    <View style={styles.aiAllocPctBadge}>
+                      <Text style={styles.aiAllocPct}>{a.percentage}%</Text>
+                    </View>
+                    {a.explanation && <Text style={styles.aiAllocNote}>{a.explanation}</Text>}
+                  </View>
+                ))}
+              </View>
+              {budget.aiPlan.tips?.length > 0 && (
+                <View style={styles.aiTips}>
+                  <View style={styles.aiTipsHead}>
+                    <Ionicons name="checkmark-circle" size={15} color="#059669" />
+                    <Text style={styles.aiTipsTitle}>Pro Tips</Text>
+                  </View>
+                  {budget.aiPlan.tips.map((tip, i) => (
+                    <View key={i} style={styles.aiTipRow}>
+                      <Text style={styles.aiTipBullet}>{'\u2022'}</Text>
+                      <Text style={styles.aiTipText}>{tip}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* budget items list */}
+          <View style={styles.bookedSection}>
+            <View style={styles.bookedHead}>
+              <Text style={styles.bookedTitle}>Budget Items</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {budget?.items?.length > 0 && (
+                  <View style={styles.bookedCountBadge}>
+                    <Text style={styles.bookedCountText}>{budget.items.length}</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={styles.bookedAddBtn} onPress={() => openItemModal()}>
+                  <Ionicons name="add" size={14} color={theme.colors.primary} />
+                  <Text style={styles.bookedAddBtnText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {budget?.items?.length > 0 ? (
+              budget.items.map(item => {
+                const color = catColor(item.category);
+                const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
+                return (
+                  <View key={item._id} style={[styles.bookedItem, { borderLeftColor: color }]}>
+                    <View style={[styles.bookedAvatar, { backgroundColor: color }]}>
+                      <Text style={styles.bookedAvatarText}>{catInitial(item.category)}</Text>
+                    </View>
+                    <View style={styles.bookedInfo}>
+                      <Text style={styles.bookedCat}>{item.category}</Text>
+                      {item.notes ? <Text style={styles.bookedNote} numberOfLines={1}>{item.notes}</Text> : null}
+                      <View style={styles.bookedAmounts}>
+                        <Text style={styles.bookedAmtEst}>{fmtCurrency(item.allocatedAmount)}</Text>
+                        <Text style={styles.bookedAmtSep}>{'→'}</Text>
+                        <Text style={[styles.bookedAmtSpent, overItem && styles.bookedAmtOver]}>
+                          {fmtCurrency(item.spentAmount || 0)} spent
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.bookedActions}>
+                      <TouchableOpacity style={styles.bookedBtnEdit} onPress={() => openItemModal(item)}>
+                        <Ionicons name="pencil" size={13} color={theme.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.bookedBtnDel} onPress={() => setDeleteTarget(item)}>
+                        <Ionicons name="trash" size={13} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.bookedEmpty}>
+                <Ionicons name="receipt-outline" size={32} color={theme.colors.textSecondary} />
+                <Text style={styles.bookedEmptyText}>No items yet. Add your first budget item or generate an AI plan.</Text>
+              </View>
+            )}
+          </View>
+
+
+        </ScrollView>
+
+        {/* add/edit item modal */}
+        <Modal
+          visible={itemModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={closeItemModal}
+        >
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={closeItemModal} />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalSheetHeader}>
+              <Text style={styles.modalSheetTitle}>{editingItem ? 'Edit Item' : 'Add Budget Item'}</Text>
+              <TouchableOpacity onPress={closeItemModal}>
+                <Ionicons name="close" size={22} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <Text style={styles.inputLabel}>Category *</Text>
               <TextInput
-                style={styles.modalInput}
+                style={styles.input}
                 placeholder="e.g. Venue, Catering, Photography"
+                placeholderTextColor={theme.colors.textSecondary}
                 value={itemForm.category}
-                onChangeText={(text) => setItemForm({ ...itemForm, category: text })}
+                onChangeText={v => setItemForm(f => ({ ...f, category: v }))}
               />
-
-              <Text style={styles.modalLabel}>Allocated Amount (PKR) *</Text>
+              <View style={styles.inputRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Estimated Amount (PKR) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                    value={itemForm.allocatedAmount}
+                    onChangeText={v => setItemForm(f => ({ ...f, allocatedAmount: v }))}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.inputLabel}>Spent Amount (PKR)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.textSecondary}
+                    keyboardType="numeric"
+                    value={itemForm.spentAmount}
+                    onChangeText={v => setItemForm(f => ({ ...f, spentAmount: v }))}
+                  />
+                </View>
+              </View>
+              <Text style={styles.inputLabel}>Notes</Text>
               <TextInput
-                style={styles.modalInput}
-                placeholder="Enter allocated amount"
-                keyboardType="numeric"
-                value={itemForm.allocatedAmount}
-                onChangeText={(text) => setItemForm({ ...itemForm, allocatedAmount: text })}
-              />
-
-              <Text style={styles.modalLabel}>Spent Amount (PKR)</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="Enter spent amount"
-                keyboardType="numeric"
-                value={itemForm.spentAmount}
-                onChangeText={(text) => setItemForm({ ...itemForm, spentAmount: text })}
-              />
-
-              <Text style={styles.modalLabel}>Notes</Text>
-              <TextInput
-                style={[styles.modalInput, styles.modalTextArea]}
-                placeholder="Additional notes..."
+                style={[styles.input, styles.inputTA]}
+                placeholder="Additional details..."
+                placeholderTextColor={theme.colors.textSecondary}
                 multiline
-                numberOfLines={4}
+                numberOfLines={3}
                 value={itemForm.notes}
-                onChangeText={(text) => setItemForm({ ...itemForm, notes: text })}
+                onChangeText={v => setItemForm(f => ({ ...f, notes: v }))}
               />
-
-              <Button
-                title={editingItem ? 'Update Item' : 'Add Item'}
-                onPress={handleSaveItem}
-                style={styles.modalButton}
-              />
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveItem}>
+                <Text style={styles.saveBtnText}>{editingItem ? 'Save Changes' : 'Add Item'}</Text>
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </Modal>
-      </ScrollView>
+
+        {/* delete confirmation modal */}
+        <Modal
+          visible={!!deleteTarget}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDeleteTarget(null)}
+        >
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDeleteTarget(null)} />
+          <View style={styles.deleteSheet}>
+            <View style={styles.deleteIconWrap}>
+              <Ionicons name="warning" size={28} color="#f59e0b" />
+            </View>
+            <Text style={styles.deleteTitle}>Delete Item?</Text>
+            <Text style={styles.deleteSub}>
+              Remove <Text style={{ fontWeight: '700', color: theme.colors.text }}>{deleteTarget?.category}</Text> from your budget?{' '}
+              This cannot be undone.
+            </Text>
+            <View style={styles.deleteActions}>
+              <TouchableOpacity style={styles.deleteCancelBtn} onPress={() => setDeleteTarget(null)}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteConfirmBtn} onPress={handleDeleteItem}>
+                <Text style={styles.deleteConfirmText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
     </ProtectedRoute>
   );
 }
 
+// -- styles --
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-  },
-  content: {
-    padding: theme.spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  container: { flex: 1, backgroundColor: theme.colors.surface },
+
+  // setup screen
+  setupWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  setupCard: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 18,
+    padding: 28,
+    width: '100%',
     alignItems: 'center',
-    padding: theme.spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  createButton: {
-    marginTop: theme.spacing.lg,
+  setupIconWrap: {
+    width: 64, height: 64, borderRadius: 20, backgroundColor: '#fce7f3',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 16,
   },
-  overviewCard: {
-    marginBottom: theme.spacing.md,
+  setupTitle: { fontSize: 20, fontWeight: '700', color: theme.colors.text, textAlign: 'center', marginBottom: 8 },
+  setupSub: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  setupBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: theme.colors.primary, borderRadius: 10,
+    paddingHorizontal: 24, paddingVertical: 13, marginTop: 8, width: '100%', justifyContent: 'center',
   },
-  cardTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+  setupBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // hero
+  hero: {
+    flexDirection: 'column',
+    backgroundColor: theme.colors.white, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10,
+    borderBottomWidth: 1, borderBottomColor: theme.colors.border, gap: 10,
   },
-  budgetStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  heroLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  heroIconWrap: {
+    width: 38, height: 38, borderRadius: 11, backgroundColor: '#fce7f3',
+    alignItems: 'center', justifyContent: 'center',
   },
-  budgetStat: {
-    flex: 1,
+  heroTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  heroSub: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 1 },
+  heroActions: { flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
+  heroBtnAI: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#7c3aed', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
   },
-  budgetLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+  heroBtnAIText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  heroBtnPicks: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: theme.colors.primary, backgroundColor: theme.colors.white,
   },
-  budgetValue: {
-    ...theme.typography.body,
-    fontWeight: '600',
-    color: theme.colors.text,
+  heroBtnPicksActive: { backgroundColor: theme.colors.primary },
+  heroBtnPicksText: { color: theme.colors.primary, fontSize: 12, fontWeight: '600' },
+  heroBtnAdd: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: theme.colors.primary, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
   },
-  budgetValueDanger: {
-    color: theme.colors.danger,
+  heroBtnAddText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
+  // stat tiles
+  statsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10,
   },
-  progressBar: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.borderRadius.full,
-    overflow: 'hidden',
+  statTile: {
+    width: '48%', backgroundColor: theme.colors.white, borderRadius: 12, padding: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.primary,
+  statTileRose:   { borderTopWidth: 3, borderTopColor: '#D7385E' },
+  statTileViolet: { borderTopWidth: 3, borderTopColor: '#7c3aed' },
+  statTileAmber:  { borderTopWidth: 3, borderTopColor: '#d97706' },
+  statTileGreen:  { borderTopWidth: 3, borderTopColor: '#059669' },
+  statTileRed:    { borderTopWidth: 3, borderTopColor: '#dc2626' },
+  statLabel: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 6, marginBottom: 2 },
+  statValue: { fontSize: 14, fontWeight: '700' },
+
+  // progress card
+  progressCard: {
+    backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
+    padding: 16, marginBottom: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.lg,
+  progressCardStripe: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: theme.colors.primary,
   },
-  actionButton: {
-    flex: 1,
+  progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  progressTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  progressPct: { fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary },
+  progressPctOver: { color: '#dc2626' },
+  progressTrack: {
+    height: 8, backgroundColor: theme.colors.border, borderRadius: 99, overflow: 'hidden', marginBottom: 8, position: 'relative',
   },
-  itemsSection: {
-    marginTop: theme.spacing.md,
+  progressAllocFill: {
+    position: 'absolute', top: 0, left: 0, height: '100%', backgroundColor: '#c4b5fd', borderRadius: 99,
   },
-  sectionTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.md,
+  progressSpentFill: {
+    position: 'absolute', top: 0, left: 0, height: '100%', backgroundColor: theme.colors.primary, borderRadius: 99,
   },
+  progressSpentFillOver: { backgroundColor: '#ef4444' },
+  progressSpentFillWarn: { backgroundColor: '#f59e0b' },
+  progressLegend: { flexDirection: 'row', gap: 16, marginBottom: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 11, color: theme.colors.textSecondary },
+  alertOver: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#fee2e2', borderRadius: 8, padding: 10, marginTop: 10,
+  },
+  alertOverText: { fontSize: 12, color: '#dc2626', flex: 1 },
+  alertWarn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#fef3c7', borderRadius: 8, padding: 10, marginTop: 10,
+  },
+  alertWarnText: { fontSize: 12, color: '#d97706', flex: 1 },
+
+  // vendor picks builder
+  picksBuilder: {
+    backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
+    padding: 16, marginBottom: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  picksBuilderStripe: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: theme.colors.primary,
+  },
+  picksBuilderHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
+  picksBuilderTitleRow: { flexDirection: 'row', gap: 10, flex: 1 },
+  picksBuilderTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  picksBuilderSub: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2, lineHeight: 17 },
+  catToggleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  catToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface,
+  },
+  catToggleSel: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  catToggleText: { fontSize: 13, color: theme.colors.text, fontWeight: '500' },
+  catToggleTextSel: { color: '#fff' },
+  pctRows: { gap: 10 },
+  pctRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pctLabel: { fontSize: 13, color: theme.colors.text, fontWeight: '500', flex: 1 },
+  pctInputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8,
+    backgroundColor: theme.colors.surface, paddingHorizontal: 10, paddingVertical: 6,
+    minWidth: 70,
+  },
+  pctInput: { fontSize: 14, color: theme.colors.text, textAlign: 'right', minWidth: 36 },
+  pctSymbol: { fontSize: 13, color: theme.colors.textSecondary },
+  pctSum: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 4 },
+  pctSumOk: { color: '#059669' },
+  pctSumErr: { color: '#dc2626' },
+  picksSearchBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7, justifyContent: 'center',
+    backgroundColor: theme.colors.primary, borderRadius: 10, paddingVertical: 12, marginTop: 8,
+  },
+  picksSearchBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  // vendor picks results
+  picksResults: {
+    backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
+    padding: 16, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  picksResultsHead: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
+  picksResultsTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  picksResultsSub: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 },
+  changePicksBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: theme.colors.primary,
+  },
+  changePicksBtnText: { fontSize: 12, color: theme.colors.primary, fontWeight: '600' },
+  picksGridContent: { gap: 12, paddingVertical: 4 },
+  pickCard: {
+    width: 210, backgroundColor: theme.colors.surface, borderRadius: 12,
+    overflow: 'hidden', borderWidth: 1, borderColor: theme.colors.border,
+  },
+  pickStripe: { height: 3, backgroundColor: theme.colors.primary },
+  pickCover: { width: '100%', height: 100, backgroundColor: theme.colors.border },
+  pickCoverPlaceholder: {
+    width: '100%', height: 100, backgroundColor: theme.colors.surface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pickBody: { padding: 10 },
+  pickCatRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  pickCatBadge: {
+    backgroundColor: '#fce7f3', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  pickCatText: { fontSize: 10, fontWeight: '700', color: theme.colors.primary },
+  pickPct: { fontSize: 11, fontWeight: '600', color: theme.colors.textSecondary },
+  pickName: { fontSize: 13, fontWeight: '700', color: theme.colors.text, marginBottom: 5 },
+  pickMeta: { gap: 3, marginBottom: 8 },
+  pickMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pickMetaText: { fontSize: 11, color: theme.colors.textSecondary },
+  pickBudget: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
+  pickBudgetLabel: { fontSize: 10, color: theme.colors.textSecondary },
+  pickBudgetVal: { fontSize: 12, fontWeight: '700', color: theme.colors.primary },
+  pickStarting: { fontSize: 10, color: theme.colors.textSecondary, marginBottom: 5 },
+  pickReason: {
+    fontSize: 11, color: theme.colors.textSecondary, lineHeight: 16, marginBottom: 8,
+    borderLeftWidth: 2, borderLeftColor: theme.colors.border, paddingLeft: 8,
+  },
+  pickViewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'center',
+    borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 7, paddingVertical: 7,
+  },
+  pickViewBtnText: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
+
+  // AI plan card
+  aiCard: {
+    backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
+    padding: 16, marginBottom: 12, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  aiStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#7c3aed' },
+  aiHead: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 14 },
+  aiCloseBtn: { padding: 4 },
+  aiTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  aiSummary: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 3, lineHeight: 17 },
+  aiAllocsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 },
+  aiAllocBlock: {
+    width: '47%', backgroundColor: theme.colors.surface, borderRadius: 10,
+    padding: 10, borderWidth: 1, borderColor: theme.colors.border,
+  },
+  aiAllocCat: { fontSize: 11, color: theme.colors.textSecondary, textTransform: 'capitalize', marginBottom: 3 },
+  aiAllocAmt: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+  aiAllocPctBadge: {
+    backgroundColor: '#ede9fe', borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4, alignSelf: 'flex-start',
+  },
+  aiAllocPct: { fontSize: 10, fontWeight: '700', color: '#7c3aed' },
+  aiAllocNote: { fontSize: 11, color: theme.colors.textSecondary, lineHeight: 15, marginTop: 5 },
+  aiTips: {
+    backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: '#bbf7d0',
+  },
+  aiTipsHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  aiTipsTitle: { fontSize: 13, fontWeight: '700', color: '#065f46' },
+  aiTipRow: { flexDirection: 'row', gap: 6, marginBottom: 5 },
+  aiTipBullet: { color: '#059669', fontSize: 14, lineHeight: 18 },
+  aiTipText: { fontSize: 12, color: '#065f46', flex: 1, lineHeight: 18 },
+
+  // expense items
+  itemsSection: { paddingHorizontal: 12, marginBottom: 4 },
+  itemsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  itemsTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  itemsCountBadge: {
+    backgroundColor: theme.colors.surface, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: theme.colors.border,
+  },
+  itemsCountText: { fontSize: 12, color: theme.colors.textSecondary, fontWeight: '600' },
   itemCard: {
-    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.white, borderRadius: 12, marginBottom: 10,
+    borderLeftWidth: 4, padding: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
   },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
+  itemTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
+  itemAvatar: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  itemAvatarText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  itemInfo: { flex: 1 },
+  itemCat: { fontSize: 14, fontWeight: '700', color: theme.colors.text, textTransform: 'capitalize' },
+  itemNote: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 },
+  itemBtns: { flexDirection: 'row', gap: 8 },
+  itemBtnEdit: {
+    width: 30, height: 30, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.border,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface,
   },
-  itemInfo: {
-    flex: 1,
-  },
-  itemCategory: {
-    ...theme.typography.body,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  itemNotes: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.textSecondary,
-  },
-  itemActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
+  itemBtnDel: {
+    width: 30, height: 30, borderRadius: 8, borderWidth: 1, borderColor: '#fecaca',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff5f5',
   },
   itemAmounts: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingBottom: 10, marginBottom: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
   },
-  itemAmount: {
-    alignItems: 'center',
+  itemAmtBlock: { flex: 1, alignItems: 'center' },
+  itemAmtLabel: { fontSize: 10, color: theme.colors.textSecondary, marginBottom: 2 },
+  itemAmtVal: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
+  itemAmtValOver: { color: '#ef4444' },
+  itemBarTrack: {
+    height: 5, backgroundColor: theme.colors.border, borderRadius: 99, overflow: 'hidden', marginBottom: 4,
   },
-  itemAmountLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
+  itemBarFill: { height: '100%', borderRadius: 99 },
+  itemPct: { fontSize: 10, color: theme.colors.textSecondary, textAlign: 'right' },
+
+  // empty items
+  emptyItems: {
+    backgroundColor: theme.colors.white, borderRadius: 14, padding: 24,
+    alignItems: 'center', marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
   },
-  itemAmountValue: {
-    ...theme.typography.body,
-    fontWeight: '600',
-    color: theme.colors.text,
+  emptyItemsTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text, marginTop: 12, marginBottom: 4 },
+  emptyItemsSub: { fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
+  emptyItemsActions: { flexDirection: 'row', gap: 10 },
+  emptyAIBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#7c3aed', borderRadius: 9, paddingHorizontal: 14, paddingVertical: 10,
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
+  emptyAIBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  emptyAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 9, paddingHorizontal: 14, paddingVertical: 10,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  emptyAddBtnText: { color: theme.colors.primary, fontSize: 13, fontWeight: '600' },
+
+  // modal overlay + sheet
+  modalOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
-  modalTitle: {
-    ...theme.typography.h2,
-    color: theme.colors.text,
+  modalSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: theme.colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: '85%', paddingHorizontal: 18, paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
   },
-  modalContent: {
-    flex: 1,
-    padding: theme.spacing.md,
+  modalSheetHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
   },
-  modalLabel: {
-    ...theme.typography.bodySmall,
-    fontWeight: '600',
-    color: theme.colors.text,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.xs,
+  modalSheetTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+
+  // form inputs
+  inputLabel: { fontSize: 13, fontWeight: '600', color: theme.colors.text, marginBottom: 6, marginTop: 14 },
+  input: {
+    borderWidth: 1, borderColor: theme.colors.border, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: theme.typography.body.fontSize,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.white,
+  inputRow: { flexDirection: 'row', gap: 10 },
+  inputTA: { minHeight: 80, textAlignVertical: 'top', paddingTop: 12 },
+  saveBtn: {
+    backgroundColor: theme.colors.primary, borderRadius: 10,
+    paddingVertical: 13, alignItems: 'center', marginTop: 20, marginBottom: 10,
   },
-  modalTextArea: {
-    minHeight: 100,
-    textAlignVertical: 'top',
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
+  // delete modal
+  deleteSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: theme.colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 24, alignItems: 'center',
   },
-  modalButton: {
-    marginTop: theme.spacing.lg,
+  deleteIconWrap: {
+    width: 56, height: 56, borderRadius: 28, backgroundColor: '#fef3c7',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 14,
   },
+  deleteTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 8 },
+  deleteSub: { fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  deleteActions: { flexDirection: 'row', gap: 10, width: '100%' },
+  deleteCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center',
+  },
+  deleteCancelText: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+  deleteConfirmBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: '#ef4444', alignItems: 'center',
+  },
+  deleteConfirmText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+
+  // shared
+  btnDisabled: { opacity: 0.55 },
+
+  // compact booked items list
+  bookedSection: { paddingHorizontal: 12, marginBottom: 16 },
+  bookedHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  bookedTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+  bookedCountBadge: {
+    backgroundColor: theme.colors.surface, borderRadius: 10,
+    paddingHorizontal: 9, paddingVertical: 2, borderWidth: 1, borderColor: theme.colors.border,
+  },
+  bookedCountText: { fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary },
+  bookedAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    borderWidth: 1, borderColor: theme.colors.primary, borderRadius: 7,
+    paddingHorizontal: 9, paddingVertical: 5,
+  },
+  bookedAddBtnText: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
+  bookedItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: theme.colors.white, borderRadius: 10, borderLeftWidth: 4,
+    paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+  bookedAvatar: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  bookedAvatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  bookedInfo: { flex: 1 },
+  bookedCat: { fontSize: 13, fontWeight: '600', color: theme.colors.text, textTransform: 'capitalize' },
+  bookedNote: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 1 },
+  bookedAmounts: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
+  bookedAmtEst: { fontSize: 11, color: theme.colors.textSecondary },
+  bookedAmtSep: { fontSize: 10, color: theme.colors.border },
+  bookedAmtSpent: { fontSize: 11, fontWeight: '600', color: '#059669' },
+  bookedAmtOver: { color: '#ef4444' },
+  bookedActions: { flexDirection: 'row', gap: 6 },
+  bookedBtnEdit: {
+    width: 28, height: 28, borderRadius: 7, borderWidth: 1, borderColor: theme.colors.border,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface,
+  },
+  bookedBtnDel: {
+    width: 28, height: 28, borderRadius: 7, borderWidth: 1, borderColor: '#fecaca',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff5f5',
+  },
+  bookedEmpty: {
+    backgroundColor: theme.colors.white, borderRadius: 12, padding: 20,
+    alignItems: 'center', gap: 8,
+  },
+  bookedEmptyText: { fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 19 },
 });

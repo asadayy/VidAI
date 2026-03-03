@@ -15,12 +15,14 @@ export default function OnboardingLayout() {
     const [onboardingData, setOnboardingData] = useState({
         firstName: '',
         lastName: '',
-        weddingLocation: '',
-        eventDate: null,
-        guestCount: 0,
-        lookingFor: [],
+        phone: '',
         eventTypes: [],
-        budgets: {}
+        eventDate: '',
+        weddingLocation: '',
+        venueType: '',
+        guestCount: 200,
+        foodPreference: '',
+        totalBudget: '',
     });
 
     const updateOnboardingData = (data) => {

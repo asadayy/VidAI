@@ -1,91 +1,211 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Sparkles, Brain, Save, X, DollarSign } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import {
+  Plus, Trash2, Edit2, Sparkles, Brain, X,
+  Wallet, TrendingUp, TrendingDown, Target,
+  ChevronRight, AlertTriangle, CheckCircle2, BarChart3,
+  Star, MapPin, ArrowUpRight, Store
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetAPI } from '../../api/budget';
 import { useAuth } from '../../context/AuthContext';
 import './BudgetPlanner.css';
 
+const PICKS_CATS = [
+  { name: 'Venue',         emoji: '🏛️' },
+  { name: 'Catering',      emoji: '🍽️' },
+  { name: 'Photography',   emoji: '📸' },
+  { name: 'Makeup/Mehndi', emoji: '💄' },
+  { name: 'Decoration',    emoji: '🎨' },
+];
+
+const CATEGORY_COLOR = {
+  venue:        '#D7385E',
+  catering:     '#f59e0b',
+  photography:  '#6366f1',
+  videography:  '#8b5cf6',
+  decoration:   '#ec4899',
+  music:        '#3b82f6',
+  flowers:      '#10b981',
+  attire:       '#f97316',
+  transport:    '#14b8a6',
+  invitation:   '#64748b',
+  default:      '#94a3b8',
+};
+
+function catColor(cat) {
+  const key = (cat || '').toLowerCase().split(' ')[0];
+  return CATEGORY_COLOR[key] || CATEGORY_COLOR.default;
+}
+
+function catInitial(cat) {
+  return (cat || '?').charAt(0).toUpperCase();
+}
+
+function fmtCurrency(amount) {
+  return new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR' }).format(amount || 0);
+}
+
+/* ── Delete Confirmation Modal ── */
+function DeleteModal({ itemName, onConfirm, onCancel }) {
+  return createPortal(
+    <div className="bp-overlay" onClick={onCancel}>
+      <div className="bp-modal bp-modal--delete" onClick={(e) => e.stopPropagation()}>
+        <div className="bp-modal-icon bp-modal-icon--warn">
+          <AlertTriangle size={26} />
+        </div>
+        <h3 className="bp-modal-title">Delete Item?</h3>
+        <p className="bp-modal-sub">
+          Remove <strong>{itemName}</strong> from your budget? This cannot be undone.
+        </p>
+        <div className="bp-modal-row">
+          <button className="bp-btn bp-btn--ghost" onClick={onCancel}>Cancel</button>
+          <button className="bp-btn bp-btn--danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── Add / Edit Item Modal ── */
+function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose }) {
+  return createPortal(
+    <div className="bp-overlay" onClick={onClose}>
+      <div className="bp-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="bp-modal-head">
+          <h3 className="bp-modal-title">{editingItem ? 'Edit Item' : 'Add Budget Item'}</h3>
+          <button className="bp-modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+        <form onSubmit={onSave} className="bp-modal-form">
+          <div className="bp-form-group">
+            <label className="bp-label">Category *</label>
+            <input
+              className="bp-input"
+              placeholder="e.g. Venue, Catering, Photography"
+              value={itemForm.category}
+              onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
+              required
+            />
+          </div>
+          <div className="bp-form-group">
+            <label className="bp-label">Notes</label>
+            <input
+              className="bp-input"
+              placeholder="Additional details..."
+              value={itemForm.notes}
+              onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
+            />
+          </div>
+          <div className="bp-form-row">
+            <div className="bp-form-group">
+              <label className="bp-label">Estimated Amount *</label>
+              <input
+                type="number"
+                className="bp-input"
+                placeholder="0"
+                value={itemForm.allocatedAmount}
+                onChange={(e) => setItemForm({ ...itemForm, allocatedAmount: e.target.value })}
+                required
+              />
+            </div>
+            <div className="bp-form-group">
+              <label className="bp-label">Spent Amount</label>
+              <input
+                type="number"
+                className="bp-input"
+                placeholder="0"
+                value={itemForm.spentAmount}
+                onChange={(e) => setItemForm({ ...itemForm, spentAmount: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="bp-modal-row">
+            <button type="button" className="bp-btn bp-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="bp-btn bp-btn--primary">
+              {editingItem ? 'Save Changes' : 'Add Item'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── Main Component ── */
 const BudgetPlanner = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [budget, setBudget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
-  // Form states
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [createAmount, setCreateAmount] = useState('');
-  const [itemForm, setItemForm] = useState({
-    category: '',
-    notes: '',
-    allocatedAmount: '',
-    spentAmount: ''
+  const [itemForm, setItemForm] = useState({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+  const [picksCategories, setPicksCategories] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('vidai_picks_cats') || '[]'); } catch { return []; }
+  });
+  const [vendorPicks, setVendorPicks] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('vidai_vendor_picks') || '[]'); } catch { return []; }
+  });
+  const [picksLoading, setPicksLoading] = useState(false);
+  const [showAiPlan, setShowAiPlan] = useState(true);
+  const [showPicksBuilder, setShowPicksBuilder] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('vidai_vendor_picks') || '[]').length === 0; } catch { return true; }
   });
 
   useEffect(() => {
-    fetchBudget();
-  }, []);
+    sessionStorage.setItem('vidai_picks_cats', JSON.stringify(picksCategories));
+  }, [picksCategories]);
 
   useEffect(() => {
-    if (user?.onboarding?.budgets && !budget && createAmount === '') {
-      let total = 0;
-      Object.values(user.onboarding.budgets).forEach(val => {
-        if (val === 'Under 10,000') total += 10000;
-        else if (val === '10,000 - 25,000') total += 25000;
-        else if (val === '25,000 - 50,000') total += 50000;
-        else if (val === 'Above 50,000') total += 75000;
-      });
-      if (total > 0) {
-        setCreateAmount(total.toString());
+    sessionStorage.setItem('vidai_vendor_picks', JSON.stringify(vendorPicks));
+  }, [vendorPicks]);
+
+  useEffect(() => { fetchBudget(); }, []);
+
+  useEffect(() => {
+    const autoCreate = async () => {
+      if (!loading && !budget && user?.onboarding?.totalBudget && user.onboarding.totalBudget > 0) {
+        try {
+          await budgetAPI.create({ totalBudget: Number(user.onboarding.totalBudget) });
+          await fetchBudget();
+        } catch {
+          setCreateAmount(user.onboarding.totalBudget.toString());
+        }
       }
-    }
-  }, [user, budget, createAmount]);
-
-  // Debug: Log budget state changes
-  useEffect(() => {
-    console.log('Budget state changed:', budget);
-    console.log('Loading state:', loading);
-  }, [budget, loading]);
+    };
+    autoCreate();
+  }, [loading, budget, user]);
 
   const fetchBudget = async () => {
     try {
       setLoading(true);
       const response = await budgetAPI.getMine();
-      console.log('Fetched budget response:', response.data); // Debug log
-      // Axios returns response.data, which contains {success, data: {budget}}
-      // So we need response.data.data.budget
       const budgetData = response.data?.data?.budget || response.data?.budget;
       setBudget(budgetData);
-      console.log('Budget set to:', budgetData); // Debug log
     } catch (error) {
-      if (error.response && error.response.status === 404) {
-        setBudget(null);
-      } else {
-        console.error('Error fetching budget:', error);
-        toast.error('Failed to load budget');
-      }
+      if (error.response?.status !== 404) toast.error('Failed to load budget');
+      setBudget(null);
     } finally {
       setLoading(false);
-      console.log('Loading set to false'); // Debug log
     }
   };
 
   const handleCreateBudget = async (e) => {
     e.preventDefault();
     if (!createAmount || isNaN(createAmount) || Number(createAmount) <= 0) {
-      toast.error('Please enter a valid amount');
-      return;
+      toast.error('Please enter a valid amount'); return;
     }
-
     try {
-      console.log('Creating budget with amount:', createAmount); // Debug log
       await budgetAPI.create({ totalBudget: Number(createAmount) });
-      toast.success('Budget created successfully!');
-      console.log('Budget created, fetching...'); // Debug log
-      await fetchBudget(); // Wait for fetchBudget to complete
-      console.log('Fetch complete'); // Debug log
-    } catch (error) {
-      console.error('Error creating budget:', error);
+      toast.success('Budget created!');
+      await fetchBudget();
+    } catch {
       toast.error('Failed to create budget');
       setLoading(false);
     }
@@ -96,13 +216,56 @@ const BudgetPlanner = () => {
       setAiLoading(true);
       toast.loading('Generating AI budget plan...', { id: 'ai-toast' });
       await budgetAPI.generateAIPlan();
+      setShowAiPlan(true);
       toast.success('AI Plan generated!', { id: 'ai-toast' });
       fetchBudget();
-    } catch (error) {
-      console.error('Error generating AI plan:', error);
+    } catch {
       toast.error('Failed to generate AI plan', { id: 'ai-toast' });
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const picksTotal = picksCategories.reduce((s, c) => s + (Number(c.percentage) || 0), 0);
+  const picksValid = picksCategories.length > 0
+    && picksTotal > 0
+    && picksTotal <= 100
+    && picksCategories.every(c => Number(c.percentage) > 0);
+
+  const togglePicksCat = (name) => {
+    setPicksCategories(prev => {
+      const existing = prev.find(c => c.name === name);
+      if (existing) return prev.filter(c => c.name !== name);
+      return [...prev, { name, percentage: '' }];
+    });
+  };
+
+  const updatePicksPct = (name, value) => {
+    setPicksCategories(prev =>
+      prev.map(c => c.name === name ? { ...c, percentage: value } : c)
+    );
+  };
+
+  const handleGetVendorPicks = async () => {
+    if (!picksValid) { toast.error('Each category needs a percentage between 1–100, and total cannot exceed 100%'); return; }
+    try {
+      setPicksLoading(true);
+      toast.loading('Finding best vendors...', { id: 'picks-toast' });
+      const res = await budgetAPI.recommendVendors(
+        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) }))
+      );
+      const picks = res.data?.data?.picks || [];
+      setVendorPicks(picks);
+      if (picks.length === 0) {
+        toast.error('No vendors found for these categories.', { id: 'picks-toast' });
+      } else {
+        toast.success(`Found ${picks.length} vendor recommendation(s)!`, { id: 'picks-toast' });
+        setShowPicksBuilder(false);
+      }
+    } catch {
+      toast.error('Failed to get vendor recommendations.', { id: 'picks-toast' });
+    } finally {
+      setPicksLoading(false);
     }
   };
 
@@ -113,9 +276,8 @@ const BudgetPlanner = () => {
         category: itemForm.category,
         notes: itemForm.notes,
         allocatedAmount: Number(itemForm.allocatedAmount),
-        spentAmount: Number(itemForm.spentAmount) || 0
+        spentAmount: Number(itemForm.spentAmount) || 0,
       };
-
       if (editingItem) {
         await budgetAPI.updateItem(editingItem._id, data);
         toast.success('Item updated');
@@ -125,21 +287,19 @@ const BudgetPlanner = () => {
       }
       closeModal();
       fetchBudget();
-    } catch (error) {
-      console.error('Error saving item:', error);
+    } catch {
       toast.error('Failed to save item');
     }
   };
 
-  const handleDeleteItem = async (itemId) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
-
+  const handleDeleteItem = async () => {
+    if (!deleteTarget) return;
     try {
-      await budgetAPI.deleteItem(itemId);
+      await budgetAPI.deleteItem(deleteTarget._id);
       toast.success('Item deleted');
+      setDeleteTarget(null);
       fetchBudget();
-    } catch (error) {
-      console.error('Error deleting item:', error);
+    } catch {
       toast.error('Failed to delete item');
     }
   };
@@ -147,150 +307,331 @@ const BudgetPlanner = () => {
   const openModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      setItemForm({
-        category: item.category,
-        notes: item.notes || '',
-        allocatedAmount: item.allocatedAmount,
-        spentAmount: item.spentAmount || ''
-      });
+      setItemForm({ category: item.category, notes: item.notes || '', allocatedAmount: item.allocatedAmount, spentAmount: item.spentAmount || '' });
     } else {
       setEditingItem(null);
-      setItemForm({
-        category: '',
-        notes: '',
-        allocatedAmount: '',
-        spentAmount: ''
-      });
+      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
     }
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingItem(null);
-  };
+  const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR'
-    }).format(amount || 0);
-  };
-
-  console.log('Render - budget:', budget, 'loading:', loading, 'budget truthy:', !!budget); // Debug log
-
+  /* ── Loading ── */
   if (loading && !budget) {
-    console.log('Showing loading spinner');
-    return <div className="loading-spinner">Loading budget...</div>;
-  }
-
-  // Create Budget View
-  if (!budget && !loading) {
-    console.log('Showing create budget form'); // Debug log
     return (
-      <div className="create-budget-container">
-        <h2 className="create-budget-title">Create Your Wedding Budget</h2>
-        <form onSubmit={handleCreateBudget}>
-          <div className="budget-input-group">
-            <label className="form-label">Total Budget Amount</label>
-            <input
-              type="number"
-              className="budget-input"
-              placeholder="e.g. 25000"
-              value={createAmount}
-              onChange={(e) => setCreateAmount(e.target.value)}
-            />
-          </div>
-          <button type="submit" className="btn-primary">
-            <Plus size={20} style={{ marginRight: '8px', display: 'inline' }} />
-            Start Planning
-          </button>
-        </form>
+      <div className="bp-loading">
+        <div className="bp-loading-spinner" />
+        <span>Loading your budget...</span>
       </div>
     );
   }
 
-  // If we reach here, budget exists
-  console.log('Showing budget planner with budget:', budget);
+  /* ── Create Budget ── */
+  if (!budget && !loading) {
+    return (
+      <div className="bp-setup-wrap">
+        <div className="bp-setup-card">
+          <div className="bp-setup-icon"><Wallet size={36} /></div>
+          <h2 className="bp-setup-title">Set Your Wedding Budget</h2>
+          <p className="bp-setup-sub">Enter your total budget to start planning and tracking expenses.</p>
+          <form onSubmit={handleCreateBudget} className="bp-setup-form">
+            <div className="bp-form-group">
+              <label className="bp-label">Total Budget (PKR)</label>
+              <input
+                type="number"
+                className="bp-input bp-input--lg"
+                placeholder="e.g. 2500000"
+                value={createAmount}
+                onChange={(e) => setCreateAmount(e.target.value)}
+              />
+            </div>
+            <button type="submit" className="bp-btn bp-btn--primary bp-btn--full">
+              <Plus size={18} /> Start Planning
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
-  // Calculate totals
-  const totalAllocated = budget?.items?.reduce((sum, item) => sum + (item.allocatedAmount || 0), 0) || 0;
-  const totalSpent = budget?.items?.reduce((sum, item) => sum + (item.spentAmount || 0), 0) || 0;
-  const remaining = (budget?.totalBudget || 0) - totalSpent;
+  /* ── Totals ── */
+  const totalAllocated = budget?.items?.reduce((s, i) => s + (i.allocatedAmount || 0), 0) || 0;
+  const totalSpent     = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
+  const remaining      = (budget?.totalBudget || 0) - totalSpent;
+  const spentPct       = budget?.totalBudget ? Math.min(100, (totalSpent / budget.totalBudget) * 100) : 0;
+  const allocPct       = budget?.totalBudget ? Math.min(100, (totalAllocated / budget.totalBudget) * 100) : 0;
+  const isOver         = remaining < 0;
+  const isWarning      = !isOver && spentPct >= 80;
 
   return (
-    <div className="budget-planner-container">
-      <div className="budget-header">
-        <h1 className="budget-title">Budget Planner</h1>
+    <div className="bp-page">
+
+      {/* ── Hero ── */}
+      <div className="bp-hero">
+        <div className="bp-hero-glow" />
+        <div className="bp-hero-content">
+          <div className="bp-hero-icon"><BarChart3 size={28} /></div>
+          <div>
+            <h1 className="bp-hero-title">Budget Planner</h1>
+            <p className="bp-hero-sub">{budget?.items?.length || 0} expense categories tracked</p>
+          </div>
+        </div>
+        <div className="bp-hero-actions">
+          <button className="bp-btn bp-btn--ai" onClick={handleGenerateAI} disabled={aiLoading}>
+            {aiLoading ? <Sparkles size={16} className="bp-spin" /> : <Brain size={16} />}
+            {aiLoading ? 'Generating...' : 'AI Plan'}
+          </button>
+          <button
+            className={`bp-btn bp-btn--picks ${showPicksBuilder ? 'bp-btn--picks--active' : ''}`}
+            onClick={() => setShowPicksBuilder(b => !b)}
+          >
+            <Store size={16} /> Vendor Picks
+          </button>
+          <button className="bp-btn bp-btn--add" onClick={() => openModal()}>
+            <Plus size={16} /> Add Item
+          </button>
+        </div>
       </div>
 
-      <div className="budget-summary">
-        <div className="summary-card">
-          <span className="summary-label">Total Budget</span>
-          <span className="summary-value">{formatCurrency(budget.totalBudget)}</span>
+      {/* ── Stat Tiles ── */}
+      <div className="bp-stats">
+        <div className="bp-stat bp-stat--rose">
+          <div className="bp-stat-icon"><Wallet size={20} /></div>
+          <div className="bp-stat-body">
+            <span className="bp-stat-label">Total Budget</span>
+            <span className="bp-stat-value">{fmtCurrency(budget.totalBudget)}</span>
+          </div>
         </div>
-        <div className="summary-card">
-          <span className="summary-label">Estimated Cost</span>
-          <span className="summary-value">{formatCurrency(totalAllocated)}</span>
+        <div className="bp-stat bp-stat--violet">
+          <div className="bp-stat-icon"><Target size={20} /></div>
+          <div className="bp-stat-body">
+            <span className="bp-stat-label">Estimated Cost</span>
+            <span className="bp-stat-value">{fmtCurrency(totalAllocated)}</span>
+          </div>
         </div>
-        <div className="summary-card">
-          <span className="summary-label">Actual Spent</span>
-          <span className="summary-value">{formatCurrency(totalSpent)}</span>
+        <div className="bp-stat bp-stat--amber">
+          <div className="bp-stat-icon"><TrendingDown size={20} /></div>
+          <div className="bp-stat-body">
+            <span className="bp-stat-label">Actual Spent</span>
+            <span className="bp-stat-value">{fmtCurrency(totalSpent)}</span>
+          </div>
         </div>
-        <div className="summary-card">
-          <span className="summary-label">Remaining</span>
-          <span className={`summary-value ${remaining >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(remaining)}
-          </span>
+        <div className={`bp-stat ${isOver ? 'bp-stat--red' : isWarning ? 'bp-stat--amber' : 'bp-stat--green'}`}>
+          <div className="bp-stat-icon">
+            {isOver ? <TrendingDown size={20} /> : <TrendingUp size={20} />}
+          </div>
+          <div className="bp-stat-body">
+            <span className="bp-stat-label">Remaining</span>
+            <span className="bp-stat-value">{fmtCurrency(remaining)}</span>
+          </div>
         </div>
       </div>
 
-      <div className="budget-actions">
-        <button
-          className="btn-ai-generate"
-          onClick={handleGenerateAI}
-          disabled={aiLoading}
-        >
-          {aiLoading ? <Sparkles className="spin" size={20} /> : <Brain size={20} />}
-          {aiLoading ? 'Generating...' : 'Generate AI Plan'}
-        </button>
-        <button className="btn-add-item" onClick={() => openModal()}>
-          <Plus size={20} />
-          Add Item
-        </button>
+      {/* ── Overall Progress ── */}
+      <div className="bp-progress-card">
+        <div className="bp-card-stripe" />
+        <div className="bp-progress-head">
+          <span className="bp-progress-title">Budget Overview</span>
+          <span className={`bp-progress-pct ${isOver ? 'bp-progress-pct--over' : ''}`}>{spentPct.toFixed(1)}% spent</span>
+        </div>
+        <div className="bp-progress-track">
+          <div
+            className={`bp-progress-fill ${isOver ? 'bp-progress-fill--over' : isWarning ? 'bp-progress-fill--warn' : ''}`}
+            style={{ width: `${spentPct}%` }}
+          />
+          <div className="bp-progress-alloc" style={{ width: `${allocPct}%` }} />
+        </div>
+        <div className="bp-progress-legend">
+          <span className="bp-legend-dot bp-legend-dot--spent" /> Spent &nbsp;
+          <span className="bp-legend-dot bp-legend-dot--alloc" /> Estimated
+        </div>
+        {isOver && (
+          <div className="bp-alert bp-alert--over">
+            <AlertTriangle size={15} /> You have exceeded your budget by {fmtCurrency(Math.abs(remaining))}
+          </div>
+        )}
+        {isWarning && !isOver && (
+          <div className="bp-alert bp-alert--warn">
+            <AlertTriangle size={15} /> {spentPct.toFixed(0)}% of your budget has been spent — review your expenses.
+          </div>
+        )}
       </div>
 
-      {/* AI Plan Section */}
-      {budget.aiPlan && budget.aiPlan.allocations && budget.aiPlan.allocations.length > 0 && (
-        <div className="ai-plan-section" style={{ margin: '2rem 0', padding: '1.5rem', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-          <h2 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Brain size={24} style={{ color: '#6366f1' }} />
-            AI Budget Recommendations
-          </h2>
-          {budget.aiPlan.summary && (
-            <p style={{ marginBottom: '1rem', color: '#666' }}>{budget.aiPlan.summary}</p>
+      {/* ── Vendor Picks Builder ── */}
+      {showPicksBuilder && (
+        <div className="bp-picks-builder">
+          <div className="bp-card-stripe" />
+          <div className="bp-picks-builder-head">
+            <div className="bp-picks-builder-title-row">
+              <Store size={20} className="bp-picks-builder-icon" />
+              <div>
+                <h2 className="bp-picks-builder-title">AI Vendor Picks</h2>
+                <p className="bp-picks-builder-sub">Select categories and allocate budget percentages. AI will find the best vendor for each.</p>
+              </div>
+            </div>
+            <button className="bp-modal-close" onClick={() => setShowPicksBuilder(false)}><X size={18} /></button>
+          </div>
+
+          <div className="bp-cat-toggle-grid">
+            {PICKS_CATS.map(cat => {
+              const selected = picksCategories.some(c => c.name === cat.name);
+              return (
+                <button
+                  key={cat.name}
+                  className={`bp-cat-toggle ${selected ? 'bp-cat-toggle--sel' : ''}`}
+                  onClick={() => togglePicksCat(cat.name)}
+                >
+                  <span className="bp-cat-toggle-emoji">{cat.emoji}</span>
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {picksCategories.length > 0 && (
+            <div className="bp-pct-rows">
+              {picksCategories.map(cat => (
+                <div key={cat.name} className="bp-pct-row">
+                  <span className="bp-pct-label">
+                    {PICKS_CATS.find(c => c.name === cat.name)?.emoji} {cat.name}
+                  </span>
+                  <div className="bp-pct-input-wrap">
+                    <input
+                      type="number"
+                      className="bp-pct-input"
+                      placeholder="0"
+                      min="1"
+                      max="100"
+                      value={cat.percentage}
+                      onChange={e => updatePicksPct(cat.name, e.target.value)}
+                    />
+                    <span className="bp-pct-symbol">%</span>
+                  </div>
+                </div>
+              ))}
+              <div className={`bp-pct-sum ${picksTotal > 100 ? 'bp-pct-sum--err' : picksTotal > 0 ? 'bp-pct-sum--ok' : ''}`}>
+                Allocated: {picksTotal}%
+                {picksTotal > 100
+                  ? ' — exceeds 100%, please reduce'
+                  : picksTotal > 0 && picksTotal < 100
+                  ? ` — ${100 - picksTotal}% of budget left unallocated`
+                  : picksTotal === 100
+                  ? ' — full budget allocated'
+                  : ''}
+              </div>
+              <button
+                className="bp-btn bp-btn--primary bp-btn--full"
+                onClick={handleGetVendorPicks}
+                disabled={!picksValid || picksLoading}
+              >
+                {picksLoading ? <Sparkles size={16} className="bp-spin" /> : <ArrowUpRight size={16} />}
+                {picksLoading ? 'Finding vendors...' : 'Find Best Vendors →'}
+              </button>
+            </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-            {budget.aiPlan.allocations.map((allocation, index) => (
-              <div key={index} style={{ padding: '1rem', background: 'white', borderRadius: '6px', border: '1px solid #e0e0e0' }}>
-                <div style={{ fontWeight: '600', marginBottom: '0.5rem', textTransform: 'capitalize' }}>
-                  {allocation.category.replace(/_/g, ' ')}
-                </div>
-                <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#6366f1', marginBottom: '0.5rem' }}>
-                  {formatCurrency(allocation.amount)} ({allocation.percentage}%)
-                </div>
-                {allocation.explanation && (
-                  <div style={{ fontSize: '0.875rem', color: '#666' }}>{allocation.explanation}</div>
+        </div>
+      )}
+
+      {/* ── Vendor Picks Results ── */}
+      {vendorPicks.length > 0 && (
+        <div className="bp-picks-results">
+          <div className="bp-picks-results-head">
+            <Store size={20} className="bp-picks-builder-icon" />
+            <div>
+              <h2 className="bp-picks-results-title">Your Vendor Picks</h2>
+              <p className="bp-picks-results-sub">AI-matched vendors based on your preferences and budget.</p>
+            </div>
+            <button
+              className="bp-picks-change-btn"
+              onClick={() => {
+                setVendorPicks([]);
+                sessionStorage.removeItem('vidai_vendor_picks');
+                setShowPicksBuilder(true);
+              }}
+              title="Change percentages and get new picks"
+            >
+              <Edit2 size={14} /> Change Picks
+            </button>
+          </div>
+          <div className="bp-picks-grid">
+            {vendorPicks.map((pick, i) => (
+              <div key={i} className="bp-pick-card">
+                <div className="bp-pick-card-stripe" />
+                {pick.vendor.coverImage ? (
+                  <img className="bp-pick-cover" src={pick.vendor.coverImage} alt={pick.vendor.businessName} />
+                ) : (
+                  <div className="bp-pick-cover-placeholder">
+                    <Store size={32} />
+                  </div>
                 )}
+                <div className="bp-pick-body">
+                  <div className="bp-pick-cat-row">
+                    <span className="bp-pick-cat-badge">
+                      {PICKS_CATS.find(c => c.name === pick.category)?.emoji} {pick.category}
+                    </span>
+                    <span className="bp-pick-pct">{pick.percentage}%</span>
+                  </div>
+                  <h3 className="bp-pick-name">{pick.vendor.businessName}</h3>
+                  <div className="bp-pick-meta">
+                    {pick.vendor.city && (
+                      <span className="bp-pick-city"><MapPin size={13} /> {pick.vendor.city}</span>
+                    )}
+                    {pick.vendor.ratingsAverage > 0 && (
+                      <span className="bp-pick-rating"><Star size={13} /> {pick.vendor.ratingsAverage.toFixed(1)}</span>
+                    )}
+                  </div>
+                  <div className="bp-pick-budget">
+                    <span className="bp-pick-budget-label">Your budget</span>
+                    <span className="bp-pick-budget-val">{fmtCurrency(pick.budgetAmount)}</span>
+                  </div>
+                  {pick.vendor.startingPrice > 0 && (
+                    <div className="bp-pick-starting">Starting from {fmtCurrency(pick.vendor.startingPrice)}</div>
+                  )}
+                  {pick.reasoning && <p className="bp-pick-reason">{pick.reasoning}</p>}
+                  <button
+                    className="bp-pick-view-btn"
+                    onClick={() => navigate(`/user/vendors/${pick.vendor.slug}`)}
+                  >
+                    View Vendor <ArrowUpRight size={14} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-          {budget.aiPlan.tips && budget.aiPlan.tips.length > 0 && (
-            <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fff3cd', borderRadius: '6px', border: '1px solid #ffc107' }}>
-              <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: '600' }}>💡 Tips</h3>
-              <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                {budget.aiPlan.tips.map((tip, index) => (
-                  <li key={index} style={{ marginBottom: '0.25rem', fontSize: '0.875rem' }}>{tip}</li>
+        </div>
+      )}
+
+      {/* ── AI Plan ── */}
+      {budget.aiPlan?.allocations?.length > 0 && showAiPlan && (
+        <div className="bp-ai-card">
+          <div className="bp-ai-stripe" />
+          <div className="bp-ai-head">
+            <Brain size={22} className="bp-ai-brain" />
+            <div style={{ flex: 1 }}>
+              <h2 className="bp-ai-title">AI Budget Recommendations</h2>
+              {budget.aiPlan.summary && <p className="bp-ai-summary">{budget.aiPlan.summary}</p>}
+            </div>
+            <button className="bp-ai-close" onClick={() => setShowAiPlan(false)} title="Dismiss"><X size={16} /></button>
+          </div>
+          <div className="bp-ai-grid">
+            {budget.aiPlan.allocations.map((a, i) => (
+              <div key={i} className="bp-ai-alloc">
+                <div className="bp-ai-alloc-cat">{a.category.replace(/_/g, ' ')}</div>
+                <div className="bp-ai-alloc-amt">{fmtCurrency(a.amount)}</div>
+                <div className="bp-ai-alloc-pct">{a.percentage}%</div>
+                {a.explanation && <div className="bp-ai-alloc-note">{a.explanation}</div>}
+              </div>
+            ))}
+          </div>
+          {budget.aiPlan.tips?.length > 0 && (
+            <div className="bp-ai-tips">
+              <div className="bp-ai-tips-head">
+                <CheckCircle2 size={16} /> Pro Tips
+              </div>
+              <ul className="bp-ai-tips-list">
+                {budget.aiPlan.tips.map((tip, i) => (
+                  <li key={i}>{tip}</li>
                 ))}
               </ul>
             </div>
@@ -298,111 +639,77 @@ const BudgetPlanner = () => {
         </div>
       )}
 
-      <div className="budget-items-list">
-        <table className="items-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Description</th>
-              <th>Estimated</th>
-              <th>Actual</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {budget?.items?.length > 0 ? (
-              budget.items.map((item) => (
-                <tr key={item._id}>
-                  <td>{item.category}</td>
-                  <td>{item.notes}</td>
-                  <td>{formatCurrency(item.allocatedAmount)}</td>
-                  <td>{formatCurrency(item.spentAmount)}</td>
-                  <td>
-                    <div className="item-actions">
-                      <button className="btn-icon edit" onClick={() => openModal(item)}>
-                        <Edit2 size={18} />
-                      </button>
-                      <button className="btn-icon delete" onClick={() => handleDeleteItem(item._id)}>
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>
-                  No budget items yet. Add one or use AI to generate a plan!
-                </td>
-              </tr>
+      {/* ── Budget Items ── */}
+      <div className="bp-booked-section">
+        <div className="bp-booked-head">
+          <h2 className="bp-booked-title">Budget Items</h2>
+          <div className="bp-booked-head-right">
+            {budget?.items?.length > 0 && (
+              <span className="bp-booked-count">{budget.items.length}</span>
             )}
-          </tbody>
-        </table>
-      </div>
-
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>{editingItem ? 'Edit Item' : 'Add New Item'}</h3>
-              <button className="modal-close" onClick={closeModal}>
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleSaveItem}>
-              <div className="form-group">
-                <label className="form-label">Category</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Venue, Catering"
-                  value={itemForm.category}
-                  onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Notes</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Item details"
-                  value={itemForm.notes}
-                  onChange={(e) => setItemForm({ ...itemForm, notes: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Allocated Amount</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="0.00"
-                  value={itemForm.allocatedAmount}
-                  onChange={(e) => setItemForm({ ...itemForm, allocatedAmount: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Spent Amount</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  placeholder="0.00"
-                  value={itemForm.spentAmount}
-                  onChange={(e) => setItemForm({ ...itemForm, spentAmount: e.target.value })}
-                />
-              </div>
-              <div className="modal-actions">
-                <button type="button" className="btn-cancel" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-save">
-                  Save Item
-                </button>
-              </div>
-            </form>
+            <button className="bp-btn bp-btn--add bp-btn--sm" onClick={() => openModal()}>
+              <Plus size={14} /> Add Item
+            </button>
           </div>
         </div>
+
+        {budget?.items?.length > 0 ? (
+          <div className="bp-booked-list">
+            {budget.items.map((item) => {
+              const color = catColor(item.category);
+              const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
+              return (
+                <div key={item._id} className="bp-booked-item" style={{ borderLeftColor: color }}>
+                  <div className="bp-booked-avatar" style={{ background: color }}>
+                    {catInitial(item.category)}
+                  </div>
+                  <div className="bp-booked-info">
+                    <span className="bp-booked-cat">{item.category}</span>
+                    {item.notes && <span className="bp-booked-note">{item.notes}</span>}
+                    <div className="bp-booked-amounts">
+                      <span className="bp-booked-est">{fmtCurrency(item.allocatedAmount)}</span>
+                      <span className="bp-booked-arrow">&rarr;</span>
+                      <span className={`bp-booked-spent ${overItem ? 'bp-booked-spent--over' : ''}`}>
+                        {fmtCurrency(item.spentAmount || 0)} spent
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bp-booked-btns">
+                    <button className="bp-icon-btn bp-icon-btn--edit" onClick={() => openModal(item)}>
+                      <Edit2 size={14} />
+                    </button>
+                    <button className="bp-icon-btn bp-icon-btn--del" onClick={() => setDeleteTarget(item)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bp-booked-empty">
+            <Wallet size={32} className="bp-booked-empty-icon" />
+            <p>No items yet. Add your first budget item or generate an AI plan.</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Modals ── */}
+      {isModalOpen && (
+        <ItemModal
+          editingItem={editingItem}
+          itemForm={itemForm}
+          setItemForm={setItemForm}
+          onSave={handleSaveItem}
+          onClose={closeModal}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteModal
+          itemName={deleteTarget.category}
+          onConfirm={handleDeleteItem}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   );

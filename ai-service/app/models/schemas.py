@@ -126,3 +126,47 @@ class BudgetPlanResponse(BaseModel):
     """POST /api/v1/budget-plan response."""
 
     data: BudgetPlanResponseData
+
+
+# ── Vendor Picks ─────────────────────────────────────────────────────
+
+
+class CategoryWithPercentage(BaseModel):
+    """Single category input with user-set percentage."""
+
+    name: str = Field(..., description="Category name e.g. Venue, Catering")
+    percentage: float = Field(..., gt=0, le=100, description="Budget percentage 1-100")
+
+
+class VendorPickRequest(BaseModel):
+    """POST /api/v1/vendor-picks request body."""
+
+    totalBudget: float = Field(..., gt=0, description="Total budget in PKR")
+    categoriesWithPercentages: list[CategoryWithPercentage] = Field(
+        ..., min_length=1, description="Categories with user-set percentages"
+    )
+    preferences: dict = Field(
+        default_factory=dict, description="User onboarding preferences"
+    )
+    userId: str = Field(default="", description="User ID from backend")
+
+
+class VendorPickItem(BaseModel):
+    """AI recommendation for a single vendor category."""
+
+    category: str = Field(..., description="Category name matching input")
+    vendorCategory: str = Field(..., description="DB vendor category enum value")
+    reasoning: str = Field(default="", description="Why this allocation fits")
+    keyFeatures: list[str] = Field(default_factory=list, description="Key features to look for")
+
+
+class VendorPickResponseData(BaseModel):
+    """Data payload for vendor picks response."""
+
+    picks: list[VendorPickItem] = Field(default_factory=list)
+
+
+class VendorPickResponse(BaseModel):
+    """POST /api/v1/vendor-picks response."""
+
+    data: VendorPickResponseData

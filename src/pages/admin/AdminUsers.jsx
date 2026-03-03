@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminAPI } from '../../api';
 import Loading from '../../components/Loading';
 import {
@@ -7,33 +7,38 @@ import {
   ChevronRight,
   UserCheck,
   UserX,
+  Users,
+  X,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './AdminUsers.css';
 
-const ROLE_FILTERS = [
-  { key: '', label: 'All Roles' },
-  { key: 'user', label: 'Users' },
-  { key: 'vendor', label: 'Vendors' },
-  { key: 'admin', label: 'Admins' },
+const STATUS_TABS = [
+  { key: '', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'inactive', label: 'Inactive' },
 ];
 
 function AdminUsers() {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers]           = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  const [loading, setLoading] = useState(true);
-  const [roleFilter, setRoleFilter] = useState('');
-  const [search, setSearch] = useState('');
+  const [loading, setLoading]       = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch]         = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [page, setPage] = useState(1);
-  const [toggleLoading, setToggleLoading] = useState(null); // user id being toggled
+  const [page, setPage]             = useState(1);
+  const [toggleLoading, setToggleLoading] = useState(null);
+  const searchRef = useRef(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit: 20 };
-      if (roleFilter) params.role = roleFilter;
+      const params = { page, limit: 20, role: 'user' };
       if (search) params.search = search;
+      if (statusFilter === 'active')   params.isActive = true;
+      if (statusFilter === 'inactive') params.isActive = false;
 
       const res = await adminAPI.getUsers(params);
       setUsers(res.data.data.users);
@@ -43,71 +48,85 @@ function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [page, roleFilter, search]);
+  }, [page, statusFilter, search]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [roleFilter, search]);
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => { setPage(1); }, [statusFilter, search]);
 
   const handleSearch = (e) => {
     e.preventDefault();
     setSearch(searchInput.trim());
   };
 
-  const handleToggleStatus = async (userId, userName) => {
+  const clearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    searchRef.current?.focus();
+  };
+
+  const handleToggleStatus = async (userId, userName, isActive) => {
     setToggleLoading(userId);
     try {
       const res = await adminAPI.toggleUserStatus(userId);
-      const isActive = res.data.data.user.isActive;
-      toast.success(`${userName} ${isActive ? 'activated' : 'deactivated'}`);
+      const nowActive = res.data.data.user.isActive;
+      toast.success(`${userName} ${nowActive ? 'activated' : 'deactivated'}`);
       fetchUsers();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to toggle user status');
+      toast.error(err.response?.data?.message || 'Failed to update user status');
     } finally {
       setToggleLoading(null);
     }
   };
 
   return (
-    <div className="admin-users">
-      <div className="page-header">
-        <h1>User Management</h1>
-        <span className="admin-total-badge">{pagination.total} user{pagination.total !== 1 ? 's' : ''}</span>
+    <div className="au-page">
+      {/* Header */}
+      <div className="au-header">
+        <div className="au-header-left">
+          <div className="au-header-icon"><Users size={18} /></div>
+          <div>
+            <h1 className="au-title">User Management</h1>
+            <p className="au-subtitle">Manage registered customer accounts</p>
+          </div>
+        </div>
+        <span className="au-count-badge">
+          {pagination.total} user{pagination.total !== 1 ? 's' : ''}
+        </span>
       </div>
 
       {/* Filters */}
-      <div className="admin-user-filters">
-        <div className="admin-status-tabs">
-          {ROLE_FILTERS.map(({ key, label }) => (
+      <div className="au-filters">
+        <div className="au-tabs">
+          {STATUS_TABS.map(({ key, label }) => (
             <button
               key={key}
               type="button"
-              className={`admin-tab ${roleFilter === key ? 'admin-tab-active' : ''}`}
-              onClick={() => setRoleFilter(key)}
+              className={`au-tab ${statusFilter === key ? 'au-tab-active' : ''}`}
+              onClick={() => setStatusFilter(key)}
             >
               {label}
             </button>
           ))}
         </div>
 
-        <form className="admin-search-form" onSubmit={handleSearch}>
-          <div className="admin-search-wrap">
-            <Search size={16} className="admin-search-icon" />
+        <form className="au-search-form" onSubmit={handleSearch}>
+          <div className="au-search-wrap">
+            <Search size={15} className="au-search-icon" />
             <input
+              ref={searchRef}
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search name or email…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="admin-search-input"
+              className="au-search-input"
             />
+            {searchInput && (
+              <button type="button" className="au-search-clear" onClick={clearSearch}>
+                <X size={13} />
+              </button>
+            )}
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm">
-            Search
-          </button>
+          <button type="submit" className="au-search-btn">Search</button>
         </form>
       </div>
 
@@ -115,19 +134,19 @@ function AdminUsers() {
       {loading ? (
         <Loading size="md" />
       ) : users.length === 0 ? (
-        <div className="empty-state">
-          <h3>No users found</h3>
-          <p>{search ? `No results for "${search}"` : 'Try changing your filters.'}</p>
+        <div className="au-empty">
+          <Users size={40} strokeWidth={1.2} />
+          <h3>{search ? `No results for "${search}"` : 'No users found'}</h3>
+          <p>Try adjusting your search or filters.</p>
         </div>
       ) : (
         <>
-          <div className="table-wrapper">
-            <table>
+          <div className="au-table-wrap">
+            <table className="au-table">
               <thead>
                 <tr>
                   <th>User</th>
                   <th>Email</th>
-                  <th>Role</th>
                   <th>Status</th>
                   <th>Joined</th>
                   <th>Last Login</th>
@@ -136,44 +155,52 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u._id} className={!u.isActive ? 'admin-user-disabled' : ''}>
-                    <td className="admin-user-cell">
-                      <div className="admin-avatar-sm">
-                        {u.name?.charAt(0).toUpperCase()}
-                      </div>
-                      {u.name}
-                    </td>
-                    <td>{u.email}</td>
+                  <tr key={u._id} className={!u.isActive ? 'au-row-disabled' : ''}>
                     <td>
-                      <span className={`badge badge-${roleBadge(u.role)}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`badge badge-${u.isActive ? 'success' : 'danger'}`}>
-                        {u.isActive ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                    <td>{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : '—'}</td>
-                    <td>
-                      {u.role !== 'admin' && (
-                        <button
-                          type="button"
-                          className={`btn btn-sm ${u.isActive ? 'admin-btn-reject' : 'admin-btn-approve'}`}
-                          onClick={() => handleToggleStatus(u._id, u.name)}
-                          disabled={toggleLoading === u._id}
-                          title={u.isActive ? 'Deactivate user' : 'Activate user'}
+                      <div className="au-user-cell">
+                        <div
+                          className="au-avatar"
+                          style={{ background: stringToColor(u.name || u.email) }}
                         >
-                          {toggleLoading === u._id ? (
-                            '...'
-                          ) : u.isActive ? (
-                            <><UserX size={14} /> Deactivate</>
-                          ) : (
-                            <><UserCheck size={14} /> Activate</>
-                          )}
-                        </button>
-                      )}
+                          {(u.name || u.email || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <span className="au-user-name">{u.name || '—'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="au-muted">{u.email}</td>
+                    <td>
+                      <span className={`au-status-badge ${u.isActive ? 'au-status-active' : 'au-status-inactive'}`}>
+                        {u.isActive
+                          ? <><CheckCircle2 size={11} /> Active</>
+                          : <><XCircle size={11} /> Disabled</>}
+                      </span>
+                    </td>
+                    <td className="au-muted">
+                      {new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="au-muted">
+                      {u.lastLogin
+                        ? new Date(u.lastLogin).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        : <span className="au-never">Never</span>}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`au-toggle-btn ${u.isActive ? 'au-toggle-deactivate' : 'au-toggle-activate'}`}
+                        onClick={() => handleToggleStatus(u._id, u.name, u.isActive)}
+                        disabled={toggleLoading === u._id}
+                        title={u.isActive ? 'Deactivate account' : 'Activate account'}
+                      >
+                        {toggleLoading === u._id ? (
+                          <span className="au-spinner" />
+                        ) : u.isActive ? (
+                          <><UserX size={13} /> Deactivate</>
+                        ) : (
+                          <><UserCheck size={13} /> Activate</>
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -183,25 +210,47 @@ function AdminUsers() {
 
           {/* Pagination */}
           {pagination.pages > 1 && (
-            <div className="admin-pagination">
+            <div className="au-pagination">
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="au-page-btn"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
               >
-                <ChevronLeft size={16} /> Prev
+                <ChevronLeft size={15} /> Prev
               </button>
-              <span className="admin-page-info">
-                Page {pagination.page} of {pagination.pages}
-              </span>
+
+              <div className="au-page-numbers">
+                {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                  .filter((n) => n === 1 || n === pagination.pages || Math.abs(n - page) <= 1)
+                  .reduce((acc, n, idx, arr) => {
+                    if (idx > 0 && n - arr[idx - 1] > 1) acc.push('...');
+                    acc.push(n);
+                    return acc;
+                  }, [])
+                  .map((n, i) =>
+                    n === '...' ? (
+                      <span key={`e${i}`} className="au-page-ellipsis">…</span>
+                    ) : (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`au-page-num ${page === n ? 'active' : ''}`}
+                        onClick={() => setPage(n)}
+                      >
+                        {n}
+                      </button>
+                    )
+                  )}
+              </div>
+
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
+                className="au-page-btn"
                 disabled={page >= pagination.pages}
                 onClick={() => setPage((p) => p + 1)}
               >
-                Next <ChevronRight size={16} />
+                Next <ChevronRight size={15} />
               </button>
             </div>
           )}
@@ -211,9 +260,10 @@ function AdminUsers() {
   );
 }
 
-function roleBadge(role) {
-  const map = { admin: 'info', vendor: 'warning', user: 'neutral' };
-  return map[role] || 'neutral';
+function stringToColor(str = '') {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return `hsl(${Math.abs(hash) % 360},50%,42%)`;
 }
 
 export default AdminUsers;

@@ -6,21 +6,24 @@ import toast from 'react-hot-toast';
 
 import './Onboarding.css';
 
-const LOCATIONS = ['Lahore', 'Karachi', 'Islamabad', 'Rawalpindi'];
-const LOOKING_FOR_OPTIONS = [
-    'Wedding Venue', 'Photographer', 'Makeup Artist', 'Decor',
-    'Catering', 'Henna Artist', 'Car Rental', 'Wedding Stationery'
-];
+const LOCATIONS = ['Islamabad', 'Rawalpindi'];
+
 const EVENT_TYPES = [
     'Baraat', 'Walima', 'Mehndi', 'Nikkah',
-    'Engagement', 'Home-based Event', 'Other'
+    'Engagement', 'Other'
 ];
-const BUDGET_OPTIONS = [
-    'Under 10,000',
-    '10,000 - 25,000',
-    '25,000 - 50,000',
-    'Above 50,000'
+
+const VENUE_TYPES = [
+    'Banquet Hall', 'Outdoor Garden', 'Farmhouse',
+    'Marquee'
 ];
+
+const FOOD_OPTIONS = [
+    'Full Buffet', 'Hi-Tea', 'Sit-down Dinner',
+    'Mixed / Fusion', 'No Preference'
+];
+
+const TOTAL_STEPS = 4;
 
 const Onboarding = () => {
     const navigate = useNavigate();
@@ -29,17 +32,23 @@ const Onboarding = () => {
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
+        // Step 1 – Personal Details
         firstName: '',
         lastName: '',
-        weddingLocation: '',
-        eventDate: '',
-        guestCount: 200,
-        lookingFor: [],
+        phone: '',
+        // Step 2 – Event Planning
         eventTypes: [],
-        budgets: {}
+        eventDate: '',
+        weddingLocation: '',
+        // Step 3 – Venue & Guests
+        venueType: '',
+        guestCount: 200,
+        foodPreference: '',
+        // Step 4 – Budget
+        totalBudget: '',
     });
 
-    const nextStep = () => setStep(s => Math.min(s + 1, 4));
+    const nextStep = () => setStep(s => Math.min(s + 1, TOTAL_STEPS));
     const prevStep = () => setStep(s => Math.max(s - 1, 1));
 
     const updateForm = (key, value) => setFormData(prev => ({ ...prev, [key]: value }));
@@ -57,7 +66,12 @@ const Onboarding = () => {
     const handleFinish = async () => {
         setLoading(true);
         try {
-            const { data } = await client.post('/auth/onboarding', formData);
+            const payload = {
+                ...formData,
+                totalBudget: formData.totalBudget ? Number(formData.totalBudget) : 0,
+                guestCount: Number(formData.guestCount),
+            };
+            const { data } = await client.post('/auth/onboarding', payload);
             if (data.success) {
                 updateUser(data.data.user);
                 toast.success('Onboarding complete!');
@@ -70,18 +84,30 @@ const Onboarding = () => {
         }
     };
 
+    // Format number with commas for display
+    const formatPKR = (val) => {
+        if (!val) return '';
+        return Number(val).toLocaleString('en-PK');
+    };
+
     return (
         <div className="onboarding-page">
             <div className="onboarding-container">
-                {/* Progress Bar */}
-                <div className="progress-bar-container">
-                    <div className="progress-bar" style={{ width: `${(step / 4) * 100}%` }}></div>
+                {/* Step indicator */}
+                <div className="onboarding-stepper">
+                    {[1, 2, 3, 4].map((n, i) => (
+                        <React.Fragment key={n}>
+                            <span className={`dot ${step >= n ? 'active' : ''} ${step === n ? 'current' : ''}`}>{n}</span>
+                            {i < 3 && <span className={`line ${step > n ? 'done' : ''}`} />}
+                        </React.Fragment>
+                    ))}
                 </div>
 
+                {/* ── Step 1: Personal Details ── */}
                 {step === 1 && (
                     <div className="onboarding-step">
-                        <h2>Let's get to know you</h2>
-                        <p>We'll ask a few questions to customize your experience.</p>
+                        <h2>👋 Let's get to know you</h2>
+                        <p>Tell us a bit about yourself so we can personalize your experience.</p>
 
                         <div className="form-group-row">
                             <div className="form-group">
@@ -105,7 +131,61 @@ const Onboarding = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Wedding Location *</label>
+                            <label>Phone Number</label>
+                            <input
+                                type="tel"
+                                value={formData.phone}
+                                onChange={(e) => updateForm('phone', e.target.value)}
+                                placeholder="e.g. 0300-1234567"
+                            />
+                        </div>
+
+                        <div className="onboarding-actions">
+                            <button
+                                className="btn-primary"
+                                onClick={nextStep}
+                                disabled={!formData.firstName || !formData.lastName}
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── Step 2: Event Planning ── */}
+                {step === 2 && (
+                    <div className="onboarding-step">
+                        <h2>🎉 What are you planning?</h2>
+                        <p>Tell us about the event so we can find the best vendors for you.</p>
+
+                        <div className="form-group">
+                            <label>What event(s) are you planning? *</label>
+                            <div className="chip-grid">
+                                {EVENT_TYPES.map(evt => (
+                                    <button
+                                        key={evt}
+                                        className={`chip ${formData.eventTypes.includes(evt) ? 'active' : ''}`}
+                                        onClick={() => toggleArrayItem('eventTypes', evt)}
+                                    >
+                                        {evt}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>When's the big day?</label>
+                            <input
+                                type="date"
+                                value={formData.eventDate}
+                                onChange={(e) => updateForm('eventDate', e.target.value)}
+                                className="form-input"
+                                min={new Date().toISOString().split('T')[0]}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>Preferred Location *</label>
                             <div className="chip-grid">
                                 {LOCATIONS.map(loc => (
                                     <button
@@ -120,10 +200,11 @@ const Onboarding = () => {
                         </div>
 
                         <div className="onboarding-actions">
+                            <button className="btn-secondary" onClick={prevStep}>Back</button>
                             <button
                                 className="btn-primary"
                                 onClick={nextStep}
-                                disabled={!formData.firstName || !formData.lastName || !formData.weddingLocation}
+                                disabled={formData.eventTypes.length === 0 || !formData.weddingLocation}
                             >
                                 Continue
                             </button>
@@ -131,120 +212,117 @@ const Onboarding = () => {
                     </div>
                 )}
 
-                {step === 2 && (
+                {/* ── Step 3: Venue & Guests ── */}
+                {step === 3 && (
                     <div className="onboarding-step">
-                        <h2>When's the Big Day?</h2>
-                        <p>Get deals & discounts tailor-made for your wedding day.</p>
+                        <h2>🏛️ Venue & Guest Preferences</h2>
+                        <p>Help us understand your ideal setup.</p>
 
                         <div className="form-group">
-                            <label>Select Date</label>
+                            <label>What kind of venue do you want? *</label>
+                            <div className="chip-grid">
+                                {VENUE_TYPES.map(v => (
+                                    <button
+                                        key={v}
+                                        className={`chip ${formData.venueType === v ? 'active' : ''}`}
+                                        onClick={() => updateForm('venueType', v)}
+                                    >
+                                        {v}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>How many guests do you expect? <strong>{formData.guestCount}</strong></label>
                             <input
-                                type="date"
-                                value={formData.eventDate}
-                                onChange={(e) => updateForm('eventDate', e.target.value)}
-                                className="form-input"
+                                type="range"
+                                min="20" max="2000" step="10"
+                                value={formData.guestCount}
+                                onChange={(e) => updateForm('guestCount', parseInt(e.target.value))}
+                                className="range-slider"
                             />
+                            <div className="range-labels">
+                                <span>20</span>
+                                <span>500</span>
+                                <span>1000</span>
+                                <span>2000</span>
+                            </div>
+                        </div>
+
+                        <div className="form-group">
+                            <label>What kind of food do you want to serve?</label>
+                            <div className="chip-grid">
+                                {FOOD_OPTIONS.map(f => (
+                                    <button
+                                        key={f}
+                                        className={`chip ${formData.foodPreference === f ? 'active' : ''}`}
+                                        onClick={() => updateForm('foodPreference', f)}
+                                    >
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="onboarding-actions">
                             <button className="btn-secondary" onClick={prevStep}>Back</button>
-                            <button className="btn-primary" onClick={nextStep}>
-                                {formData.eventDate ? 'Continue' : 'Skip'}
+                            <button
+                                className="btn-primary"
+                                onClick={nextStep}
+                                disabled={!formData.venueType}
+                            >
+                                Continue
                             </button>
                         </div>
                     </div>
                 )}
 
-                {step === 3 && (
-                    <div className="onboarding-step">
-                        <h2>Your guests and preferences</h2>
-                        <p>We'll find the best match for you based on these details.</p>
-
-                        <div className="form-group">
-                            <label>Number of guests: {formData.guestCount}</label>
-                            <input
-                                type="range"
-                                min="50" max="1000" step="50"
-                                value={formData.guestCount}
-                                onChange={(e) => updateForm('guestCount', parseInt(e.target.value))}
-                                className="range-slider"
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label>I'm looking for</label>
-                            <div className="chip-grid">
-                                {LOOKING_FOR_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        className={`chip ${formData.lookingFor.includes(opt) ? 'active' : ''}`}
-                                        onClick={() => toggleArrayItem('lookingFor', opt)}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label>Event Type</label>
-                            <div className="chip-grid">
-                                {EVENT_TYPES.map(opt => (
-                                    <button
-                                        key={opt}
-                                        className={`chip ${formData.eventTypes.includes(opt) ? 'active' : ''}`}
-                                        onClick={() => toggleArrayItem('eventTypes', opt)}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="onboarding-actions">
-                            <button className="btn-secondary" onClick={prevStep}>Back</button>
-                            <button className="btn-primary" onClick={nextStep}>Continue</button>
-                        </div>
-                    </div>
-                )}
-
+                {/* ── Step 4: Budget ── */}
                 {step === 4 && (
                     <div className="onboarding-step">
-                        <h2>Let's Get Some Estimates</h2>
-                        <p>Tell us your budget limits for each category.</p>
+                        <h2>💰 What's your budget?</h2>
+                        <p>Set a total budget for your event. You can always change it later in the Budget Planner.</p>
 
-                        {formData.lookingFor.length === 0 ? (
-                            <p className="no-selection">You haven't selected any specific services. You can continue without estimates.</p>
-                        ) : (
-                            <div className="budget-list">
-                                {formData.lookingFor.map(svc => (
-                                    <div key={svc} className="form-group">
-                                        <label>{svc} Budget</label>
-                                        <div className="chip-grid">
-                                            {BUDGET_OPTIONS.map(opt => (
-                                                <button
-                                                    key={opt}
-                                                    className={`chip ${formData.budgets[svc] === opt ? 'active' : ''}`}
-                                                    onClick={() => {
-                                                        setFormData(prev => ({
-                                                            ...prev,
-                                                            budgets: { ...prev.budgets, [svc]: opt }
-                                                        }));
-                                                    }}
-                                                >
-                                                    {opt}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
+                        <div className="form-group budget-input-group">
+                            <label>Total Event Budget (PKR)</label>
+                            <div className="budget-input-wrapper">
+                                <span className="currency-prefix">Rs.</span>
+                                <input
+                                    type="number"
+                                    value={formData.totalBudget}
+                                    onChange={(e) => updateForm('totalBudget', e.target.value)}
+                                    placeholder="e.g. 500000"
+                                    min="0"
+                                    className="budget-input"
+                                />
+                            </div>
+                            {formData.totalBudget && (
+                                <p className="budget-display">
+                                    Rs. {formatPKR(formData.totalBudget)}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="budget-quick-picks">
+                            <label>Quick pick:</label>
+                            <div className="chip-grid">
+                                {[200000, 500000, 1000000, 2000000, 5000000].map(amt => (
+                                    <button
+                                        key={amt}
+                                        className={`chip ${Number(formData.totalBudget) === amt ? 'active' : ''}`}
+                                        onClick={() => updateForm('totalBudget', amt.toString())}
+                                    >
+                                        Rs. {formatPKR(amt)}
+                                    </button>
                                 ))}
                             </div>
-                        )}
+                        </div>
 
                         <div className="onboarding-actions">
                             <button className="btn-secondary" onClick={prevStep}>Back</button>
                             <button className="btn-primary" onClick={handleFinish} disabled={loading}>
-                                {loading ? 'Saving...' : 'Finish'}
+                                {loading ? 'Saving...' : 'Finish Setup'}
                             </button>
                         </div>
                     </div>
