@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
   gridImgWrap: { position: 'relative' },
   gridImg: {
     width: '100%',
-    height: 120,
+    aspectRatio: 1,
     backgroundColor: theme.colors.border,
   },
   gridBadges: {
