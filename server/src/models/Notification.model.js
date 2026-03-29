@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema(
         'booking_created', 'booking_approved', 'booking_rejected',
         'booking_cancelled', 'booking_completed', 'payment_received',
         'vendor_verified', 'vendor_rejected', 'review_received',
-        'system_alert', 'welcome', 'general',
+        'new_message', 'system_alert', 'welcome', 'general',
       ],
       default: 'general',
     },
@@ -30,7 +30,7 @@ const notificationSchema = new mongoose.Schema(
     // Link to related resource
     relatedModel: {
       type: String,
-      enum: ['Booking', 'Vendor', 'Review', 'User', null],
+      enum: ['Booking', 'Vendor', 'Review', 'User', 'Conversation', null],
     },
     relatedId: {
       type: mongoose.Schema.Types.ObjectId,

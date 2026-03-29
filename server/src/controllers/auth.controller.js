@@ -488,3 +488,38 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
     }
   });
 });
+
+/**
+ * @route   POST /api/v1/auth/push-token
+ * @desc    Register a device push notification token
+ * @access  Private
+ */
+export const registerPushToken = asyncHandler(async (req, res) => {
+  const { token, platform = 'android' } = req.body;
+
+  if (!token) {
+    const error = new Error('Push token is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const user = await User.findById(req.user._id);
+
+  // Remove existing token if it already exists (re-registration)
+  user.pushTokens = (user.pushTokens || []).filter((t) => t.token !== token);
+
+  // Add the new token
+  user.pushTokens.push({ token, platform });
+
+  // Keep only the latest 5 tokens per user (multiple devices)
+  if (user.pushTokens.length > 5) {
+    user.pushTokens = user.pushTokens.slice(-5);
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Push token registered',
+  });
+});

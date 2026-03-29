@@ -8,6 +8,9 @@ export const vendorAPI = {
   getBySlug: (slug) => client.get(`/vendors/slug/${slug}`),
   getReviews: (id) => client.get(`/vendors/${id}/reviews`),
   addReview: (id, data) => client.post(`/vendors/${id}/reviews`, data),
+  togglePortfolioLike: (vendorId, itemId) => client.post(`/vendors/${vendorId}/portfolio/${itemId}/like`),
+  addPortfolioComment: (vendorId, itemId, text) => client.post(`/vendors/${vendorId}/portfolio/${itemId}/comments`, { text }),
+  deletePortfolioComment: (vendorId, itemId, commentId) => client.delete(`/vendors/${vendorId}/portfolio/${itemId}/comments/${commentId}`),
 
   // Vendor (protected)
   getMyProfile: () => client.get('/vendors/me/profile'),

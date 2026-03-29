@@ -11,10 +11,12 @@ import {
   Menu,
   X,
   LogIn,
-  Mail
+  Mail,
+  MessageSquareDot,
 } from 'lucide-react';
 import { useState } from 'react';
 import AuthModal from '../auth/AuthModal';
+import NotificationDropdown from '../NotificationDropdown';
 import './UserLayout.css';
 
 const PUBLIC_NAV_ITEMS = [
@@ -26,7 +28,8 @@ const PRIVATE_NAV_ITEMS = [
   { to: '/user', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/user/bookings', icon: Calendar, label: 'Bookings' },
   { to: '/user/budget', icon: Calculator, label: 'Budget' },
-  { to: '/user/chat', icon: MessageCircle, label: 'Chat' },
+  { to: '/user/messages', icon: MessageSquareDot, label: 'Messages' },
+  { to: '/user/chat', icon: MessageCircle, label: 'AI Chat' },
   { to: '/user/invitations', icon: Mail, label: 'Invitation' },
 ];
 
@@ -85,6 +88,7 @@ function UserLayout() {
           <div className="user-actions">
             {isAuthenticated ? (
               <>
+                <NotificationDropdown messagesPath="/user/messages" />
                 <div className="user-info">
                   <div className="user-avatar">
                     {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}

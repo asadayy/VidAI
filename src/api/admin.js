@@ -16,4 +16,8 @@ export const adminAPI = {
   getActivityLogs: (params) => client.get('/admin/activity-logs', { params }),
   getSystemHealth: () => client.get('/admin/system-health'),
   getBookings: (params) => client.get('/admin/bookings', { params }),
+  getReports: (params) => client.get('/admin/reports', { params }),
+  getReportById: (id) => client.get(`/admin/reports/${id}`),
+  updateReport: (id, data) => client.patch(`/admin/reports/${id}`, data),
+  updateReportsBulk: (data) => client.patch('/admin/reports/bulk', data),
 };

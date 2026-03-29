@@ -69,11 +69,6 @@ function VendorProfile() {
   const [form, setForm]                         = useState(INITIAL_FORM);
   const [saving, setSaving]                     = useState(false);
   const [uploadingCover, setUploadingCover]     = useState(false);
-  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
-  const [uploadProgress, setUploadProgress]     = useState(0);
-  const [deletingItemId, setDeletingItemId]     = useState(null);
-
-  const portfolioInputRef = useRef(null);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -162,57 +157,11 @@ function VendorProfile() {
     }
   };
 
-  /* â”€â”€ Portfolio upload â”€â”€ */
-  const handlePortfolioUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    for (const f of files) {
-      const isVideo = f.type.startsWith('video/');
-      const limit = isVideo ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      if (f.size > limit) {
-        toast.error(`${f.name} exceeds the ${isVideo ? '100 MB (video)' : '10 MB (image)'} limit`);
-        return;
-      }
-    }
-
-    setUploadingPortfolio(true);
-    setUploadProgress(0);
-    try {
-      const { data } = await uploadAPI.uploadVendorPortfolio(files, '', (evt) => {
-        if (evt.total) setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
-      });
-      setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
-      toast.success(`${data.data.added.length} item(s) added to portfolio`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to upload files');
-    } finally {
-      setUploadingPortfolio(false);
-      setUploadProgress(0);
-      e.target.value = '';
-    }
-  };
-
-  /* â”€â”€ Delete portfolio item â”€â”€ */
-  const handleDeletePortfolioItem = async (itemId) => {
-    setDeletingItemId(itemId);
-    try {
-      const { data } = await uploadAPI.deleteVendorPortfolioItem(itemId);
-      setVendor((prev) => ({ ...prev, portfolio: data.data.portfolio }));
-      toast.success('Item removed from portfolio');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to remove item');
-    } finally {
-      setDeletingItemId(null);
-    }
-  };
-
   if (loading) return <Loading fullScreen message="Loading profileâ€¦" />;
 
   const verStatus  = vendor?.verificationStatus || 'pending';
   const verCfg     = VERIFICATION_CONFIG[verStatus] || VERIFICATION_CONFIG.pending;
   const VerIcon    = verCfg.icon;
-  const portfolio  = vendor?.portfolio || [];
   const completeness = vendor?.profileCompleteness ?? 0;
 
   return (
@@ -530,96 +479,6 @@ function VendorProfile() {
           </button>
         </div>
       </form>
-
-      {/* â•â• Portfolio section â•â• */}
-      {!isNew && (
-        <div className="vp-portfolio-card">
-          <div className="vp-portfolio-card-stripe" />
-          <div className="vp-portfolio-header">
-            <div className="vp-portfolio-title-wrap">
-              <div className="vp-portfolio-icon"><ImageIcon size={16} /></div>
-              <div>
-                <h3 className="vp-portfolio-title">Portfolio Gallery</h3>
-                <p className="vp-portfolio-subtitle">
-                  {portfolio.length} item{portfolio.length !== 1 ? 's' : ''} — photos &amp; videos of your work
-                </p>
-              </div>
-            </div>
-
-            <label className={`vp-btn vp-btn--outline${uploadingPortfolio ? ' vp-btn--busy' : ''}`}>
-              <Upload size={14} />
-              {uploadingPortfolio
-                ? `Uploading${uploadProgress > 0 ? ` ${uploadProgress}%` : 'â€¦'}`
-                : 'Upload Media'}
-              <input
-                ref={portfolioInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/x-msvideo,video/webm,video/mpeg"
-                multiple
-                hidden
-                onChange={handlePortfolioUpload}
-                disabled={uploadingPortfolio}
-              />
-            </label>
-          </div>
-
-          <p className="vp-portfolio-hint">
-            Images â‰¤ 10 MB (JPEG, PNG, WebP, GIF) Â· Videos â‰¤ 100 MB (MP4, MOV, AVI, WebM)
-          </p>
-
-          {/* Upload progress */}
-          {uploadingPortfolio && uploadProgress > 0 && (
-            <div className="vp-upload-bar">
-              <div className="vp-upload-bar-fill" style={{ width: `${uploadProgress}%` }} />
-            </div>
-          )}
-
-          {/* Grid or empty state */}
-          {portfolio.length === 0 ? (
-            <div className="vp-portfolio-empty">
-              <div className="vp-portfolio-empty-icon"><ImageIcon size={28} /></div>
-              <p className="vp-portfolio-empty-text">
-                Upload photos or videos of your work to attract more customers
-              </p>
-            </div>
-          ) : (
-            <div className="vp-portfolio-grid">
-              {portfolio.map((item, i) => (
-                <div key={item._id || item.publicId || i} className="vp-portfolio-item">
-                  {item.resourceType === 'video' ? (
-                    <video src={item.url} controls preload="metadata" className="vp-portfolio-media" />
-                  ) : (
-                    <img src={item.url} alt={item.caption || `Portfolio ${i + 1}`} className="vp-portfolio-media" />
-                  )}
-
-                  {/* Type badge */}
-                  <span className="vp-media-badge">
-                    {item.resourceType === 'video'
-                      ? <><Film size={10} /> Video</>
-                      : <><ImageIcon size={10} /> Photo</>}
-                  </span>
-
-                  {/* Caption */}
-                  {item.caption && <span className="vp-media-caption">{item.caption}</span>}
-
-                  {/* Delete overlay */}
-                  <button
-                    type="button"
-                    className="vp-portfolio-delete"
-                    onClick={() => handleDeletePortfolioItem(item._id)}
-                    disabled={deletingItemId === item._id}
-                    title="Remove"
-                  >
-                    {deletingItemId === item._id
-                      ? <span className="vp-spinner" />
-                      : <Trash2 size={13} />}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

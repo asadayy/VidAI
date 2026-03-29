@@ -5,6 +5,16 @@ import { asyncHandler } from '../middleware/error.middleware.js';
 import slugify from 'slugify';
 import Review from '../models/Review.model.js';
 
+const serializePortfolioItem = (item) => {
+  if (!item) return null;
+
+  return {
+    ...item.toObject(),
+    likesCount: item.likes?.length || 0,
+    commentsCount: item.comments?.length || 0,
+  };
+};
+
 /**
  * @route   GET /api/v1/vendors
  * @desc    Get all approved vendors (public listing)
@@ -129,7 +139,8 @@ export const searchVendors = asyncHandler(async (req, res) => {
  */
 export const getVendorById = asyncHandler(async (req, res) => {
   const vendor = await Vendor.findById(req.params.id)
-    .populate('user', 'name email avatar phone');
+    .populate('user', 'name email avatar phone')
+    .populate('portfolio.comments.user', 'name avatar');
 
   if (!vendor) {
     const error = new Error('Vendor not found.');
@@ -153,7 +164,8 @@ export const getVendorById = asyncHandler(async (req, res) => {
  */
 export const getVendorBySlug = asyncHandler(async (req, res) => {
   const vendor = await Vendor.findOne({ slug: req.params.slug })
-    .populate('user', 'name email avatar phone');
+    .populate('user', 'name email avatar phone')
+    .populate('portfolio.comments.user', 'name avatar');
 
   if (!vendor) {
     const error = new Error('Vendor not found.');
@@ -254,7 +266,9 @@ export const createVendorProfile = asyncHandler(async (req, res) => {
  */
 export const getMyVendorProfile = asyncHandler(async (req, res) => {
   const vendor = await Vendor.findOne({ user: req.user._id })
-    .populate('user', 'name email avatar phone');
+    .populate('user', 'name email avatar phone')
+    .populate('portfolio.likes', 'name avatar')
+    .populate('portfolio.comments.user', 'name avatar');
 
   if (!vendor) {
     const error = new Error('Vendor profile not found. Please create one first.');
@@ -479,6 +493,146 @@ export const getReviews = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: { reviews }
+  });
+});
+
+/**
+ * @route   POST /api/v1/vendors/:id/portfolio/:itemId/like
+ * @desc    Toggle like on a vendor portfolio item
+ * @access  Private (User/Admin)
+ */
+export const togglePortfolioLike = asyncHandler(async (req, res) => {
+  const { id: vendorId, itemId } = req.params;
+
+  const vendor = await Vendor.findById(vendorId).select('businessName portfolio');
+  if (!vendor) {
+    const error = new Error('Vendor not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const item = vendor.portfolio.id(itemId);
+  if (!item) {
+    const error = new Error('Portfolio item not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const userId = req.user._id.toString();
+  const alreadyLiked = item.likes?.some((id) => id.toString() === userId);
+
+  if (alreadyLiked) {
+    item.likes = item.likes.filter((id) => id.toString() !== userId);
+  } else {
+    item.likes.push(req.user._id);
+  }
+
+  await vendor.save();
+  await vendor.populate('portfolio.comments.user', 'name avatar');
+  const populatedItem = vendor.portfolio.id(itemId);
+
+  res.status(200).json({
+    success: true,
+    message: alreadyLiked ? 'Portfolio item unliked.' : 'Portfolio item liked.',
+    data: {
+      liked: !alreadyLiked,
+      portfolioItem: serializePortfolioItem(populatedItem),
+    },
+  });
+});
+
+/**
+ * @route   POST /api/v1/vendors/:id/portfolio/:itemId/comments
+ * @desc    Add a comment on a vendor portfolio item
+ * @access  Private (User/Admin)
+ */
+export const addPortfolioComment = asyncHandler(async (req, res) => {
+  const { id: vendorId, itemId } = req.params;
+  const text = (req.body?.text || '').trim();
+
+  if (!text) {
+    const error = new Error('Comment text is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const vendor = await Vendor.findById(vendorId).select('businessName portfolio');
+  if (!vendor) {
+    const error = new Error('Vendor not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const item = vendor.portfolio.id(itemId);
+  if (!item) {
+    const error = new Error('Portfolio item not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  item.comments.push({ user: req.user._id, text });
+  await vendor.save();
+
+  await vendor.populate('portfolio.comments.user', 'name avatar');
+  const populatedItem = vendor.portfolio.id(itemId);
+
+  res.status(201).json({
+    success: true,
+    message: 'Comment added successfully.',
+    data: {
+      portfolioItem: serializePortfolioItem(populatedItem),
+    },
+  });
+});
+
+/**
+ * @route   DELETE /api/v1/vendors/:id/portfolio/:itemId/comments/:commentId
+ * @desc    Delete own comment from a vendor portfolio item
+ * @access  Private (User/Admin)
+ */
+export const deletePortfolioComment = asyncHandler(async (req, res) => {
+  const { id: vendorId, itemId, commentId } = req.params;
+
+  const vendor = await Vendor.findById(vendorId).select('businessName portfolio');
+  if (!vendor) {
+    const error = new Error('Vendor not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const item = vendor.portfolio.id(itemId);
+  if (!item) {
+    const error = new Error('Portfolio item not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const comment = item.comments.id(commentId);
+  if (!comment) {
+    const error = new Error('Comment not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const commentOwnerId = (comment.user?._id || comment.user)?.toString();
+  if (!commentOwnerId || commentOwnerId !== req.user._id.toString()) {
+    const error = new Error('You can only delete your own comment.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  item.comments.pull(commentId);
+  await vendor.save();
+
+  await vendor.populate('portfolio.comments.user', 'name avatar');
+  const populatedItem = vendor.portfolio.id(itemId);
+
+  res.status(200).json({
+    success: true,
+    message: 'Comment deleted successfully.',
+    data: {
+      portfolioItem: serializePortfolioItem(populatedItem),
+    },
   });
 });
 

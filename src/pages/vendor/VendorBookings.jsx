@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { bookingAPI } from '../../api/bookings';
+import { reportAPI } from '../../api';
 import Loading from '../../components/Loading';
+import ReportModal from '../../components/ReportModal';
 import toast from 'react-hot-toast';
 import {
   CalendarCheck,
@@ -19,6 +21,7 @@ import {
   CircleCheck,
   CircleDot,
   DollarSign,
+  Flag,
 } from 'lucide-react';
 import './VendorBookings.css';
 
@@ -78,7 +81,7 @@ const formatPrice = (price) => {
   return `PKR ${price.toLocaleString('en-PK')}`;
 };
 
-function BookingCard({ booking: b, onApprove, onReject, onCancel }) {
+function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustomer }) {
   const cfg = STATUS_CONFIG[b.status] || STATUS_CONFIG.pending;
   const isPending = b.status === 'pending';
   const canCancel = ['pending', 'approved'].includes(b.status);
@@ -156,6 +159,11 @@ function BookingCard({ booking: b, onApprove, onReject, onCancel }) {
             Received {formatDate(b.createdAt)}
           </span>
           <div className="vb-actions">
+            {b.user?._id && (
+              <button type="button" className="vb-btn vb-btn-cancel" onClick={() => onReportCustomer(b)}>
+                <Flag size={12} /> Report customer
+              </button>
+            )}
             {isPending && (
               <>
                 <button type="button" className="vb-btn vb-btn-approve" onClick={() => onApprove(b)}>
@@ -189,6 +197,9 @@ function VendorBookings() {
   const [respondAction, setRespondAction] = useState('');
   const [respondMessage, setRespondMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [reportTarget, setReportTarget] = useState(null);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const fetchBookings = useCallback(async (page = 1) => {
     setLoading(true);
@@ -256,6 +267,36 @@ function VendorBookings() {
     }
   };
 
+  const openReportCustomer = (booking) => {
+    setReportTarget(booking);
+  };
+
+  const closeReportCustomer = () => {
+    setReportTarget(null);
+  };
+
+  const handleSubmitCustomerReport = async ({ reasonCategory, reason, description }) => {
+    if (!reportTarget?.user?._id) return;
+
+    setReportSubmitting(true);
+    try {
+      await reportAPI.create({
+        targetType: 'customer',
+        targetUserId: reportTarget.user._id,
+        targetBookingId: reportTarget._id,
+        reasonCategory,
+        reason,
+        description,
+      });
+      toast.success('Customer report submitted for admin review.');
+      closeReportCustomer();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to submit report');
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   return (
     <div className="vb-page">
       {/* Page header with stats */}
@@ -308,6 +349,7 @@ function VendorBookings() {
                 onApprove={openApprove}
                 onReject={openReject}
                 onCancel={handleCancel}
+                onReportCustomer={openReportCustomer}
               />
             ))}
           </div>
@@ -419,6 +461,22 @@ function VendorBookings() {
         </div>,
         document.body
       )}
+
+      <ReportModal
+        isOpen={Boolean(reportTarget)}
+        onClose={closeReportCustomer}
+        title="Report Customer"
+        subtitle={reportTarget?.user?.name ? `Reporting ${reportTarget.user.name}` : 'Submit a report for this customer.'}
+        reasonOptions={[
+          { value: 'harassment_or_abuse', label: 'Harassment or abusive behavior' },
+          { value: 'fraud_or_scam', label: 'Fraud or scam attempt' },
+          { value: 'spam', label: 'Spam or repeated fake bookings' },
+          { value: 'fake_or_misleading', label: 'Misleading event details' },
+          { value: 'other', label: 'Other' },
+        ]}
+        onSubmit={handleSubmitCustomerReport}
+        submitting={reportSubmitting}
+      />
     </div>
   );
 }

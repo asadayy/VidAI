@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, SafeAreaView,
+    View, Text, StyleSheet, ScrollView,
     KeyboardAvoidingView, Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { theme } from '../../constants/theme';
 import Input from '../../components/Input';

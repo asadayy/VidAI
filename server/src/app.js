@@ -18,6 +18,8 @@ import uploadRoutes from './routes/upload.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
+import reportRoutes from './routes/report.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware.js';
@@ -152,6 +154,8 @@ app.use('/api/v1/upload', uploadRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/invitations', invitationRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 // --------------- ERROR HANDLING ---------------
 

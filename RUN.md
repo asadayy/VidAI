@@ -21,12 +21,12 @@ node server.js
 
 ```bash
 cd ai-service
-.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+.venv\Scripts\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
                   
-- **Port:** 8000  
+- **Port:** 8001  
 - **Requires:** Ollama running locally (e.g. `ollama serve` and model `llama3.2:3b`)  
-- You should see: `Uvicorn running on http://0.0.0.0:8000`
+- You should see: `Uvicorn running on http://0.0.0.0:8001`
 
 ---
 

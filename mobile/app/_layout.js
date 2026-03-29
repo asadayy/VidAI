@@ -1,5 +1,6 @@
 import { Stack, useRouter } from 'expo-router';
-import { AuthProvider } from '../contexts/AuthContext';
+import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { SocketProvider } from '../contexts/SocketContext';
 import Toast from 'react-native-toast-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -9,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setNavigation } from '../api/client';
 import AppSplash from '../components/AppSplash';
 import AppIntro, { INTRO_SEEN_KEY } from '../components/AppIntro';
+import { registerForPushNotifications } from '../utils/notifications';
 
 function NavigationSetup() {
   const router = useRouter();
@@ -26,6 +28,7 @@ function NavigationSetup() {
 
 function InnerLayout() {
   const router = useRouter();
+  const { user } = useAuth();
   const [splashDone, setSplashDone] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [introChecked, setIntroChecked] = useState(false);
@@ -48,6 +51,13 @@ function InnerLayout() {
       }
     })();
   }, []);
+
+  // Register push notifications when user is authenticated
+  useEffect(() => {
+    if (user?._id) {
+      registerForPushNotifications().catch(() => {});
+    }
+  }, [user?._id]);
 
   const handleIntroRegister = () => {
     setShowIntro(false);
@@ -85,7 +95,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <InnerLayout />
+          <SocketProvider>
+            <InnerLayout />
+          </SocketProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

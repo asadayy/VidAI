@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   ScrollText,
   Activity,
+  Flag,
   LogOut,
   Shield,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { to: '/admin/users',     icon: Users,           label: 'Users'        },
   { to: '/admin/bookings',  icon: CalendarCheck,   label: 'Bookings'     },
   { to: '/admin/logs',      icon: ScrollText,      label: 'Activity Logs'},
+  { to: '/admin/reports',   icon: Flag,            label: 'System Reports'},
   { to: '/admin/system',    icon: Activity,        label: 'System Health'},
 ];
 

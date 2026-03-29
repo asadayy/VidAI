@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView,
-    SafeAreaView, Platform
+    Platform
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Feather } from '@expo/vector-icons';

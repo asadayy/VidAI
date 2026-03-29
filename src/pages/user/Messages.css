@@ -1,0 +1,33 @@
+.messages-page {
+  display: flex;
+  height: calc(100vh - 64px);
+  background: #12121e;
+  overflow: hidden;
+}
+
+.messages-sidebar {
+  width: 340px;
+  min-width: 280px;
+  border-right: 1px solid #2a2a3e;
+  flex-shrink: 0;
+}
+
+.messages-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile: show only list or chat */
+@media (max-width: 768px) {
+  .messages-sidebar {
+    width: 100%;
+  }
+
+  .messages-page.has-active .messages-sidebar {
+    display: none;
+  }
+
+  .messages-page:not(.has-active) .messages-main {
+    display: none;
+  }
+}

@@ -10,6 +10,12 @@ import {
   getSystemHealth,
   getAllBookings,
 } from '../controllers/admin.controller.js';
+import {
+  getAllReports,
+  getReportById,
+  updateReport,
+  bulkUpdateReports,
+} from '../controllers/report.controller.js';
 import { loginAdmin, getAdminMe } from '../controllers/admin-auth.controller.js';
 import { protectAdmin } from '../middleware/auth.middleware.js';
 
@@ -33,5 +39,9 @@ router.patch('/users/:id/toggle-status', toggleUserStatus);
 router.get('/activity-logs', getActivityLogs);
 router.get('/system-health', getSystemHealth);
 router.get('/bookings', getAllBookings);
+router.get('/reports', getAllReports);
+router.patch('/reports/bulk', bulkUpdateReports);
+router.get('/reports/:id', getReportById);
+router.patch('/reports/:id', updateReport);
 
 export default router;

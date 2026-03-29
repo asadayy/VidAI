@@ -4,15 +4,22 @@ import {
   LayoutDashboard,
   Package,
   CalendarCheck,
+  Star,
   UserCircle,
   LogOut,
+  Image as ImageIcon,
+  MessageSquareDot,
 } from 'lucide-react';
+import NotificationDropdown from '../NotificationDropdown';
 import './VendorLayout.css';
 
 const NAV_ITEMS = [
   { to: '/vendor', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { to: '/vendor/portfolio', icon: ImageIcon, label: 'Portfolio' },
   { to: '/vendor/services', icon: Package, label: 'Services' },
   { to: '/vendor/bookings', icon: CalendarCheck, label: 'Bookings' },
+  { to: '/vendor/messages', icon: MessageSquareDot, label: 'Messages' },
+  { to: '/vendor/reviews', icon: Star, label: 'Reviews' },
   { to: '/vendor/profile', icon: UserCircle, label: 'Profile' },
 ];
 
@@ -60,6 +67,7 @@ function VendorLayout() {
               <span className="sidebar-user-email">{user?.email}</span>
             </div>
           </div>
+          <NotificationDropdown messagesPath="/vendor/messages" />
           <button
             type="button"
             className="sidebar-logout"

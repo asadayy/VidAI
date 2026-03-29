@@ -13,7 +13,7 @@ const activityLogSchema = new mongoose.Schema(
     },
     resourceType: {
       type: String,
-      enum: ['User', 'Vendor', 'Booking', 'Review', 'Budget', 'Invitation', 'Payment', 'System'],
+      enum: ['User', 'Vendor', 'Booking', 'Review', 'Budget', 'Invitation', 'Payment', 'Report', 'System'],
       default: 'System',
     },
     resourceId: {

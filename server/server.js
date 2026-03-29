@@ -28,6 +28,7 @@ function freePort(port) {
 }
 
 import { logger } from './src/config/logger.js';
+import { setupSocket } from './src/config/socket.js';
 import { networkInterfaces } from 'os';
 
 const PORT = process.env.PORT || 5000;
@@ -72,6 +73,10 @@ const startServer = async () => {
 
       logger.info(`Health check at http://localhost:${PORT}/api/v1/health`);
     });
+
+    // Initialize Socket.io for real-time chat
+    setupSocket(server);
+    logger.info('Socket.io initialized for real-time messaging');
 
     server.on('error', (err) => {
       if (err.code === 'EADDRINUSE') {

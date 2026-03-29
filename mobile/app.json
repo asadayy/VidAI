@@ -41,6 +41,13 @@
       "expo-router",
       "expo-font",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#D7385E"
+        }
+      ],
+      [
         "expo-media-library",
         {
           "photosPermission": "Allow VidAI to save invitation images to your gallery.",
@@ -49,7 +56,8 @@
           "isAudioEnabled": false
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-video"
     ],
     "extra": {
       "apiUrl": "https://cyetic-feetless-bridgette.ngrok-free.dev/api/v1",

@@ -22,6 +22,7 @@ import {
   CreditCard,
   Settings,
   Activity,
+  Flag,
   XCircle,
   Filter,
   Calendar,
@@ -73,13 +74,15 @@ const ACTION_CONFIG = {
   refund_payment:        { label: 'Payment Refunded',       icon: CreditCard,    color: '#94a3b8', group: 'Payments' },
 
   // System
+  create_report:         { label: 'Report Submitted',       icon: Flag,          color: '#be123c', group: 'Reports' },
+  admin_update_report:   { label: 'Report Moderated',       icon: ShieldCheck,   color: '#0f766e', group: 'Reports' },
   system:                { label: 'System Event',           icon: Settings,      color: '#6b7280', group: 'System' },
 };
 
-const GROUPS = ['Auth', 'Bookings', 'Vendors', 'Users', 'Reviews', 'Budget', 'Invitations', 'Payments', 'System'];
+const GROUPS = ['Auth', 'Bookings', 'Vendors', 'Users', 'Reviews', 'Reports', 'Budget', 'Invitations', 'Payments', 'System'];
 
 const RESOURCE_TYPES = [
-  '', 'User', 'Vendor', 'Booking', 'Review', 'Budget', 'Invitation', 'Payment', 'System',
+  '', 'User', 'Vendor', 'Booking', 'Review', 'Report', 'Budget', 'Invitation', 'Payment', 'System',
 ];
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -157,6 +160,11 @@ function AdminLogs() {
     actions: Object.entries(ACTION_CONFIG).filter(([, v]) => v.group === group),
   })).filter(({ actions }) => actions.length > 0);
 
+  const actionOptions = groupedActions.flatMap(({ group, actions }) => ([
+    { value: `__group_${group}`, label: `--- ${group} ---`, disabled: true },
+    ...actions.map(([key, { label }]) => ({ value: key, label, disabled: false })),
+  ]));
+
   return (
     <div className="al-page">
       {/* Header */}
@@ -185,12 +193,8 @@ function AdminLogs() {
                 onChange={(e) => setActionFilter(e.target.value)}
               >
                 <option value="">All Events</option>
-                {groupedActions.map(({ group, actions }) => (
-                  <optgroup key={group} label={group}>
-                    {actions.map(([key, { label }]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </optgroup>
+                {actionOptions.map(({ value, label, disabled }) => (
+                  <option key={value} value={value} disabled={disabled}>{label}</option>
                 ))}
               </select>
             </div>

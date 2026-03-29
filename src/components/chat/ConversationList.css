@@ -1,0 +1,159 @@
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #12121e;
+}
+
+.cl-header {
+  padding: 1rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.cl-header h2 {
+  font-size: 1.2rem;
+  color: #fff;
+  margin: 0 0 0.75rem;
+}
+
+.cl-search {
+  width: 100%;
+  background: #2a2a3e;
+  border: 1px solid #3a3a4e;
+  border-radius: 0.75rem;
+  color: #e0e0e0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.cl-search:focus {
+  border-color: #D7385E;
+}
+
+.cl-search::placeholder {
+  color: #666;
+}
+
+.cl-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.cl-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #1e1e2e;
+}
+
+.cl-item:hover {
+  background: #1e1e2e;
+}
+
+.cl-item.active {
+  background: #1e1e30;
+  border-left: 3px solid #D7385E;
+}
+
+.cl-avatar {
+  position: relative;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: #D7385E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.cl-online-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4caf50;
+  border: 2px solid #12121e;
+}
+
+.cl-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cl-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cl-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-time {
+  font-size: 0.7rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.cl-preview-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.cl-preview {
+  font-size: 0.8rem;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cl-unread-badge {
+  background: #D7385E;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cl-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  text-align: center;
+  padding: 2rem;
+}
+
+.cl-empty p {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+}

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
 import VendorLayout from './components/vendor/VendorLayout';
@@ -11,14 +12,18 @@ import AdminLogin from './pages/AdminLogin';
 import VendorDashboard from './pages/vendor/VendorDashboard';
 import VendorServices from './pages/vendor/VendorServices';
 import VendorBookings from './pages/vendor/VendorBookings';
+import VendorReviews from './pages/vendor/VendorReviews';
 import VendorProfile from './pages/vendor/VendorProfile';
+import VendorPortfolio from './pages/vendor/VendorPortfolio';
 import VendorOnboarding from './pages/vendor/VendorOnboarding';
+import VendorMessages from './pages/vendor/VendorMessages';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminVendors from './pages/admin/AdminVendors';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminSystemHealth from './pages/admin/AdminSystemHealth';
 import AdminBookings from './pages/admin/AdminBookings';
+import AdminReports from './pages/admin/AdminReports';
 import UserLayout from './components/user/UserLayout';
 import VendorSearch from './pages/user/VendorSearch';
 import VendorDetails from './pages/user/VendorDetails';
@@ -27,6 +32,7 @@ import AIChat from './pages/user/AIChat';
 import UserDashboard from './pages/user/UserDashboard';
 import UserBookings from './pages/user/UserBookings';
 import InvitationGenerator from './pages/user/InvitationGenerator';
+import Messages from './pages/user/Messages';
 import Onboarding from './pages/user/Onboarding';
 import './App.css';
 
@@ -34,6 +40,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SocketProvider>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -64,6 +71,7 @@ function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="logs" element={<AdminLogs />} />
+            <Route path="reports" element={<AdminReports />} />
             <Route path="system" element={<AdminSystemHealth />} />
           </Route>
 
@@ -85,6 +93,7 @@ function App() {
               <Route path="bookings" element={<UserBookings />} />
               <Route path="budget" element={<BudgetPlanner />} />
               <Route path="chat" element={<AIChat />} />
+              <Route path="messages" element={<Messages />} />
               <Route path="invitations" element={<InvitationGenerator />} />
             </Route>
           </Route>
@@ -111,12 +120,16 @@ function App() {
             <Route index element={<VendorDashboard />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
+            <Route path="portfolio" element={<VendorPortfolio />} />
+            <Route path="reviews" element={<VendorReviews />} />
+            <Route path="messages" element={<VendorMessages />} />
             <Route path="profile" element={<VendorProfile />} />
           </Route>
 
           {/* ── Catch-all ── */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

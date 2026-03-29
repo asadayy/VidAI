@@ -12,6 +12,9 @@ import {
   searchVendors,
   addReview,
   getReviews,
+  togglePortfolioLike,
+  addPortfolioComment,
+  deletePortfolioComment,
 } from '../controllers/vendor.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 import { validateVendorProfile } from '../middleware/validate.middleware.js';
@@ -34,6 +37,11 @@ router.get('/:id/reviews', getReviews);
 
 // Review management
 router.post('/:id/reviews', protect, authorize('user', 'admin'), addReview);
+
+// Portfolio social interactions
+router.post('/:id/portfolio/:itemId/like', protect, authorize('user', 'admin'), togglePortfolioLike);
+router.post('/:id/portfolio/:itemId/comments', protect, authorize('user', 'admin'), addPortfolioComment);
+router.delete('/:id/portfolio/:itemId/comments/:commentId', protect, authorize('user', 'admin'), deletePortfolioComment);
 
 // Package management
 router.post('/me/packages', protect, authorize('vendor'), addPackage);

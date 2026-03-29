@@ -1,0 +1,240 @@
+/* VendorReviews - vrev namespace */
+
+.vrev-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.vrev-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.vrev-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #1f2937;
+}
+
+.vrev-subtitle {
+  margin: 0.3rem 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.vrev-verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  white-space: nowrap;
+}
+
+.vrev-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.vrev-stat-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.8rem;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.vrev-stat-label {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.vrev-stat-value {
+  color: #111827;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.vrev-empty-state {
+  border: 1px dashed #d1d5db;
+  border-radius: 0.9rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6b7280;
+  background: #fafafa;
+  display: grid;
+  place-items: center;
+  gap: 0.4rem;
+}
+
+.vrev-empty-state h3 {
+  margin: 0.2rem 0 0;
+  color: #111827;
+}
+
+.vrev-empty-state p {
+  margin: 0;
+  max-width: 550px;
+}
+
+.vrev-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.vrev-card {
+  background: #ffffff;
+  border: 1px solid #eceff3;
+  border-radius: 0.9rem;
+  padding: 0.95rem;
+}
+
+.vrev-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.vrev-user {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.vrev-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  flex-shrink: 0;
+}
+
+.vrev-user-meta {
+  display: grid;
+  min-width: 0;
+}
+
+.vrev-user-name {
+  font-weight: 700;
+  color: #111827;
+}
+
+.vrev-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+.vrev-stars {
+  display: inline-flex;
+  gap: 0.1rem;
+}
+
+.vrev-star-filled {
+  fill: #f59e0b;
+  color: #f59e0b;
+}
+
+.vrev-star-empty {
+  color: #d1d5db;
+}
+
+.vrev-review-title {
+  margin: 0.65rem 0 0.2rem;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.vrev-comment {
+  margin: 0;
+  color: #374151;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.vrev-card-actions {
+  margin-top: 0.55rem;
+}
+
+.vrev-report-btn {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #9f1239;
+  border-radius: 999px;
+  padding: 0.26rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+
+.vrev-report-btn:hover {
+  background: #ffe4e6;
+}
+
+.vrev-empty-page {
+  min-height: 55vh;
+  display: grid;
+  place-items: center;
+}
+
+.vrev-empty-card {
+  width: min(560px, 100%);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.vrev-empty-card h2 {
+  margin: 0;
+}
+
+.vrev-empty-card p {
+  color: #6b7280;
+}
+
+.vrev-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.55rem;
+  text-decoration: none;
+  color: #fff;
+  font-weight: 700;
+  background: #d7385e;
+}
+
+@media (max-width: 900px) {
+  .vrev-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vrev-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,94 @@
+.message-bubble {
+  display: flex;
+  margin-bottom: 0.25rem;
+  padding: 0 1rem;
+}
+
+.message-bubble.sent {
+  justify-content: flex-end;
+}
+
+.message-bubble.received {
+  justify-content: flex-start;
+}
+
+.message-bubble.system {
+  justify-content: center;
+}
+
+.mb-content {
+  max-width: 65%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 1rem;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.message-bubble.sent .mb-content {
+  background: #D7385E;
+  color: #fff;
+  border-bottom-right-radius: 0.25rem;
+}
+
+.message-bubble.received .mb-content {
+  background: #2a2a3e;
+  color: #e0e0e0;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.message-bubble.system .mb-content {
+  background: transparent;
+  color: #888;
+  font-size: 0.75rem;
+  font-style: italic;
+  text-align: center;
+  max-width: 80%;
+  padding: 0.3rem 0.6rem;
+}
+
+.mb-text {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.mb-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+.mb-time {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.mb-read-icon {
+  display: flex;
+  align-items: center;
+}
+
+.mb-read-icon.read {
+  color: #4fc3f7;
+}
+
+.mb-read-icon.unread {
+  opacity: 0.5;
+}
+
+.mb-date-separator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0 0.5rem;
+  padding: 0 1rem;
+}
+
+.mb-date-separator span {
+  background: #1e1e2e;
+  color: #888;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+}

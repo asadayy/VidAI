@@ -130,6 +130,19 @@ const vendorSchema = new mongoose.Schema(
         publicId: { type: String },
         resourceType: { type: String, enum: ['image', 'video'], default: 'image' },
         caption: { type: String, default: '' },
+        likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+        comments: [
+          {
+            user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+            text: {
+              type: String,
+              required: true,
+              trim: true,
+              maxlength: [500, 'Comment cannot exceed 500 characters'],
+            },
+            createdAt: { type: Date, default: Date.now },
+          },
+        ],
       },
     ],
     // Cover image

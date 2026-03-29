@@ -476,6 +476,16 @@
 .al-date-input { color: #f1f5f9; }
 .al-select option { background: #1a1a2e; color: #f1f5f9; }
 
+.al-select option[disabled] {
+  color: #94a3b8;
+  background: #111827;
+  font-weight: 700;
+}
+
+.al-select option[value=''] {
+  font-weight: 600;
+}
+
 .al-clear-btn {
   background: rgba(220,38,38,0.12);
   border-color: rgba(220,38,38,0.3);

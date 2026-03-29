@@ -4,6 +4,7 @@ export { vendorAPI } from '../../shared/api/vendors.js';
 export { bookingAPI } from '../../shared/api/bookings.js';
 export { budgetAPI } from '../../shared/api/budget.js';
 export { paymentAPI } from '../../shared/api/payments.js';
+export { chatAPI } from '../../shared/api/chat.js';
 export { default as client } from '../../shared/api/client.js';
 
 // Web-only APIs (not needed in mobile)
@@ -18,6 +19,14 @@ export const adminAPI = {
   getActivityLogs: (params) => client.get('/admin/activity-logs', { params }),
   getSystemHealth: () => client.get('/admin/system-health'),
   getBookings: (params) => client.get('/admin/bookings', { params }),
+  getReports: (params) => client.get('/admin/reports', { params }),
+  getReportById: (id) => client.get(`/admin/reports/${id}`),
+  updateReport: (id, data) => client.patch(`/admin/reports/${id}`, data),
+  updateReportsBulk: (data) => client.patch('/admin/reports/bulk', data),
+};
+
+export const reportAPI = {
+  create: (data) => client.post('/reports', data),
 };
 
 export const uploadAPI = {

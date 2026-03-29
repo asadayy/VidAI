@@ -13,4 +13,7 @@ export const vendorAPI = {
   deletePackage: (packageId) => client.delete(`/vendors/me/packages/${packageId}`),
   getReviews: (id) => client.get(`/vendors/${id}/reviews`),
   addReview: (id, data) => client.post(`/vendors/${id}/reviews`, data),
+  togglePortfolioLike: (vendorId, itemId) => client.post(`/vendors/${vendorId}/portfolio/${itemId}/like`),
+  addPortfolioComment: (vendorId, itemId, text) => client.post(`/vendors/${vendorId}/portfolio/${itemId}/comments`, { text }),
+  deletePortfolioComment: (vendorId, itemId, commentId) => client.delete(`/vendors/${vendorId}/portfolio/${itemId}/comments/${commentId}`),
 };
