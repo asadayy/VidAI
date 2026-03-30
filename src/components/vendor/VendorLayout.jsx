@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -9,6 +10,8 @@ import {
   LogOut,
   Image as ImageIcon,
   MessageSquareDot,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import NotificationDropdown from '../NotificationDropdown';
 import './VendorLayout.css';
@@ -26,6 +29,7 @@ const NAV_ITEMS = [
 function VendorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -33,11 +37,21 @@ function VendorLayout() {
   };
 
   return (
-    <div className="vendor-layout">
+    <div className={`vendor-layout ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="vendor-sidebar">
         <div className="sidebar-brand">
-          <span className="sidebar-brand-mark">VIDAI</span>
-          <span className="sidebar-brand-sub">Vendor Portal</span>
+          <div className="sidebar-brand-text">
+            <span className="sidebar-brand-mark">{collapsed ? 'V' : 'VIDAI'}</span>
+            {!collapsed && <span className="sidebar-brand-sub">Vendor Portal</span>}
+          </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={() => setCollapsed((c) => !c)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -50,9 +64,10 @@ function VendorLayout() {
               className={({ isActive }) =>
                 `sidebar-link ${isActive ? 'sidebar-link-active' : ''}`
               }
+              title={collapsed ? label : undefined}
             >
               <NavIcon size={18} />
-              <span>{label}</span>
+              <span className="sidebar-link-label">{label}</span>
             </NavLink>
           ))}
         </nav>

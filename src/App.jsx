@@ -33,6 +33,7 @@ import UserDashboard from './pages/user/UserDashboard';
 import UserBookings from './pages/user/UserBookings';
 import InvitationGenerator from './pages/user/InvitationGenerator';
 import Messages from './pages/user/Messages';
+import Profile from './pages/user/Profile';
 import Onboarding from './pages/user/Onboarding';
 import './App.css';
 
@@ -95,6 +96,7 @@ function App() {
               <Route path="chat" element={<AIChat />} />
               <Route path="messages" element={<Messages />} />
               <Route path="invitations" element={<InvitationGenerator />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Route>
 

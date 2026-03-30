@@ -3,6 +3,7 @@ import {
   register,
   login,
   getMe,
+  updateProfile,
   logout,
   forgotPassword,
   resetPassword,
@@ -20,6 +21,7 @@ router.post('/register', validateRegister, register);
 router.post('/login', validateLogin, login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
+router.put('/profile', protect, updateProfile);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.put('/update-password', protect, updatePassword);

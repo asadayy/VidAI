@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import './ChatInput.css';
 
-export default function ChatInput({ onSend, disabled }) {
+export default function ChatInput({ onSend, onTyping, disabled }) {
   const [text, setText] = useState('');
   const textRef = useRef(null);
 
@@ -23,6 +23,11 @@ export default function ChatInput({ onSend, disabled }) {
     }
   };
 
+  const handleChange = (e) => {
+    setText(e.target.value);
+    if (onTyping) onTyping();
+  };
+
   // Auto-resize textarea
   useEffect(() => {
     if (textRef.current) {
@@ -36,7 +41,7 @@ export default function ChatInput({ onSend, disabled }) {
       <textarea
         ref={textRef}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Type a message..."
         rows={1}

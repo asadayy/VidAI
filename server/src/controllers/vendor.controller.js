@@ -25,10 +25,8 @@ export const getVendors = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  // Build filter
-  const filter = process.env.NODE_ENV === 'development'
-    ? { isActive: true }
-    : { verificationStatus: 'approved', isActive: true };
+  // Build filter — only show admin-approved vendors
+  const filter = { verificationStatus: 'approved', isActive: true };
 
   if (req.query.category) filter.category = req.query.category;
   if (req.query.city) filter.city = { $regex: req.query.city, $options: 'i' };
@@ -85,10 +83,10 @@ export const searchVendors = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  // Build detailed filter for search
+  // Build detailed filter for search — only approved vendors
   const textFilter = {
     $text: { $search: q },
-    ...(process.env.NODE_ENV === 'development' ? {} : { verificationStatus: 'approved' }),
+    verificationStatus: 'approved',
     isActive: true,
   };
 
@@ -142,7 +140,7 @@ export const getVendorById = asyncHandler(async (req, res) => {
     .populate('user', 'name email avatar phone')
     .populate('portfolio.comments.user', 'name avatar');
 
-  if (!vendor) {
+  if (!vendor || (vendor.verificationStatus !== 'approved' && !vendor.isActive)) {
     const error = new Error('Vendor not found.');
     error.statusCode = 404;
     throw error;
@@ -167,7 +165,7 @@ export const getVendorBySlug = asyncHandler(async (req, res) => {
     .populate('user', 'name email avatar phone')
     .populate('portfolio.comments.user', 'name avatar');
 
-  if (!vendor) {
+  if (!vendor || (vendor.verificationStatus !== 'approved' && !vendor.isActive)) {
     const error = new Error('Vendor not found.');
     error.statusCode = 404;
     throw error;

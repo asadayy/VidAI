@@ -78,7 +78,7 @@ const FEATURES = [
     icon: '💰',
     title: 'AI Budget Planner',
     desc: 'Set your total budget once during onboarding. Our AI breaks it down by category and tracks every rupee you spend.',
-    badge: 'Powered by Gemini',
+    badge: 'Powered by Ollama',
   },
   {
     icon: '🤖',
@@ -184,7 +184,7 @@ const Home = () => {
           <div className="hero-stat-divider" />
           <div className="hero-stat"><strong>2 Cities</strong><span>Islamabad & Rawalpindi</span></div>
           <div className="hero-stat-divider" />
-          <div className="hero-stat"><strong>AI</strong><span>Powered by Gemini</span></div>
+          <div className="hero-stat"><strong>AI</strong><span>Powered by Gemini & Ollama</span></div>
         </div>
 
         {/* slide dots */}

@@ -7,7 +7,7 @@ import MessageBubble, { DateSeparator } from './MessageBubble';
 import ChatInput from './ChatInput';
 import './ChatWindow.css';
 
-export default function ChatWindow({ conversation, onBack }) {
+export default function ChatWindow({ conversation, onBack, onToggleContactInfo }) {
   const { user } = useAuth();
   const { socket, isOnline } = useSocket();
   const [messages, setMessages] = useState([]);
@@ -19,6 +19,7 @@ export default function ChatWindow({ conversation, onBack }) {
   const typingTimerRef = useRef(null);
   const isInitialLoad = useRef(true);
 
+  const userId = user?.id || user?._id;
   const conversationId = conversation?._id;
   const otherId = conversation?.otherParticipant?._id;
   const otherName =
@@ -26,6 +27,12 @@ export default function ChatWindow({ conversation, onBack }) {
       ? conversation?.otherParticipant?.name || 'Customer'
       : conversation?.vendor?.businessName || 'Vendor';
   const otherOnline = otherId && isOnline(otherId);
+
+  // Avatar: use profile image if available
+  const otherAvatar =
+    user?.role === 'vendor'
+      ? conversation?.otherParticipant?.avatar?.url
+      : conversation?.vendor?.coverImage?.url || conversation?.vendor?.coverImage;
 
   // Fetch messages
   const loadMessages = useCallback(
@@ -97,7 +104,7 @@ export default function ChatWindow({ conversation, onBack }) {
       if (cid !== conversationId) return;
       setMessages((prev) =>
         prev.map((msg) => {
-          if (msg.sender?._id === user?.id || msg.sender === user?.id) {
+          if (msg.sender?._id === userId || msg.sender === userId) {
             const alreadyRead = msg.readBy?.some(
               (r) => (r.user?._id || r.user) === readBy
             );
@@ -125,7 +132,7 @@ export default function ChatWindow({ conversation, onBack }) {
       socket.off('user_stop_typing', handleStopTyping);
       socket.off('messages_read', handleMessagesRead);
     };
-  }, [socket, conversationId, user?.id]);
+  }, [socket, conversationId, userId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -176,7 +183,7 @@ export default function ChatWindow({ conversation, onBack }) {
       }
 
       const senderId = msg.sender?._id || msg.sender;
-      const isOwn = senderId === user?.id;
+      const isOwn = senderId === userId;
 
       elements.push(
         <MessageBubble
@@ -197,8 +204,18 @@ export default function ChatWindow({ conversation, onBack }) {
         <button className="cw-back-btn" onClick={onBack}>
           <ArrowLeft size={20} />
         </button>
-        <div className="cw-header-avatar">
-          {otherName.charAt(0).toUpperCase()}
+        <div
+          className="cw-header-avatar"
+          onClick={onToggleContactInfo}
+          role="button"
+          tabIndex={0}
+          title="View contact info"
+        >
+          {otherAvatar ? (
+            <img src={otherAvatar} alt={otherName} />
+          ) : (
+            otherName.charAt(0).toUpperCase()
+          )}
         </div>
         <div className="cw-header-info">
           <div className="cw-header-name">{otherName}</div>

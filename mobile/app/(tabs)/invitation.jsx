@@ -279,7 +279,7 @@ export default function Invitation() {
       <Text style={s.label}>City</Text>
       <TextInput
         style={s.input}
-        placeholder="e.g., Lahore"
+        placeholder="e.g., Islamabad"
         placeholderTextColor="#94a3b8"
         value={formData.essentials.venueCity}
         onChangeText={(v) => updEss("venueCity", v)}
@@ -686,10 +686,7 @@ const s = StyleSheet.create({
     margin: 14,
     borderRadius: 20,
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07,
-    shadowRadius: 16,
+    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.07)',
     elevation: 4,
   },
 

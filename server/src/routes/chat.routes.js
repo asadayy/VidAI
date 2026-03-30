@@ -6,6 +6,9 @@ import {
   getMessages,
   markAsRead,
   getUnreadCount,
+  getNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
 } from '../controllers/chat.controller.js';
 
 const router = express.Router();
@@ -18,5 +21,8 @@ router.post('/conversations', createConversation);
 router.get('/conversations/:id/messages', getMessages);
 router.patch('/conversations/:id/read', markAsRead);
 router.get('/unread-count', getUnreadCount);
+router.get('/notifications', getNotifications);
+router.patch('/notifications/read-all', markAllNotificationsRead);
+router.patch('/notifications/:id/read', markNotificationRead);
 
 export default router;

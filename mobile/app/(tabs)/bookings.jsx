@@ -460,10 +460,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderLeftWidth: 4,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
+    boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.07)',
     elevation: 3,
   },
   cardTop: {

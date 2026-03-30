@@ -16,4 +16,13 @@ export const chatAPI = {
     client.patch(`/chat/conversations/${conversationId}/read`),
 
   getUnreadCount: () => client.get('/chat/unread-count'),
+
+  getNotifications: (limit = 30) =>
+    client.get('/chat/notifications', { params: { limit } }),
+
+  markNotificationRead: (notificationId) =>
+    client.patch(`/chat/notifications/${notificationId}/read`),
+
+  markAllNotificationsRead: () =>
+    client.patch('/chat/notifications/read-all'),
 };

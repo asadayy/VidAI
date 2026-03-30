@@ -98,7 +98,7 @@ const il = StyleSheet.create({
   card: {
     width: W * 0.76, height: W * 0.68,
     backgroundColor: '#eef2f7', borderRadius: 22, overflow: 'hidden', position: 'relative',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 8,
+    boxShadow: '0px 6px 14px rgba(0, 0, 0, 0.1)', elevation: 8,
   },
   grid: { position: 'absolute', backgroundColor: '#d1d9e3' },
   gridH: { width: '100%', height: 1 },
@@ -109,7 +109,7 @@ const il = StyleSheet.create({
   pin: { position: 'absolute', alignItems: 'center' },
   bubble: {
     width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 2 }, shadowRadius: 3, elevation: 3,
+    boxShadow: '0px 2px 3px rgba(0, 0, 0, 0.15)', elevation: 3,
   },
   tip: { width: 0, height: 0, borderLeftWidth: 4, borderRightWidth: 4, borderTopWidth: 6, borderLeftColor: 'transparent', borderRightColor: 'transparent' },
   pinLabel: { fontSize: 8, color: '#374151', fontWeight: '600', marginTop: 2, textAlign: 'center' },
@@ -148,7 +148,7 @@ function TasksCard() {
 const tc = StyleSheet.create({
   card: {
     width: W * 0.76, backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 8,
+    boxShadow: '0px 6px 14px rgba(0, 0, 0, 0.1)', elevation: 8,
   },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 13 },
   headerText: { color: '#fff', fontWeight: '700', fontSize: 14 },
@@ -202,7 +202,7 @@ function BudgetCard() {
 const bc = StyleSheet.create({
   card: {
     width: W * 0.76, backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 14, elevation: 8,
+    boxShadow: '0px 6px 14px rgba(0, 0, 0, 0.1)', elevation: 8,
   },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   lbl: { fontSize: 10, color: '#9ca3af', fontWeight: '500' },

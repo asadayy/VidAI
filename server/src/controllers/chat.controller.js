@@ -1,5 +1,6 @@
 import Conversation from '../models/Conversation.model.js';
 import Message from '../models/Message.model.js';
+import Notification from '../models/Notification.model.js';
 import Vendor from '../models/Vendor.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 
@@ -15,7 +16,7 @@ export const getConversations = asyncHandler(async (req, res) => {
     participants: userId,
     isActive: true,
   })
-    .populate('participants', 'name email avatar role')
+    .populate('participants', 'name email avatar role phone city area zipCode gender dateOfBirth bio onboarding createdAt')
     .populate('vendor', 'businessName category coverImage slug')
     .sort({ updatedAt: -1 });
 
@@ -73,7 +74,7 @@ export const createConversation = asyncHandler(async (req, res) => {
     participants: { $all: [userId, vendorUserId] },
     vendor: vendorId,
   })
-    .populate('participants', 'name email avatar role')
+    .populate('participants', 'name email avatar role phone city area zipCode gender dateOfBirth bio onboarding createdAt')
     .populate('vendor', 'businessName category coverImage slug');
 
   if (existing) {
@@ -99,7 +100,7 @@ export const createConversation = asyncHandler(async (req, res) => {
     ]),
   });
 
-  await conversation.populate('participants', 'name email avatar role');
+  await conversation.populate('participants', 'name email avatar role phone city area zipCode gender dateOfBirth bio onboarding createdAt');
   await conversation.populate('vendor', 'businessName category coverImage slug');
 
   // Create a system message
@@ -241,5 +242,70 @@ export const getUnreadCount = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: { totalUnread },
+  });
+});
+
+/**
+ * @route   GET /api/v1/chat/notifications
+ * @desc    Get recent notifications for the authenticated user
+ * @access  Private
+ */
+export const getNotifications = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { limit = 30 } = req.query;
+
+  const notifications = await Notification.find({ recipient: userId })
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit));
+
+  res.status(200).json({
+    success: true,
+    data: notifications,
+  });
+});
+
+/**
+ * @route   PATCH /api/v1/chat/notifications/read-all
+ * @desc    Mark all notifications as read
+ * @access  Private
+ */
+export const markAllNotificationsRead = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  await Notification.updateMany(
+    { recipient: userId, isRead: false },
+    { $set: { isRead: true, readAt: new Date() } }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: 'All notifications marked as read',
+  });
+});
+
+/**
+ * @route   PATCH /api/v1/chat/notifications/:id/read
+ * @desc    Mark a single notification as read
+ * @access  Private
+ */
+export const markNotificationRead = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  const { id } = req.params;
+
+  const notification = await Notification.findOneAndUpdate(
+    { _id: id, recipient: userId },
+    { $set: { isRead: true, readAt: new Date() } },
+    { new: true }
+  );
+
+  if (!notification) {
+    const error = new Error('Notification not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  res.status(200).json({
+    success: true,
+    data: notification,
   });
 });

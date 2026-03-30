@@ -13,8 +13,10 @@ import {
   LogIn,
   Mail,
   MessageSquareDot,
+  User,
+  ChevronDown,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import AuthModal from '../auth/AuthModal';
 import NotificationDropdown from '../NotificationDropdown';
 import './UserLayout.css';
@@ -39,6 +41,19 @@ function UserLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -89,16 +104,48 @@ function UserLayout() {
             {isAuthenticated ? (
               <>
                 <NotificationDropdown messagesPath="/user/messages" />
-                <div className="user-info">
-                  <div className="user-avatar">
-                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <span className="user-name">{user?.name || user?.email}</span>
-                </div>
+                <div className="profile-dropdown-wrapper" ref={profileDropdownRef}>
+                  <button
+                    className="user-info-btn"
+                    onClick={() => setIsProfileDropdownOpen((v) => !v)}
+                  >
+                    <div className="user-avatar">
+                      {user?.avatar?.url ? (
+                        <img src={user.avatar.url} alt="" className="user-avatar-img" />
+                      ) : (
+                        (user?.name || user?.email || 'U').charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <span className="user-name">{user?.name?.split(' ')[0] || user?.email}</span>
+                    <ChevronDown size={14} className={`chevron-icon ${isProfileDropdownOpen ? 'open' : ''}`} />
+                  </button>
 
-                <button onClick={handleLogout} className="user-logout-btn" title="Logout">
-                  <LogOut size={18} />
-                </button>
+                  {isProfileDropdownOpen && (
+                    <div className="profile-dropdown">
+                      <button
+                        className="profile-dropdown-item"
+                        onClick={() => {
+                          navigate('/user/profile');
+                          setIsProfileDropdownOpen(false);
+                        }}
+                      >
+                        <User size={16} />
+                        <span>My Profile</span>
+                      </button>
+                      <div className="profile-dropdown-divider" />
+                      <button
+                        className="profile-dropdown-item logout"
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          handleLogout();
+                        }}
+                      >
+                        <LogOut size={16} />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="guest-actions">

@@ -5,6 +5,7 @@ import { useSocket } from '../../context/SocketContext';
 import { chatAPI } from '../../api';
 import ConversationList from '../../components/chat/ConversationList';
 import ChatWindow from '../../components/chat/ChatWindow';
+import ContactInfoPanel from '../../components/chat/ContactInfoPanel';
 import '../../pages/user/Messages.css';
 
 export default function VendorMessages() {
@@ -88,17 +89,23 @@ export default function VendorMessages() {
     };
   }, [socket, activeConv, loadConversations]);
 
+  const [showContactInfo, setShowContactInfo] = useState(false);
+
+  const handleBack = () => {
+    setActiveConv(null);
+    setShowContactInfo(false);
+  };
+
   const handleSelect = (conv) => {
     setActiveConv(conv);
+    setShowContactInfo(false);
     setConversations((prev) =>
       prev.map((c) => (c._id === conv._id ? { ...c, unreadCount: 0 } : c))
     );
   };
 
-  const handleBack = () => setActiveConv(null);
-
   return (
-    <div className={`messages-page ${activeConv ? 'has-active' : ''}`}>
+    <div className={`messages-page ${activeConv ? 'has-active' : ''} ${showContactInfo ? 'has-contact-info' : ''}`}>
       <div className="messages-sidebar">
         <ConversationList
           conversations={conversations}
@@ -111,8 +118,16 @@ export default function VendorMessages() {
         <ChatWindow
           conversation={activeConv}
           onBack={handleBack}
+          onToggleContactInfo={() => setShowContactInfo((v) => !v)}
         />
       </div>
+      {showContactInfo && activeConv && (
+        <ContactInfoPanel
+          conversation={activeConv}
+          userRole="vendor"
+          onClose={() => setShowContactInfo(false)}
+        />
+      )}
     </div>
   );
 }

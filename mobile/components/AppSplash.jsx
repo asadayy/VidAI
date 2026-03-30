@@ -18,32 +18,32 @@ export default function AppSplash({ onFinish }) {
     // 1. icon floats in
     Animated.parallel([
       Animated.timing(iconOpacity, {
-        toValue: 1, duration: 480, delay: 120, useNativeDriver: true,
+        toValue: 1, duration: 480, delay: 120, useNativeDriver: false,
       }),
       Animated.spring(iconTranslateY, {
-        toValue: 0, friction: 6, tension: 80, delay: 120, useNativeDriver: true,
+        toValue: 0, friction: 6, tension: 80, delay: 120, useNativeDriver: false,
       }),
     ]).start();
 
     // 2. logo text fades + scales in
     Animated.parallel([
       Animated.timing(logoOpacity, {
-        toValue: 1, duration: 520, delay: 340, useNativeDriver: true,
+        toValue: 1, duration: 520, delay: 340, useNativeDriver: false,
       }),
       Animated.spring(logoScale, {
-        toValue: 1, friction: 5, tension: 70, delay: 340, useNativeDriver: true,
+        toValue: 1, friction: 5, tension: 70, delay: 340, useNativeDriver: false,
       }),
     ]).start();
 
     // 3. tagline fades in
     Animated.timing(tagOpacity, {
-      toValue: 1, duration: 420, delay: 780, useNativeDriver: true,
+      toValue: 1, duration: 420, delay: 780, useNativeDriver: false,
     }).start();
 
     // 4. whole screen fades out → calls onFinish
     const hold = setTimeout(() => {
       Animated.timing(screenOpacity, {
-        toValue: 0, duration: 450, useNativeDriver: true,
+        toValue: 0, duration: 450, useNativeDriver: false,
       }).start(() => onFinish && onFinish());
     }, 2600);
 
@@ -60,8 +60,8 @@ export default function AppSplash({ onFinish }) {
       />
 
       {/* decorative blurred glow blobs */}
-      <View style={[styles.blob, styles.blobTop]}    pointerEvents="none" />
-      <View style={[styles.blob, styles.blobBottom]} pointerEvents="none" />
+      <View style={[styles.blob, styles.blobTop, { pointerEvents: 'none' }]} />
+      <View style={[styles.blob, styles.blobBottom, { pointerEvents: 'none' }]} />
 
       {/* centre content */}
       <View style={styles.centre}>
@@ -149,10 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: PINK,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 22,
+    boxShadow: '0px 0px 22px rgba(215, 56, 94, 0.9)',
     elevation: 14,
   },
 

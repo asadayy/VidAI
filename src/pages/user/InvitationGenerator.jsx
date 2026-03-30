@@ -213,7 +213,7 @@ const InvitationGenerator = () => {
             <div className="ig-field">
                 <label className="ig-label">City</label>
                 <input type="text" name="venueCity"
-                    placeholder="e.g., Lahore"
+                    placeholder="e.g., Islamabad"
                     value={formData.essentials.venueCity}
                     onChange={updateEssentials}
                     className="ig-input" />

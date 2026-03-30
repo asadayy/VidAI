@@ -5,10 +5,11 @@ import {
   Plus, Trash2, Edit2, Sparkles, Brain, X,
   Wallet, TrendingUp, TrendingDown, Target,
   ChevronRight, AlertTriangle, CheckCircle2, BarChart3,
-  Star, MapPin, ArrowUpRight, Store
+  Star, MapPin, ArrowUpRight, Store, CalendarPlus, Settings2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { budgetAPI } from '../../api/budget';
+import { eventAPI } from '../../api/index';
 import { useAuth } from '../../context/AuthContext';
 import './BudgetPlanner.css';
 
@@ -19,6 +20,17 @@ const PICKS_CATS = [
   { name: 'Makeup/Mehndi', emoji: '💄' },
   { name: 'Decoration',    emoji: '🎨' },
 ];
+
+const EVENT_LABELS = {
+  dholki: 'Dholki', mehndi: 'Mehndi', mayun: 'Mayun', nikkah: 'Nikkah',
+  baraat: 'Baraat', walima: 'Walima', engagement: 'Engagement',
+  wedding: 'Wedding', full_wedding: 'Full Wedding', other: 'Other',
+};
+
+const EVENT_COLORS = {
+  dholki: '#f59e0b', mehndi: '#10b981', mayun: '#eab308', nikkah: '#6366f1',
+  baraat: '#D7385E', walima: '#8b5cf6', engagement: '#ec4899', other: '#64748b',
+};
 
 const CATEGORY_COLOR = {
   venue:        '#D7385E',
@@ -70,7 +82,7 @@ function DeleteModal({ itemName, onConfirm, onCancel }) {
 }
 
 /* ── Add / Edit Item Modal ── */
-function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose }) {
+function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose, events }) {
   return createPortal(
     <div className="bp-overlay" onClick={onClose}>
       <div className="bp-modal" onClick={(e) => e.stopPropagation()}>
@@ -89,6 +101,23 @@ function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose }) {
               required
             />
           </div>
+          {events.length > 1 && (
+            <div className="bp-form-group">
+              <label className="bp-label">Event</label>
+              <select
+                className="bp-input"
+                value={itemForm.weddingEvent || ''}
+                onChange={(e) => setItemForm({ ...itemForm, weddingEvent: e.target.value })}
+              >
+                <option value="">— General (all events) —</option>
+                {events.map(evt => (
+                  <option key={evt._id} value={evt._id}>
+                    {evt.title || EVENT_LABELS[evt.eventType] || evt.eventType}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="bp-form-group">
             <label className="bp-label">Notes</label>
             <input
@@ -134,6 +163,143 @@ function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose }) {
   );
 }
 
+const ALL_EVENT_TYPES = [
+  { type: 'dholki',     label: 'Dholki',     emoji: '🥁' },
+  { type: 'mayun',      label: 'Mayun',      emoji: '🌿' },
+  { type: 'mehndi',     label: 'Mehndi',     emoji: '✋' },
+  { type: 'nikkah',     label: 'Nikkah',     emoji: '📜' },
+  { type: 'baraat',     label: 'Baraat',     emoji: '🐎' },
+  { type: 'walima',     label: 'Walima',     emoji: '🍽️' },
+  { type: 'engagement', label: 'Engagement', emoji: '💍' },
+  { type: 'other',      label: 'Other',      emoji: '✨' },
+];
+
+/* ── Event Manager Modal ── */
+function EventManagerModal({ events, totalBudget, onAddEvent, onDeleteEvent, onSaveAllocations, onClose, saving }) {
+  const existingTypes = events.map(e => e.eventType);
+  const availableTypes = ALL_EVENT_TYPES.filter(t => !existingTypes.includes(t.type));
+  const [allocations, setAllocations] = useState(() =>
+    events.map(e => ({ eventId: e._id, eventType: e.eventType, title: e.title, color: e.color, amount: e.allocatedBudget || 0 }))
+  );
+  const totalAlloc = allocations.reduce((s, a) => s + (Number(a.amount) || 0), 0);
+  const unallocated = (totalBudget || 0) - totalAlloc;
+
+  // Sync allocations when events change (after add/delete)
+  useEffect(() => {
+    setAllocations(
+      events.map(e => {
+        const existing = allocations.find(a => a.eventId === e._id);
+        return { eventId: e._id, eventType: e.eventType, title: e.title, color: e.color, amount: existing?.amount ?? e.allocatedBudget ?? 0 };
+      })
+    );
+  }, [events]);
+
+  return createPortal(
+    <div className="bp-overlay" onClick={onClose}>
+      <div className="bp-modal bp-modal--events" onClick={e => e.stopPropagation()}>
+        <div className="bp-modal-head">
+          <h3 className="bp-modal-title"><Settings2 size={18} /> Manage Events</h3>
+          <button className="bp-modal-close" onClick={onClose}><X size={20} /></button>
+        </div>
+
+        {/* Current events + allocations */}
+        <div className="bp-em-section">
+          <p className="bp-em-subtitle">Your Events &amp; Budget Split</p>
+          {allocations.length === 0 && (
+            <p className="bp-em-empty">No events yet. Add your first event below.</p>
+          )}
+          {allocations.map(alloc => (
+            <div key={alloc.eventId} className="bp-em-row">
+              <span
+                className="bp-em-dot"
+                style={{ background: alloc.color || EVENT_COLORS[alloc.eventType] || '#64748b' }}
+              />
+              <span className="bp-em-name">
+                {alloc.title || EVENT_LABELS[alloc.eventType] || alloc.eventType}
+              </span>
+              <div className="bp-em-input-wrap">
+                <span className="bp-em-currency">PKR</span>
+                <input
+                  type="number"
+                  className="bp-em-input"
+                  value={alloc.amount}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setAllocations(prev => prev.map(a =>
+                      a.eventId === alloc.eventId ? { ...a, amount: val === '' ? '' : Number(val) } : a
+                    ));
+                  }}
+                  min="0"
+                />
+              </div>
+              <button
+                className="bp-icon-btn bp-icon-btn--del"
+                title="Remove event"
+                onClick={() => onDeleteEvent(alloc.eventId)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+          {allocations.length > 0 && (
+            <div className="bp-em-summary">
+              <div className="bp-em-summary-row">
+                <span>Total Budget</span>
+                <span className="bp-em-summary-val">{fmtCurrency(totalBudget)}</span>
+              </div>
+              <div className="bp-em-summary-row">
+                <span>Allocated</span>
+                <span className="bp-em-summary-val">{fmtCurrency(totalAlloc)}</span>
+              </div>
+              <div className={`bp-em-summary-row ${unallocated < 0 ? 'bp-em-summary-row--over' : ''}`}>
+                <span>Unallocated</span>
+                <span className="bp-em-summary-val">{fmtCurrency(unallocated)}</span>
+              </div>
+            </div>
+          )}
+          {allocations.length > 0 && (
+            <button
+              className="bp-btn bp-btn--primary bp-btn--full"
+              disabled={saving}
+              onClick={() => onSaveAllocations(allocations.map(a => ({
+                eventId: a.eventId,
+                allocatedBudget: Number(a.amount) || 0,
+              })))}
+            >
+              {saving ? 'Saving...' : 'Save Allocations'}
+            </button>
+          )}
+        </div>
+
+        {/* Add event */}
+        {availableTypes.length > 0 && (
+          <div className="bp-em-section">
+            <p className="bp-em-subtitle">Add an Event</p>
+            <div className="bp-em-type-grid">
+              {availableTypes.map(t => (
+                <button
+                  key={t.type}
+                  className="bp-em-type-btn"
+                  onClick={() => onAddEvent(t.type)}
+                  disabled={saving}
+                >
+                  <span className="bp-em-type-emoji">{t.emoji}</span>
+                  <span className="bp-em-type-label">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bp-modal-row">
+          <button className="bp-btn bp-btn--ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 /* ── Main Component ── */
 const BudgetPlanner = () => {
   const { user } = useAuth();
@@ -157,6 +323,10 @@ const BudgetPlanner = () => {
   const [showPicksBuilder, setShowPicksBuilder] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem('vidai_vendor_picks') || '[]').length === 0; } catch { return true; }
   });
+  const [events, setEvents] = useState([]);
+  const [activeEventId, setActiveEventId] = useState(null); // null = "All"
+  const [showEventManager, setShowEventManager] = useState(false);
+  const [eventSaving, setEventSaving] = useState(false);
 
   useEffect(() => {
     sessionStorage.setItem('vidai_picks_cats', JSON.stringify(picksCategories));
@@ -166,7 +336,58 @@ const BudgetPlanner = () => {
     sessionStorage.setItem('vidai_vendor_picks', JSON.stringify(vendorPicks));
   }, [vendorPicks]);
 
-  useEffect(() => { fetchBudget(); }, []);
+  useEffect(() => { fetchBudget(); fetchEvents(); }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const res = await eventAPI.getAll();
+      const evts = res.data?.data?.events || [];
+      setEvents(evts);
+    } catch {
+      // Events are optional — silently fail
+    }
+  };
+
+  const handleAddEvent = async (eventType) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.create({ eventType });
+      toast.success(`${EVENT_LABELS[eventType] || eventType} event added!`);
+      await Promise.all([fetchEvents(), fetchBudget()]);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to add event');
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.delete(eventId);
+      // If the deleted event was active, reset to "All"
+      if (activeEventId === eventId) setActiveEventId(null);
+      toast.success('Event removed');
+      await Promise.all([fetchEvents(), fetchBudget()]);
+    } catch {
+      toast.error('Failed to remove event');
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleSaveAllocations = async (allocations) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.updateAllocations(allocations);
+      toast.success('Budget allocations saved!');
+      await Promise.all([fetchEvents(), fetchBudget()]);
+    } catch {
+      toast.error('Failed to save allocations');
+    } finally {
+      setEventSaving(false);
+    }
+  };
 
   useEffect(() => {
     const autoCreate = async () => {
@@ -215,7 +436,7 @@ const BudgetPlanner = () => {
     try {
       setAiLoading(true);
       toast.loading('Generating AI budget plan...', { id: 'ai-toast' });
-      await budgetAPI.generateAIPlan();
+      await budgetAPI.generateAIPlan(activeEventId);
       setShowAiPlan(true);
       toast.success('AI Plan generated!', { id: 'ai-toast' });
       fetchBudget();
@@ -278,6 +499,7 @@ const BudgetPlanner = () => {
         allocatedAmount: Number(itemForm.allocatedAmount),
         spentAmount: Number(itemForm.spentAmount) || 0,
       };
+      if (itemForm.weddingEvent) data.weddingEvent = itemForm.weddingEvent;
       if (editingItem) {
         await budgetAPI.updateItem(editingItem._id, data);
         toast.success('Item updated');
@@ -307,10 +529,10 @@ const BudgetPlanner = () => {
   const openModal = (item = null) => {
     if (item) {
       setEditingItem(item);
-      setItemForm({ category: item.category, notes: item.notes || '', allocatedAmount: item.allocatedAmount, spentAmount: item.spentAmount || '' });
+      setItemForm({ category: item.category, notes: item.notes || '', allocatedAmount: item.allocatedAmount, spentAmount: item.spentAmount || '', weddingEvent: item.weddingEvent || '' });
     } else {
       setEditingItem(null);
-      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '', weddingEvent: activeEventId || '' });
     }
     setIsModalOpen(true);
   };
@@ -356,13 +578,30 @@ const BudgetPlanner = () => {
   }
 
   /* ── Totals ── */
-  const totalAllocated = budget?.items?.reduce((s, i) => s + (i.allocatedAmount || 0), 0) || 0;
-  const totalSpent     = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
-  const remaining      = (budget?.totalBudget || 0) - totalSpent;
-  const spentPct       = budget?.totalBudget ? Math.min(100, (totalSpent / budget.totalBudget) * 100) : 0;
-  const allocPct       = budget?.totalBudget ? Math.min(100, (totalAllocated / budget.totalBudget) * 100) : 0;
+  const allItems = budget?.items || [];
+  const filteredItems = activeEventId
+    ? allItems.filter(i => i.weddingEvent?.toString() === activeEventId)
+    : allItems;
+
+  // Get the active event's AI plan, or the master AI plan
+  const activeAiPlan = activeEventId
+    ? budget?.events?.find(e => e.weddingEvent?.toString() === activeEventId)?.aiPlan
+    : budget?.aiPlan;
+
+  const totalAllocated = filteredItems.reduce((s, i) => s + (i.allocatedAmount || 0), 0);
+  const totalSpent     = filteredItems.reduce((s, i) => s + (i.spentAmount || 0), 0);
+  const activeEventEntry = activeEventId
+    ? budget?.events?.find(e => e.weddingEvent?.toString() === activeEventId)
+    : null;
+  const activeBudgetTotal = activeEventId
+    ? (activeEventEntry?.allocatedAmount ?? budget?.totalBudget ?? 0)
+    : (budget?.totalBudget ?? 0);
+  const remaining      = activeBudgetTotal - totalSpent;
+  const spentPct       = activeBudgetTotal ? Math.min(100, (totalSpent / activeBudgetTotal) * 100) : 0;
+  const allocPct       = activeBudgetTotal ? Math.min(100, (totalAllocated / activeBudgetTotal) * 100) : 0;
   const isOver         = remaining < 0;
   const isWarning      = !isOver && spentPct >= 80;
+  const showEventTabs  = events.length > 1;
 
   return (
     <div className="bp-page">
@@ -374,7 +613,7 @@ const BudgetPlanner = () => {
           <div className="bp-hero-icon"><BarChart3 size={28} /></div>
           <div>
             <h1 className="bp-hero-title">Budget Planner</h1>
-            <p className="bp-hero-sub">{budget?.items?.length || 0} expense categories tracked</p>
+            <p className="bp-hero-sub">{filteredItems.length} expense categories tracked</p>
           </div>
         </div>
         <div className="bp-hero-actions">
@@ -388,11 +627,49 @@ const BudgetPlanner = () => {
           >
             <Store size={16} /> Vendor Picks
           </button>
+          <button className="bp-btn bp-btn--events" onClick={() => setShowEventManager(true)}>
+            <CalendarPlus size={16} /> {events.length > 0 ? 'Events' : 'Add Events'}
+          </button>
           <button className="bp-btn bp-btn--add" onClick={() => openModal()}>
             <Plus size={16} /> Add Item
           </button>
         </div>
       </div>
+
+      {/* ── Event Tabs (only with 2+ events) ── */}
+      {showEventTabs && (
+        <div className="bp-event-tabs">
+          <button
+            className={`bp-event-tab ${!activeEventId ? 'bp-event-tab--active' : ''}`}
+            onClick={() => setActiveEventId(null)}
+          >
+            All Events
+          </button>
+          {events.map(evt => (
+            <button
+              key={evt._id}
+              className={`bp-event-tab ${activeEventId === evt._id ? 'bp-event-tab--active' : ''}`}
+              style={{
+                '--evt-color': evt.color || EVENT_COLORS[evt.eventType] || '#64748b',
+              }}
+              onClick={() => setActiveEventId(evt._id)}
+            >
+              <span
+                className="bp-event-tab-dot"
+                style={{ background: evt.color || EVENT_COLORS[evt.eventType] || '#64748b' }}
+              />
+              {evt.title || EVENT_LABELS[evt.eventType] || evt.eventType}
+            </button>
+          ))}
+          <button
+            className="bp-event-tab bp-event-tab--add"
+            onClick={() => setShowEventManager(true)}
+            title="Manage events"
+          >
+            <Settings2 size={14} />
+          </button>
+        </div>
+      )}
 
       {/* ── Stat Tiles ── */}
       <div className="bp-stats">
@@ -400,7 +677,7 @@ const BudgetPlanner = () => {
           <div className="bp-stat-icon"><Wallet size={20} /></div>
           <div className="bp-stat-body">
             <span className="bp-stat-label">Total Budget</span>
-            <span className="bp-stat-value">{fmtCurrency(budget.totalBudget)}</span>
+            <span className="bp-stat-value">{fmtCurrency(activeBudgetTotal)}</span>
           </div>
         </div>
         <div className="bp-stat bp-stat--violet">
@@ -603,19 +880,19 @@ const BudgetPlanner = () => {
       )}
 
       {/* ── AI Plan ── */}
-      {budget.aiPlan?.allocations?.length > 0 && showAiPlan && (
+      {activeAiPlan?.allocations?.length > 0 && showAiPlan && (
         <div className="bp-ai-card">
           <div className="bp-ai-stripe" />
           <div className="bp-ai-head">
             <Brain size={22} className="bp-ai-brain" />
             <div style={{ flex: 1 }}>
               <h2 className="bp-ai-title">AI Budget Recommendations</h2>
-              {budget.aiPlan.summary && <p className="bp-ai-summary">{budget.aiPlan.summary}</p>}
+              {activeAiPlan.summary && <p className="bp-ai-summary">{activeAiPlan.summary}</p>}
             </div>
             <button className="bp-ai-close" onClick={() => setShowAiPlan(false)} title="Dismiss"><X size={16} /></button>
           </div>
           <div className="bp-ai-grid">
-            {budget.aiPlan.allocations.map((a, i) => (
+            {activeAiPlan.allocations.map((a, i) => (
               <div key={i} className="bp-ai-alloc">
                 <div className="bp-ai-alloc-cat">{a.category.replace(/_/g, ' ')}</div>
                 <div className="bp-ai-alloc-amt">{fmtCurrency(a.amount)}</div>
@@ -624,13 +901,13 @@ const BudgetPlanner = () => {
               </div>
             ))}
           </div>
-          {budget.aiPlan.tips?.length > 0 && (
+          {activeAiPlan.tips?.length > 0 && (
             <div className="bp-ai-tips">
               <div className="bp-ai-tips-head">
                 <CheckCircle2 size={16} /> Pro Tips
               </div>
               <ul className="bp-ai-tips-list">
-                {budget.aiPlan.tips.map((tip, i) => (
+                {activeAiPlan.tips.map((tip, i) => (
                   <li key={i}>{tip}</li>
                 ))}
               </ul>
@@ -644,8 +921,8 @@ const BudgetPlanner = () => {
         <div className="bp-booked-head">
           <h2 className="bp-booked-title">Budget Items</h2>
           <div className="bp-booked-head-right">
-            {budget?.items?.length > 0 && (
-              <span className="bp-booked-count">{budget.items.length}</span>
+            {filteredItems.length > 0 && (
+              <span className="bp-booked-count">{filteredItems.length}</span>
             )}
             <button className="bp-btn bp-btn--add bp-btn--sm" onClick={() => openModal()}>
               <Plus size={14} /> Add Item
@@ -653,9 +930,9 @@ const BudgetPlanner = () => {
           </div>
         </div>
 
-        {budget?.items?.length > 0 ? (
+        {filteredItems.length > 0 ? (
           <div className="bp-booked-list">
-            {budget.items.map((item) => {
+            {filteredItems.map((item) => {
               const color = catColor(item.category);
               const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
               return (
@@ -702,6 +979,7 @@ const BudgetPlanner = () => {
           setItemForm={setItemForm}
           onSave={handleSaveItem}
           onClose={closeModal}
+          events={events}
         />
       )}
       {deleteTarget && (
@@ -709,6 +987,17 @@ const BudgetPlanner = () => {
           itemName={deleteTarget.category}
           onConfirm={handleDeleteItem}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {showEventManager && (
+        <EventManagerModal
+          events={events}
+          totalBudget={budget?.totalBudget || 0}
+          onAddEvent={handleAddEvent}
+          onDeleteEvent={handleDeleteEvent}
+          onSaveAllocations={handleSaveAllocations}
+          onClose={() => setShowEventManager(false)}
+          saving={eventSaving}
         />
       )}
     </div>

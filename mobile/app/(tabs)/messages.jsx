@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,8 +28,11 @@ function formatTimeAgo(dateStr) {
 
   if (diffMin < 1) return 'now';
   if (diffMin < 60) return `${diffMin}m`;
-  if (diffHr < 24) return `${diffHr}h`;
-  if (diffDay < 7) return `${diffDay}d`;
+  if (diffHr < 24) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (diffDay < 7) {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[d.getDay()];
+  }
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -99,6 +103,9 @@ export default function MessagesScreen() {
     const otherId = conv.otherParticipant?._id;
     const online = otherId && isOnline(otherId);
     const hasUnread = conv.unreadCount > 0;
+    const timeStr = formatTimeAgo(conv.lastMessage?.createdAt || conv.updatedAt);
+    const isSentByMe = String(conv.lastMessage?.sender) === String(user?._id || user?.id);
+    const previewText = conv.lastMessage?.text || 'No messages yet';
 
     return (
       <TouchableOpacity
@@ -107,7 +114,7 @@ export default function MessagesScreen() {
         onPress={() => router.push(`/chat/${conv._id}`)}
       >
         <View style={styles.avatarWrap}>
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, online && styles.avatarOnline]}>
             <Text style={styles.avatarText}>{initial}</Text>
           </View>
           {online && <View style={styles.onlineDot} />}
@@ -117,17 +124,25 @@ export default function MessagesScreen() {
             <Text style={[styles.name, hasUnread && styles.nameBold]} numberOfLines={1}>
               {name}
             </Text>
-            <Text style={styles.time}>
-              {formatTimeAgo(conv.lastMessage?.createdAt || conv.updatedAt)}
-            </Text>
+            <Text style={[styles.time, hasUnread && styles.timeUnread]}>{timeStr}</Text>
           </View>
           <View style={styles.previewRow}>
-            <Text
-              style={[styles.preview, hasUnread && styles.previewBold]}
-              numberOfLines={1}
-            >
-              {conv.lastMessage?.text || 'No messages yet'}
-            </Text>
+            <View style={styles.previewLeft}>
+              {isSentByMe && (
+                <Ionicons
+                  name="checkmark-done"
+                  size={16}
+                  color={hasUnread ? '#9ca3af' : theme.colors.primary}
+                  style={{ marginRight: 2 }}
+                />
+              )}
+              <Text
+                style={[styles.preview, hasUnread && styles.previewBold]}
+                numberOfLines={1}
+              >
+                {previewText}
+              </Text>
+            </View>
             {hasUnread && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{conv.unreadCount}</Text>
@@ -142,6 +157,7 @@ export default function MessagesScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
+        <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
@@ -149,6 +165,9 @@ export default function MessagesScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
+
+      {/* Search bar */}
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
         <TextInput
@@ -176,7 +195,7 @@ export default function MessagesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={theme.colors.textSecondary} />
+            <Ionicons name="chatbubbles-outline" size={52} color={theme.colors.textSecondary} />
             <Text style={styles.emptyText}>
               {search ? 'No conversations match' : 'No conversations yet'}
             </Text>
@@ -193,51 +212,49 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#fff',
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    marginHorizontal: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: 12,
-    height: 42,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: '#f0f2f5',
+    marginHorizontal: 12,
+    marginVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    height: 38,
   },
   searchInput: {
     flex: 1,
-    marginLeft: theme.spacing.sm,
+    marginLeft: 10,
     fontSize: 15,
-    color: theme.colors.text,
+    color: '#111',
   },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   avatarWrap: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: 14,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarOnline: {},
   avatarText: {
     color: '#fff',
     fontSize: 20,
@@ -245,18 +262,21 @@ const styles = StyleSheet.create({
   },
   onlineDot: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    bottom: 1,
+    right: 1,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: theme.colors.success,
     borderWidth: 2,
-    borderColor: theme.colors.background,
+    borderColor: '#fff',
   },
   info: {
     flex: 1,
     minWidth: 0,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e9edef',
+    paddingBottom: 14,
   },
   nameRow: {
     flexDirection: 'row',
@@ -276,46 +296,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
   },
+  timeUnread: {
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
   previewRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 3,
+  },
+  previewLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   preview: {
     fontSize: 14,
     color: theme.colors.textSecondary,
     flex: 1,
-    marginRight: 8,
   },
   previewBold: {
     color: theme.colors.text,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   badge: {
     backgroundColor: theme.colors.primary,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 5,
   },
   badgeText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
   empty: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 80,
+    paddingTop: 100,
   },
   emptyText: {
     fontSize: 16,
     color: theme.colors.textSecondary,
-    marginTop: 12,
+    marginTop: 14,
+    fontWeight: '500',
   },
   emptySubtext: {
     fontSize: 14,

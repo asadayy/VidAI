@@ -264,7 +264,7 @@ function VendorProfile() {
               id="businessName"
               className="vp-input"
               type="text"
-              placeholder="e.g. Lahore Royal Events"
+              placeholder="e.g. Islamabad Royal Events"
               value={form.businessName}
               onChange={updateField('businessName')}
               required
@@ -312,7 +312,7 @@ function VendorProfile() {
               id="city"
               className="vp-input"
               type="text"
-              placeholder="e.g. Lahore"
+              placeholder="e.g. Islamabad"
               value={form.city}
               onChange={updateField('city')}
               required

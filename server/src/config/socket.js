@@ -58,7 +58,7 @@ export function setupSocket(httpServer) {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(decoded.id).select('name email role avatar');
+      const user = await User.findById(decoded.id).select('name email role avatar isActive');
 
       if (!user || !user.isActive) {
         return next(new Error('User not found or inactive'));

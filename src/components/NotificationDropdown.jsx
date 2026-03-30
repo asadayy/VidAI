@@ -27,10 +27,22 @@ export default function NotificationDropdown({ messagesPath = '/user/messages' }
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
 
-  // Fetch unread count on mount
+  // Fetch persisted notifications + unread count on mount
   useEffect(() => {
-    chatAPI.getUnreadCount()
-      .then(({ data }) => setUnreadCount(data.data.totalUnread))
+    chatAPI.getNotifications(30)
+      .then(({ data }) => {
+        const mapped = data.data.map((n) => ({
+          id: n._id,
+          type: n.type,
+          title: n.title,
+          body: n.message,
+          conversationId: n.relatedModel === 'Conversation' ? n.relatedId : null,
+          createdAt: n.createdAt,
+          isRead: n.isRead,
+        }));
+        setNotifications(mapped);
+        setUnreadCount(mapped.filter((n) => !n.isRead).length);
+      })
       .catch(() => {});
   }, []);
 
@@ -42,33 +54,24 @@ export default function NotificationDropdown({ messagesPath = '/user/messages' }
       if (notif.type === 'new_message') {
         setNotifications((prev) => [
           {
-            id: notif.message._id,
+            id: notif.message._id + '_rt',
             type: 'new_message',
             title: `${notif.message.sender.name}`,
             body: notif.message.content,
             conversationId: notif.conversationId,
-            createdAt: notif.createdAt,
+            createdAt: notif.createdAt || new Date().toISOString(),
             isRead: false,
           },
           ...prev,
-        ].slice(0, 20)); // Keep latest 20
+        ].slice(0, 30));
         setUnreadCount((prev) => prev + 1);
       }
     };
 
-    const handleUnreadUpdate = ({ unreadCount: count }) => {
-      // This fires on individual conversation updates; refresh total
-      chatAPI.getUnreadCount()
-        .then(({ data }) => setUnreadCount(data.data.totalUnread))
-        .catch(() => {});
-    };
-
     socket.on('notification', handleNotification);
-    socket.on('unread_update', handleUnreadUpdate);
 
     return () => {
       socket.off('notification', handleNotification);
-      socket.off('unread_update', handleUnreadUpdate);
     };
   }, [socket]);
 
@@ -84,17 +87,23 @@ export default function NotificationDropdown({ messagesPath = '/user/messages' }
   }, []);
 
   const handleNotifClick = (notif) => {
-    if (notif.type === 'new_message' && notif.conversationId) {
+    // Mark as read in DB and locally
+    if (!notif.isRead) {
+      chatAPI.markNotificationRead(notif.id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+    setIsOpen(false);
+    // Navigate to the conversation
+    if (notif.conversationId) {
       navigate(`${messagesPath}?conversation=${notif.conversationId}`);
     }
-    // Mark as read locally
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
-    );
-    setIsOpen(false);
   };
 
   const markAllRead = () => {
+    chatAPI.markAllNotificationsRead().catch(() => {});
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
   };

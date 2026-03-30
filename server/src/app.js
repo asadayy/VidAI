@@ -20,6 +20,7 @@ import aiRoutes from './routes/ai.routes.js';
 import invitationRoutes from './routes/invitation.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import chatRoutes from './routes/chat.routes.js';
+import eventRoutes from './routes/event.routes.js';
 
 // Import middleware
 import { errorHandler, notFound } from './middleware/error.middleware.js';
@@ -156,6 +157,7 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/chat', chatRoutes);
+app.use('/api/v1/events', eventRoutes);
 
 // --------------- ERROR HANDLING ---------------
 

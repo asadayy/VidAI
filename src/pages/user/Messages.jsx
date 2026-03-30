@@ -5,6 +5,7 @@ import { useSocket } from '../../context/SocketContext';
 import { chatAPI } from '../../api';
 import ConversationList from '../../components/chat/ConversationList';
 import ChatWindow from '../../components/chat/ChatWindow';
+import ContactInfoPanel from '../../components/chat/ContactInfoPanel';
 import './Messages.css';
 
 export default function Messages() {
@@ -91,18 +92,23 @@ export default function Messages() {
     };
   }, [socket, activeConv, loadConversations]);
 
+  const [showContactInfo, setShowContactInfo] = useState(false);
+
   const handleSelect = (conv) => {
     setActiveConv(conv);
-    // Reset unread for selected conversation
+    setShowContactInfo(false);
     setConversations((prev) =>
       prev.map((c) => (c._id === conv._id ? { ...c, unreadCount: 0 } : c))
     );
   };
 
-  const handleBack = () => setActiveConv(null);
+  const handleBack = () => {
+    setActiveConv(null);
+    setShowContactInfo(false);
+  };
 
   return (
-    <div className={`messages-page ${activeConv ? 'has-active' : ''}`}>
+    <div className={`messages-page ${activeConv ? 'has-active' : ''} ${showContactInfo ? 'has-contact-info' : ''}`}>
       <div className="messages-sidebar">
         <ConversationList
           conversations={conversations}
@@ -115,8 +121,16 @@ export default function Messages() {
         <ChatWindow
           conversation={activeConv}
           onBack={handleBack}
+          onToggleContactInfo={() => setShowContactInfo((v) => !v)}
         />
       </div>
+      {showContactInfo && activeConv && (
+        <ContactInfoPanel
+          conversation={activeConv}
+          userRole={user?.role}
+          onClose={() => setShowContactInfo(false)}
+        />
+      )}
     </div>
   );
 }

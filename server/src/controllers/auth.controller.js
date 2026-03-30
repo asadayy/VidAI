@@ -1,6 +1,7 @@
 import User from '../models/User.model.js';
 import Vendor from '../models/Vendor.model.js';
 import Budget from '../models/Budget.model.js';
+import WeddingEvent from '../models/WeddingEvent.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { sendEmail } from '../config/email.js';
@@ -75,6 +76,16 @@ export const register = asyncHandler(async (req, res) => {
         email: user.email,
         role: user.role,
         phone: user.phone,
+        avatar: user.avatar,
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        city: user.city,
+        area: user.area,
+        zipCode: user.zipCode,
+        bio: user.bio,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+        onboarding: user.onboarding,
       },
       accessToken,
       refreshToken,
@@ -150,6 +161,14 @@ export const login = asyncHandler(async (req, res) => {
         role: user.role,
         phone: user.phone,
         avatar: user.avatar,
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        city: user.city,
+        area: user.area,
+        zipCode: user.zipCode,
+        bio: user.bio,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
         onboarding: user.onboarding,
       },
       vendorProfile,
@@ -182,11 +201,78 @@ export const getMe = asyncHandler(async (req, res) => {
         role: user.role,
         phone: user.phone,
         avatar: user.avatar,
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        city: user.city,
+        area: user.area,
+        zipCode: user.zipCode,
+        bio: user.bio,
         isEmailVerified: user.isEmailVerified,
         createdAt: user.createdAt,
         onboarding: user.onboarding,
       },
       vendorProfile,
+    },
+  });
+});
+
+/**
+ * @route   PUT /api/v1/auth/profile
+ * @desc    Update current user's profile
+ * @access  Private
+ */
+export const updateProfile = asyncHandler(async (req, res) => {
+  const allowedFields = [
+    'name', 'phone', 'dateOfBirth', 'gender',
+    'city', 'area', 'zipCode', 'bio', 'avatar',
+  ];
+
+  const allowedOnboardingFields = [
+    'eventTypes', 'eventDate', 'weddingLocation',
+    'venueType', 'guestCount', 'foodPreference', 'totalBudget',
+  ];
+
+  const updates = {};
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updates[field] = req.body[field];
+    }
+  }
+
+  // Handle onboarding sub-fields
+  if (req.body.onboarding && typeof req.body.onboarding === 'object') {
+    for (const field of allowedOnboardingFields) {
+      if (req.body.onboarding[field] !== undefined) {
+        updates[`onboarding.${field}`] = req.body.onboarding[field];
+      }
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        avatar: user.avatar,
+        dateOfBirth: user.dateOfBirth,
+        gender: user.gender,
+        city: user.city,
+        area: user.area,
+        zipCode: user.zipCode,
+        bio: user.bio,
+        isEmailVerified: user.isEmailVerified,
+        createdAt: user.createdAt,
+        onboarding: user.onboarding,
+      },
     },
   });
 });
@@ -454,7 +540,7 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
         await budget.save();
         logger.info(`Budget updated during onboarding for user ${user._id}: ${totalBudget}`);
       } else {
-        await Budget.create({
+        budget = await Budget.create({
           user: user._id,
           totalBudget: Number(totalBudget),
           eventType: (eventTypes && eventTypes.length > 0)
@@ -463,6 +549,40 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
           items: [],
         });
         logger.info(`Budget created during onboarding for user ${user._id}: ${totalBudget}`);
+      }
+
+      // Auto-create WeddingEvent documents when multiple events selected
+      if (eventTypes && eventTypes.length > 1) {
+        const perEventBudget = Math.floor(Number(totalBudget) / eventTypes.length);
+        const budgetEvents = [];
+
+        for (let i = 0; i < eventTypes.length; i++) {
+          const evtType = eventTypes[i].toLowerCase().replace(/[- ]/g, '_');
+          // Skip if event already exists for this user + type
+          const existing = await WeddingEvent.findOne({ user: user._id, eventType: evtType });
+          if (!existing) {
+            const evt = await WeddingEvent.create({
+              user: user._id,
+              eventType: evtType,
+              eventDate: eventDate || undefined,
+              venueType: venueType || undefined,
+              guestCount: guestCount || undefined,
+              allocatedBudget: perEventBudget,
+              sortOrder: i,
+            });
+            budgetEvents.push({
+              weddingEvent: evt._id,
+              eventType: evtType,
+              allocatedAmount: perEventBudget,
+            });
+          }
+        }
+
+        if (budgetEvents.length > 0) {
+          budget.events.push(...budgetEvents);
+          await budget.save();
+          logger.info(`Created ${budgetEvents.length} WeddingEvent docs for user ${user._id}`);
+        }
       }
     } catch (budgetErr) {
       logger.error(`Failed to create/update budget during onboarding: ${budgetErr.message}`);

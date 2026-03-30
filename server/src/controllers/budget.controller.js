@@ -1,5 +1,6 @@
 import Budget from '../models/Budget.model.js';
 import Vendor from '../models/Vendor.model.js';
+import WeddingEvent from '../models/WeddingEvent.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { logger } from '../config/logger.js';
@@ -18,7 +19,7 @@ const CATEGORY_ENUM_MAP = {
  * @access  Private (User)
  */
 export const createBudget = asyncHandler(async (req, res) => {
-  const { totalBudget, eventType, items } = req.body;
+  const { totalBudget, eventType, items, events } = req.body;
 
   if (!totalBudget || totalBudget <= 0) {
     const error = new Error('Total budget is required and must be positive.');
@@ -34,6 +35,7 @@ export const createBudget = asyncHandler(async (req, res) => {
     budget.totalBudget = totalBudget;
     if (eventType) budget.eventType = eventType;
     if (items) budget.items = items;
+    if (events) budget.events = events;
     await budget.save();
   } else {
     budget = await Budget.create({
@@ -41,6 +43,7 @@ export const createBudget = asyncHandler(async (req, res) => {
       totalBudget,
       eventType: eventType || 'full_wedding',
       items: items || [],
+      events: events || [],
     });
   }
 
@@ -76,6 +79,30 @@ export const getMyBudget = asyncHandler(async (req, res) => {
     });
   }
 
+  // Defensive sync: ensure every WeddingEvent is represented in budget.events
+  try {
+    const userEvents = await WeddingEvent.find({ user: req.user._id });
+    if (userEvents.length > 0) {
+      let changed = false;
+      for (const evt of userEvents) {
+        const exists = budget.events.some(
+          e => e.weddingEvent?.toString() === evt._id.toString()
+        );
+        if (!exists) {
+          budget.events.push({
+            weddingEvent: evt._id,
+            eventType: evt.eventType,
+            allocatedAmount: evt.allocatedBudget || 0,
+          });
+          changed = true;
+        }
+      }
+      if (changed) await budget.save();
+    }
+  } catch {
+    // Non-critical — don't block budget fetch
+  }
+
   res.status(200).json({
     success: true,
     data: { budget },
@@ -96,14 +123,14 @@ export const addBudgetItem = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const { category, allocatedAmount, notes } = req.body;
+  const { category, allocatedAmount, notes, weddingEvent } = req.body;
   if (!category || allocatedAmount === undefined) {
     const error = new Error('Category and allocated amount are required.');
     error.statusCode = 400;
     throw error;
   }
 
-  budget.items.push({ category, allocatedAmount, notes });
+  budget.items.push({ category, allocatedAmount, notes, weddingEvent: weddingEvent || null });
   await budget.save();
 
   res.status(201).json({
@@ -134,11 +161,12 @@ export const updateBudgetItem = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  const { category, allocatedAmount, spentAmount, notes } = req.body;
+  const { category, allocatedAmount, spentAmount, notes, weddingEvent } = req.body;
   if (category !== undefined) item.category = category;
   if (allocatedAmount !== undefined) item.allocatedAmount = allocatedAmount;
   if (spentAmount !== undefined) item.spentAmount = spentAmount;
   if (notes !== undefined) item.notes = notes;
+  if (weddingEvent !== undefined) item.weddingEvent = weddingEvent || null;
 
   await budget.save();
 
@@ -194,19 +222,32 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Per-event plan generation
+  const { eventId } = req.query;
+  let targetBudget = budget.totalBudget;
+  let targetEventType = budget.eventType;
+
+  if (eventId) {
+    const eventEntry = budget.events.find(e => e.weddingEvent?.toString() === eventId);
+    if (eventEntry) {
+      targetBudget = eventEntry.allocatedAmount ?? budget.totalBudget;
+      targetEventType = eventEntry.eventType || budget.eventType;
+    }
+  }
+
   try {
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     const response = await fetch(`${aiServiceUrl}/api/v1/budget-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        totalBudget: budget.totalBudget,
-        eventType: budget.eventType,
+        totalBudget: targetBudget,
+        eventType: targetEventType,
         currency: budget.currency,
         userId: req.user._id.toString(),
         preferences: req.user.onboarding || {},
       }),
-      signal: AbortSignal.timeout(200000), // 200 second timeout to match AI controller
+      signal: AbortSignal.timeout(200000),
     });
 
     if (!response.ok) {
@@ -216,13 +257,22 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
 
     const aiResult = await response.json();
 
-    // Save AI plan to budget
-    budget.aiPlan = {
+    const aiPlan = {
       generatedAt: new Date(),
       allocations: aiResult.data?.allocations || [],
       summary: aiResult.data?.summary || '',
       tips: aiResult.data?.tips || [],
     };
+
+    // Save to per-event slot or master
+    if (eventId) {
+      const eventEntry = budget.events.find(e => e.weddingEvent?.toString() === eventId);
+      if (eventEntry) {
+        eventEntry.aiPlan = aiPlan;
+      }
+    } else {
+      budget.aiPlan = aiPlan;
+    }
     await budget.save();
 
     res.status(200).json({
@@ -236,18 +286,18 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
 
     // Fallback: provide a basic default plan
     const defaultAllocations = [
-      { category: 'Venue', percentage: 30, amount: budget.totalBudget * 0.30, explanation: 'Wedding hall or marquee rental' },
-      { category: 'Catering', percentage: 25, amount: budget.totalBudget * 0.25, explanation: 'Food and beverage services' },
-      { category: 'Photography', percentage: 10, amount: budget.totalBudget * 0.10, explanation: 'Photography and videography' },
-      { category: 'Decoration', percentage: 10, amount: budget.totalBudget * 0.10, explanation: 'Stage, floral, and event decoration' },
-      { category: 'Attire & Makeup', percentage: 10, amount: budget.totalBudget * 0.10, explanation: 'Bridal/groom wear and makeup' },
-      { category: 'Music & Entertainment', percentage: 5, amount: budget.totalBudget * 0.05, explanation: 'DJ, sound, lighting' },
-      { category: 'Invitations', percentage: 3, amount: budget.totalBudget * 0.03, explanation: 'Physical and digital invitations' },
-      { category: 'Transport', percentage: 3, amount: budget.totalBudget * 0.03, explanation: 'Wedding car and guest transport' },
-      { category: 'Miscellaneous', percentage: 4, amount: budget.totalBudget * 0.04, explanation: 'Buffer for unexpected expenses' },
+      { category: 'Venue', percentage: 30, amount: targetBudget * 0.30, explanation: 'Wedding hall or marquee rental' },
+      { category: 'Catering', percentage: 25, amount: targetBudget * 0.25, explanation: 'Food and beverage services' },
+      { category: 'Photography', percentage: 10, amount: targetBudget * 0.10, explanation: 'Photography and videography' },
+      { category: 'Decoration', percentage: 10, amount: targetBudget * 0.10, explanation: 'Stage, floral, and event decoration' },
+      { category: 'Attire & Makeup', percentage: 10, amount: targetBudget * 0.10, explanation: 'Bridal/groom wear and makeup' },
+      { category: 'Music & Entertainment', percentage: 5, amount: targetBudget * 0.05, explanation: 'DJ, sound, lighting' },
+      { category: 'Invitations', percentage: 3, amount: targetBudget * 0.03, explanation: 'Physical and digital invitations' },
+      { category: 'Transport', percentage: 3, amount: targetBudget * 0.03, explanation: 'Wedding car and guest transport' },
+      { category: 'Miscellaneous', percentage: 4, amount: targetBudget * 0.04, explanation: 'Buffer for unexpected expenses' },
     ];
 
-    budget.aiPlan = {
+    const fallbackPlan = {
       generatedAt: new Date(),
       allocations: defaultAllocations,
       summary: 'Budget plan generated using standard Pakistani wedding allocation ratios (AI service unavailable - using defaults).',
@@ -257,6 +307,16 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
         'Keep 5-10% as emergency buffer',
       ],
     };
+
+    // Save to per-event slot or master
+    if (eventId) {
+      const eventEntry = budget.events.find(e => e.weddingEvent?.toString() === eventId);
+      if (eventEntry) {
+        eventEntry.aiPlan = fallbackPlan;
+      }
+    } else {
+      budget.aiPlan = fallbackPlan;
+    }
     await budget.save();
 
     res.status(200).json({
@@ -399,5 +459,54 @@ export const recommendVendors = asyncHandler(async (req, res) => {
     success: true,
     message: `Found ${picks.length} vendor pick(s).`,
     data: { picks, totalBudget, currency: 'PKR' },
+  });
+});
+
+/**
+ * @route   GET /api/v1/budget/event-summary
+ * @desc    Get per-event budget breakdown (allocated, spent, remaining, item count)
+ * @access  Private (User)
+ */
+export const getEventBudgetSummary = asyncHandler(async (req, res) => {
+  const budget = await Budget.findOne({ user: req.user._id });
+
+  if (!budget) {
+    const error = new Error('No budget found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const summary = budget.events.map(ev => {
+    const eventItems = budget.items.filter(
+      item => item.weddingEvent?.toString() === ev.weddingEvent?.toString()
+    );
+    const spent = eventItems.reduce((sum, item) => sum + (item.spent || 0), 0);
+    const allocated = ev.allocatedAmount || 0;
+
+    return {
+      weddingEvent: ev.weddingEvent,
+      eventType: ev.eventType,
+      allocatedAmount: allocated,
+      spent,
+      remaining: allocated - spent,
+      itemCount: eventItems.length,
+      hasAiPlan: !!ev.aiPlan?.generatedAt,
+    };
+  });
+
+  // Items not assigned to any event
+  const unassignedItems = budget.items.filter(item => !item.weddingEvent);
+  const unassignedSpent = unassignedItems.reduce((sum, item) => sum + (item.spent || 0), 0);
+  const totalAllocated = budget.events.reduce((sum, ev) => sum + (ev.allocatedAmount || 0), 0);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      totalBudget: budget.totalBudget,
+      totalAllocated,
+      unallocated: budget.totalBudget - totalAllocated,
+      unassignedItems: { count: unassignedItems.length, spent: unassignedSpent },
+      events: summary,
+    },
   });
 });

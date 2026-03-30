@@ -676,7 +676,7 @@ export default function VendorDetails() {
                   </View>
                 </View>
 
-                <View style={styles.portfolioOverlay} pointerEvents="none">
+                <View style={[styles.portfolioOverlay, { pointerEvents: 'none' }]}>
                   <Ionicons name="expand-outline" size={18} color="#fff" />
                 </View>
               </TouchableOpacity>
@@ -1630,9 +1630,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadow: '0px 1px 4px rgba(0,0,0,0.3)',
   },
   heroMeta: {
     flexDirection: 'row',
@@ -1675,15 +1673,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 8,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: { elevation: 6 },
-    }),
+    paddingVertical: 16,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
+    elevation: 6,
   },
   statItem: {
     flex: 1,
@@ -1716,15 +1708,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 14,
     padding: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 6,
-      },
-      android: { elevation: 2 },
-    }),
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
   },
   tabItem: {
     flex: 1,
@@ -1799,15 +1784,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 14,
     borderRadius: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: { elevation: 1 },
-    }),
+    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.04)',
+    elevation: 1,
   },
   contactIconWrap: {
     width: 38,
@@ -1927,15 +1905,8 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     borderWidth: 2,
     borderColor: 'transparent',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 3,
   },
   pkgCardSelected: {
     borderColor: theme.colors.primary,
@@ -2018,15 +1989,8 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
     marginBottom: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-      },
-      android: { elevation: 3 },
-    }),
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 3,
   },
   ratingBig: {
     alignItems: 'center',
@@ -2066,15 +2030,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-      },
-      android: { elevation: 1 },
-    }),
+    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.04)',
+    elevation: 1,
   },
   reviewCardHead: {
     flexDirection: 'row',
@@ -2168,15 +2125,8 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 30 : 14,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.06)',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
-      },
-      android: { elevation: 10 },
-    }),
+    boxShadow: '0px -4px 12px rgba(0, 0, 0, 0.1)',
+    elevation: 10,
   },
   bottomBarLabel: {
     fontSize: 12,

@@ -29,6 +29,11 @@ const budgetItemSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Booking',
   },
+  weddingEvent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'WeddingEvent',
+    default: null,
+  },
 });
 
 const budgetSchema = new mongoose.Schema(
@@ -52,6 +57,30 @@ const budgetSchema = new mongoose.Schema(
       enum: ['wedding', 'engagement', 'mehndi', 'baraat', 'walima', 'nikkah', 'full_wedding', 'other'],
       default: 'full_wedding',
     },
+    // Per-event budget allocations (empty = single-event mode)
+    events: [
+      {
+        weddingEvent: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'WeddingEvent',
+        },
+        eventType: { type: String },
+        allocatedAmount: { type: Number, default: 0 },
+        aiPlan: {
+          generatedAt: Date,
+          allocations: [
+            {
+              category: String,
+              percentage: Number,
+              amount: Number,
+              explanation: String,
+            },
+          ],
+          summary: String,
+          tips: [String],
+        },
+      },
+    ],
     items: [budgetItemSchema],
     // AI-generated plan stored here
     aiPlan: {

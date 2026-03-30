@@ -38,6 +38,34 @@ const userSchema = new mongoose.Schema(
       url: { type: String, default: '' },
       publicId: { type: String, default: '' },
     },
+    dateOfBirth: {
+      type: Date,
+    },
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other', 'prefer-not-to-say', ''],
+      default: '',
+    },
+    city: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+    },
+    area: {
+      type: String,
+      trim: true,
+      maxlength: 150,
+    },
+    zipCode: {
+      type: String,
+      trim: true,
+      maxlength: 10,
+    },
+    bio: {
+      type: String,
+      trim: true,
+      maxlength: 300,
+    },
     onboarding: {
       isComplete: { type: Boolean, default: false },
       firstName: String,

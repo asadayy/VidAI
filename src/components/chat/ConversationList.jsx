@@ -69,6 +69,10 @@ export default function ConversationList({
             const initial = name.charAt(0).toUpperCase();
             const otherId = conv.otherParticipant?._id;
             const online = otherId && isOnline(otherId);
+            const avatarUrl =
+              userRole === 'vendor'
+                ? conv.otherParticipant?.avatar?.url
+                : conv.vendor?.coverImage?.url || conv.vendor?.coverImage;
 
             return (
               <div
@@ -77,7 +81,11 @@ export default function ConversationList({
                 onClick={() => onSelect(conv)}
               >
                 <div className="cl-avatar">
-                  {initial}
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={name} className="cl-avatar-img" />
+                  ) : (
+                    initial
+                  )}
                   {online && <span className="cl-online-dot" />}
                 </div>
                 <div className="cl-info">

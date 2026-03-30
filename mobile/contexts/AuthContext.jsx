@@ -131,6 +131,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const updateUser = useCallback(async (updatedUser) => {
+    setUser(updatedUser);
+    await AsyncStorage.setItem(TOKEN_KEYS.user, JSON.stringify(updatedUser));
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authAPI.logout();
@@ -167,10 +172,11 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateUser,
       hasRole,
       completeOnboarding,
     }),
-    [user, token, loading, isAuthenticated, login, register, logout, hasRole, completeOnboarding]
+    [user, token, loading, isAuthenticated, login, register, logout, updateUser, hasRole, completeOnboarding]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

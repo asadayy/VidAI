@@ -3,6 +3,7 @@ export { authAPI } from '../../shared/api/auth.js';
 export { vendorAPI } from '../../shared/api/vendors.js';
 export { bookingAPI } from '../../shared/api/bookings.js';
 export { budgetAPI } from '../../shared/api/budget.js';
+export { eventAPI } from '../../shared/api/events.js';
 export { paymentAPI } from '../../shared/api/payments.js';
 export { chatAPI } from '../../shared/api/chat.js';
 export { default as client } from '../../shared/api/client.js';

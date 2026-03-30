@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { budgetAPI } from '../../api/budget.js';
+import { eventAPI } from '../../api/events.js';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 import Toast from 'react-native-toast-message';
@@ -47,6 +48,28 @@ const PICKS_CATS = [
   { name: 'Decoration',    emoji: 'flower-outline' },
 ];
 
+const EVENT_LABELS = {
+  dholki: 'Dholki', mehndi: 'Mehndi', mayun: 'Mayun', nikkah: 'Nikkah',
+  baraat: 'Baraat', walima: 'Walima', engagement: 'Engagement',
+  wedding: 'Wedding', full_wedding: 'Full Wedding', other: 'Other',
+};
+
+const EVENT_COLORS = {
+  dholki: '#f59e0b', mehndi: '#10b981', mayun: '#eab308', nikkah: '#6366f1',
+  baraat: '#D7385E', walima: '#8b5cf6', engagement: '#ec4899', other: '#64748b',
+};
+
+const ALL_EVENT_TYPES = [
+  { type: 'dholki',     label: 'Dholki',      emoji: '🥁' },
+  { type: 'mayun',      label: 'Mayun',       emoji: '🌼' },
+  { type: 'mehndi',     label: 'Mehndi',      emoji: '🌿' },
+  { type: 'nikkah',     label: 'Nikkah',      emoji: '💍' },
+  { type: 'baraat',     label: 'Baraat',      emoji: '🐴' },
+  { type: 'walima',     label: 'Walima',      emoji: '🍽️' },
+  { type: 'engagement', label: 'Engagement',  emoji: '💎' },
+  { type: 'other',      label: 'Other',       emoji: '✨' },
+];
+
 // -- helpers --
 
 function catColor(cat) {
@@ -62,6 +85,103 @@ const fmtCurrency = (n) =>
   new Intl.NumberFormat('en-PK', {
     style: 'currency', currency: 'PKR', maximumFractionDigits: 0,
   }).format(n || 0);
+
+// -- EventAllocEditor sub-component (used inside event manager modal) --
+
+function EventAllocEditor({ events, budget, onSave, onDelete, saving }) {
+  const totalBudget = budget?.totalBudget || 0;
+  const [allocations, setAllocations] = useState(() =>
+    events.map(evt => ({
+      eventId: evt._id,
+      eventType: evt.eventType,
+      title: evt.title || EVENT_LABELS[evt.eventType] || evt.eventType,
+      color: evt.color || EVENT_COLORS[evt.eventType] || '#64748b',
+      allocatedAmount: budget?.events?.find(e => e.weddingEvent?.toString() === evt._id)?.allocatedAmount || 0,
+    }))
+  );
+
+  useEffect(() => {
+    setAllocations(events.map(evt => ({
+      eventId: evt._id,
+      eventType: evt.eventType,
+      title: evt.title || EVENT_LABELS[evt.eventType] || evt.eventType,
+      color: evt.color || EVENT_COLORS[evt.eventType] || '#64748b',
+      allocatedAmount: budget?.events?.find(e => e.weddingEvent?.toString() === evt._id)?.allocatedAmount || 0,
+    })));
+  }, [events, budget]);
+
+  const totalAlloc = allocations.reduce((s, a) => s + (Number(a.allocatedAmount) || 0), 0);
+  const unallocated = totalBudget - totalAlloc;
+
+  return (
+    <View style={styles.emAllocWrap}>
+      {allocations.map(alloc => (
+        <View key={alloc.eventId} style={styles.emAllocRow}>
+          <View style={[styles.emAllocDot, { backgroundColor: alloc.color }]} />
+          <Text style={styles.emAllocName}>{alloc.title}</Text>
+          <View style={styles.emAllocInputWrap}>
+            <Text style={styles.emAllocCurrency}>PKR</Text>
+            <TextInput
+              style={styles.emAllocInput}
+              keyboardType="numeric"
+              value={alloc.allocatedAmount ? String(alloc.allocatedAmount) : ''}
+              onChangeText={v => {
+                setAllocations(prev =>
+                  prev.map(a => a.eventId === alloc.eventId ? { ...a, allocatedAmount: v.replace(/[^0-9]/g, '') } : a)
+                );
+              }}
+              placeholder="0"
+              placeholderTextColor="#cbd5e1"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.emAllocDelBtn}
+            onPress={() => onDelete(alloc.eventId)}
+            disabled={saving}
+          >
+            <Ionicons name="trash-outline" size={14} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      ))}
+
+      {/* summary */}
+      <View style={styles.emSummary}>
+        <View style={styles.emSummaryRow}>
+          <Text style={styles.emSummaryLabel}>Total Budget</Text>
+          <Text style={styles.emSummaryVal}>{fmtCurrency(totalBudget)}</Text>
+        </View>
+        <View style={styles.emSummaryRow}>
+          <Text style={styles.emSummaryLabel}>Allocated</Text>
+          <Text style={styles.emSummaryVal}>{fmtCurrency(totalAlloc)}</Text>
+        </View>
+        <View style={[styles.emSummaryRow, unallocated < 0 && styles.emSummaryRowOver]}>
+          <Text style={[styles.emSummaryLabel, unallocated < 0 && { color: '#ef4444' }]}>
+            {unallocated < 0 ? 'Over by' : 'Unallocated'}
+          </Text>
+          <Text style={[styles.emSummaryVal, unallocated < 0 && { color: '#ef4444' }]}>
+            {fmtCurrency(Math.abs(unallocated))}
+          </Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.emSaveBtn, saving && styles.btnDisabled]}
+        onPress={() => onSave(allocations.map(a => ({
+          eventId: a.eventId,
+          allocatedAmount: Number(a.allocatedAmount) || 0,
+        })))}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator size={14} color="#fff" />
+        ) : (
+          <Ionicons name="save-outline" size={14} color="#fff" />
+        )}
+        <Text style={styles.emSaveBtnText}>{saving ? 'Saving...' : 'Save Allocations'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 // -- component --
 
@@ -89,13 +209,30 @@ export default function Budget() {
   // AI plan visibility
   const [showAiPlan, setShowAiPlan] = useState(true);
 
+  // events
+  const [events, setEvents] = useState([]);
+  const [activeEventId, setActiveEventId] = useState(null);
+
+  // event manager
+  const [showEventManager, setShowEventManager] = useState(false);
+  const [eventSaving, setEventSaving] = useState(false);
+
   // vendor picks
   const [showPicksBuilder, setShowPicksBuilder] = useState(false);
   const [picksCategories, setPicksCategories] = useState([]);
   const [vendorPicks, setVendorPicks] = useState([]);
   const [picksLoading, setPicksLoading] = useState(false);
 
-  useEffect(() => { fetchBudget(); }, []);
+  useEffect(() => { fetchBudget(); fetchEvents(); }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const res = await eventAPI.getAll();
+      setEvents(res.data?.data?.events || []);
+    } catch {
+      // Events are optional
+    }
+  };
 
   const fetchBudget = async () => {
     try {
@@ -133,7 +270,7 @@ export default function Budget() {
     try {
       setAiLoading(true);
       Toast.show({ type: 'info', text1: 'Generating AI budget plan...' });
-      await budgetAPI.generateAIPlan();
+      await budgetAPI.generateAIPlan(activeEventId);
       setShowAiPlan(true);
       Toast.show({ type: 'success', text1: 'AI Plan generated!' });
       fetchBudget();
@@ -152,10 +289,11 @@ export default function Budget() {
         notes: item.notes || '',
         allocatedAmount: item.allocatedAmount?.toString() || '',
         spentAmount: item.spentAmount?.toString() || '',
+        weddingEvent: item.weddingEvent || '',
       });
     } else {
       setEditingItem(null);
-      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '' });
+      setItemForm({ category: '', notes: '', allocatedAmount: '', spentAmount: '', weddingEvent: activeEventId || '' });
     }
     setItemModalVisible(true);
   };
@@ -178,6 +316,7 @@ export default function Budget() {
         allocatedAmount: Number(itemForm.allocatedAmount),
         spentAmount: Number(itemForm.spentAmount) || 0,
       };
+      if (itemForm.weddingEvent) data.weddingEvent = itemForm.weddingEvent;
       if (editingItem) {
         await budgetAPI.updateItem(editingItem._id, data);
         Toast.show({ type: 'success', text1: 'Item updated!' });
@@ -248,14 +387,73 @@ export default function Budget() {
     }
   };
 
+  // event manager handlers
+  const handleAddEvent = async (eventType) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.create({ eventType, title: EVENT_LABELS[eventType] || eventType });
+      Toast.show({ type: 'success', text1: `${EVENT_LABELS[eventType] || eventType} added!` });
+      await fetchEvents();
+      await fetchBudget();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to add event' });
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.delete(eventId);
+      if (activeEventId === eventId) setActiveEventId(null);
+      Toast.show({ type: 'success', text1: 'Event removed' });
+      await fetchEvents();
+      await fetchBudget();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to delete event' });
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
+  const handleSaveAllocations = async (allocations) => {
+    try {
+      setEventSaving(true);
+      await eventAPI.updateAllocations(allocations);
+      Toast.show({ type: 'success', text1: 'Allocations saved!' });
+      await fetchBudget();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to save allocations' });
+    } finally {
+      setEventSaving(false);
+    }
+  };
+
   // -- derived values --
-  const totalAllocated = budget?.items?.reduce((s, i) => s + (i.allocatedAmount || 0), 0) || 0;
-  const totalSpent     = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
-  const remaining      = (budget?.totalBudget || 0) - totalSpent;
-  const spentPct       = budget?.totalBudget ? Math.min(100, (totalSpent / budget.totalBudget) * 100) : 0;
-  const allocPct       = budget?.totalBudget ? Math.min(100, (totalAllocated / budget.totalBudget) * 100) : 0;
+  const allItems = budget?.items || [];
+  const filteredItems = activeEventId
+    ? allItems.filter(i => i.weddingEvent?.toString() === activeEventId)
+    : allItems;
+
+  const activeAiPlan = activeEventId
+    ? budget?.events?.find(e => e.weddingEvent?.toString() === activeEventId)?.aiPlan
+    : budget?.aiPlan;
+
+  const totalAllocated = filteredItems.reduce((s, i) => s + (i.allocatedAmount || 0), 0);
+  const totalSpent     = filteredItems.reduce((s, i) => s + (i.spentAmount || 0), 0);
+  const activeEventEntry = activeEventId
+    ? budget?.events?.find(e => e.weddingEvent?.toString() === activeEventId)
+    : null;
+  const activeBudgetTotal = activeEventId
+    ? (activeEventEntry?.allocatedAmount ?? budget?.totalBudget ?? 0)
+    : (budget?.totalBudget ?? 0);
+  const remaining      = activeBudgetTotal - totalSpent;
+  const spentPct       = activeBudgetTotal ? Math.min(100, (totalSpent / activeBudgetTotal) * 100) : 0;
+  const allocPct       = activeBudgetTotal ? Math.min(100, (totalAllocated / activeBudgetTotal) * 100) : 0;
   const isOver         = remaining < 0;
   const isWarning      = !isOver && spentPct >= 80;
+  const showEventTabs  = events.length > 1;
 
   if (loading) return <Loading fullScreen message="Loading budget..." />;
 
@@ -309,7 +507,7 @@ export default function Budget() {
               </View>
               <View>
                 <Text style={styles.heroTitle}>Budget Planner</Text>
-                <Text style={styles.heroSub}>{budget?.items?.length || 0} expense categories tracked</Text>
+                <Text style={styles.heroSub}>{filteredItems.length} expense categories tracked</Text>
               </View>
             </View>
             <View style={styles.heroActions}>
@@ -334,15 +532,66 @@ export default function Budget() {
                 <Ionicons name="add" size={16} color="#fff" />
                 <Text style={styles.heroBtnAddText}>Add Item</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.heroBtnEvents}
+                onPress={() => setShowEventManager(true)}
+              >
+                <Ionicons name="calendar-outline" size={13} color="#fff" />
+                <Text style={styles.heroBtnEventsText}>Events</Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {/* event tabs (only with 2+ events) */}
+          {showEventTabs && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.eventTabsContent}
+              style={styles.eventTabsWrap}
+            >
+              <TouchableOpacity
+                style={[styles.eventTab, !activeEventId && styles.eventTabActive]}
+                onPress={() => setActiveEventId(null)}
+              >
+                <Text style={[styles.eventTabText, !activeEventId && styles.eventTabTextActive]}>
+                  All Events
+                </Text>
+              </TouchableOpacity>
+              {events.map(evt => {
+                const evtColor = evt.color || EVENT_COLORS[evt.eventType] || '#64748b';
+                const isActive = activeEventId === evt._id;
+                return (
+                  <TouchableOpacity
+                    key={evt._id}
+                    style={[
+                      styles.eventTab,
+                      isActive && [styles.eventTabActive, { borderBottomColor: evtColor }],
+                    ]}
+                    onPress={() => setActiveEventId(evt._id)}
+                  >
+                    <View style={[styles.eventTabDot, { backgroundColor: evtColor }]} />
+                    <Text style={[styles.eventTabText, isActive && { color: evtColor, fontWeight: '700' }]}>
+                      {evt.title || EVENT_LABELS[evt.eventType] || evt.eventType}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={styles.eventTabGear}
+                onPress={() => setShowEventManager(true)}
+              >
+                <Ionicons name="settings-outline" size={16} color="#94a3b8" />
+              </TouchableOpacity>
+            </ScrollView>
+          )}
 
           {/* 4 stat tiles */}
           <View style={styles.statsGrid}>
             <View style={[styles.statTile, styles.statTileRose]}>
               <Ionicons name="wallet-outline" size={18} color="#D7385E" />
               <Text style={styles.statLabel}>Total Budget</Text>
-              <Text style={[styles.statValue, { color: '#D7385E' }]}>{fmtCurrency(budget.totalBudget)}</Text>
+              <Text style={[styles.statValue, { color: '#D7385E' }]}>{fmtCurrency(activeBudgetTotal)}</Text>
             </View>
             <View style={[styles.statTile, styles.statTileViolet]}>
               <Ionicons name="flag-outline" size={18} color="#7c3aed" />
@@ -573,21 +822,21 @@ export default function Budget() {
           )}
 
           {/* AI plan card */}
-          {budget.aiPlan?.allocations?.length > 0 && showAiPlan && (
+          {activeAiPlan?.allocations?.length > 0 && showAiPlan && (
             <View style={styles.aiCard}>
               <View style={styles.aiStripe} />
               <View style={styles.aiHead}>
                 <Ionicons name="sparkles" size={20} color="#7c3aed" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.aiTitle}>AI Budget Recommendations</Text>
-                  {budget.aiPlan.summary && <Text style={styles.aiSummary}>{budget.aiPlan.summary}</Text>}
+                  {activeAiPlan.summary && <Text style={styles.aiSummary}>{activeAiPlan.summary}</Text>}
                 </View>
                 <TouchableOpacity onPress={() => setShowAiPlan(false)} style={styles.aiCloseBtn}>
                   <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               <View style={styles.aiAllocsGrid}>
-                {budget.aiPlan.allocations.map((a, i) => (
+                {activeAiPlan.allocations.map((a, i) => (
                   <View key={i} style={styles.aiAllocBlock}>
                     <Text style={styles.aiAllocCat}>{a.category.replace(/_/g, ' ')}</Text>
                     <Text style={styles.aiAllocAmt}>{fmtCurrency(a.amount)}</Text>
@@ -598,13 +847,13 @@ export default function Budget() {
                   </View>
                 ))}
               </View>
-              {budget.aiPlan.tips?.length > 0 && (
+              {activeAiPlan.tips?.length > 0 && (
                 <View style={styles.aiTips}>
                   <View style={styles.aiTipsHead}>
                     <Ionicons name="checkmark-circle" size={15} color="#059669" />
                     <Text style={styles.aiTipsTitle}>Pro Tips</Text>
                   </View>
-                  {budget.aiPlan.tips.map((tip, i) => (
+                  {activeAiPlan.tips.map((tip, i) => (
                     <View key={i} style={styles.aiTipRow}>
                       <Text style={styles.aiTipBullet}>{'\u2022'}</Text>
                       <Text style={styles.aiTipText}>{tip}</Text>
@@ -620,9 +869,9 @@ export default function Budget() {
             <View style={styles.bookedHead}>
               <Text style={styles.bookedTitle}>Budget Items</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {budget?.items?.length > 0 && (
+                {filteredItems.length > 0 && (
                   <View style={styles.bookedCountBadge}>
-                    <Text style={styles.bookedCountText}>{budget.items.length}</Text>
+                    <Text style={styles.bookedCountText}>{filteredItems.length}</Text>
                   </View>
                 )}
                 <TouchableOpacity style={styles.bookedAddBtn} onPress={() => openItemModal()}>
@@ -632,8 +881,8 @@ export default function Budget() {
               </View>
             </View>
 
-            {budget?.items?.length > 0 ? (
-              budget.items.map(item => {
+            {filteredItems.length > 0 ? (
+              filteredItems.map(item => {
                 const color = catColor(item.category);
                 const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
                 return (
@@ -698,6 +947,33 @@ export default function Budget() {
                 value={itemForm.category}
                 onChangeText={v => setItemForm(f => ({ ...f, category: v }))}
               />
+              {events.length > 1 && (
+                <View>
+                  <Text style={styles.inputLabel}>Event</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                    <TouchableOpacity
+                      style={[styles.eventPill, !itemForm.weddingEvent && styles.eventPillActive]}
+                      onPress={() => setItemForm(f => ({ ...f, weddingEvent: '' }))}
+                    >
+                      <Text style={[styles.eventPillText, !itemForm.weddingEvent && styles.eventPillTextActive]}>General</Text>
+                    </TouchableOpacity>
+                    {events.map(evt => {
+                      const isSelected = itemForm.weddingEvent === evt._id;
+                      return (
+                        <TouchableOpacity
+                          key={evt._id}
+                          style={[styles.eventPill, isSelected && [styles.eventPillActive, { backgroundColor: evt.color || EVENT_COLORS[evt.eventType] || theme.colors.primary }]]}
+                          onPress={() => setItemForm(f => ({ ...f, weddingEvent: evt._id }))}
+                        >
+                          <Text style={[styles.eventPillText, isSelected && styles.eventPillTextActive]}>
+                            {evt.title || EVENT_LABELS[evt.eventType] || evt.eventType}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
               <View style={styles.inputRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.inputLabel}>Estimated Amount (PKR) *</Text>
@@ -766,6 +1042,65 @@ export default function Budget() {
             </View>
           </View>
         </Modal>
+
+        {/* event manager modal */}
+        <Modal
+          visible={showEventManager}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowEventManager(false)}
+        >
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowEventManager(false)} />
+          <View style={styles.emSheet}>
+            <View style={styles.emHeader}>
+              <Text style={styles.emHeaderTitle}>Manage Events</Text>
+              <TouchableOpacity onPress={() => setShowEventManager(false)}>
+                <Ionicons name="close" size={22} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {/* current events */}
+              <Text style={styles.emSectionTitle}>Your Events & Budget Split</Text>
+              {events.length === 0 ? (
+                <Text style={styles.emEmpty}>No events yet. Add your first event below.</Text>
+              ) : (
+                <EventAllocEditor
+                  events={events}
+                  budget={budget}
+                  onSave={handleSaveAllocations}
+                  onDelete={handleDeleteEvent}
+                  saving={eventSaving}
+                />
+              )}
+
+              {/* add event */}
+              {(() => {
+                const usedTypes = events.map(e => e.eventType);
+                const available = ALL_EVENT_TYPES.filter(t => !usedTypes.includes(t.type));
+                if (available.length === 0) return null;
+                return (
+                  <View style={styles.emAddSection}>
+                    <Text style={styles.emSectionTitle}>Add an Event</Text>
+                    <View style={styles.emTypeGrid}>
+                      {available.map(t => (
+                        <TouchableOpacity
+                          key={t.type}
+                          style={styles.emTypeBtn}
+                          onPress={() => handleAddEvent(t.type)}
+                          disabled={eventSaving}
+                        >
+                          <Text style={styles.emTypeEmoji}>{t.emoji}</Text>
+                          <Text style={styles.emTypeLabel}>{t.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })()}
+            </ScrollView>
+          </View>
+        </Modal>
       </View>
     </ProtectedRoute>
   );
@@ -784,10 +1119,7 @@ const styles = StyleSheet.create({
     padding: 28,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
     elevation: 4,
   },
   setupIconWrap: {
@@ -836,13 +1168,73 @@ const styles = StyleSheet.create({
   },
   heroBtnAddText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 
+  // event tabs
+  eventTabsWrap: {
+    backgroundColor: theme.colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    maxHeight: 48,
+  },
+  eventTabsContent: {
+    paddingHorizontal: 12,
+    gap: 6,
+    alignItems: 'center',
+  },
+  eventTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  eventTabActive: {
+    borderBottomColor: theme.colors.primary,
+  },
+  eventTabDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  eventTabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+  },
+  eventTabTextActive: {
+    color: theme.colors.primary,
+    fontWeight: '700',
+  },
+
+  // event pills (in item modal)
+  eventPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    marginRight: 8,
+  },
+  eventPillActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  eventPillText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+  },
+  eventPillTextActive: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+
   // stat tiles
   statsGrid: {
     flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 10,
   },
   statTile: {
     width: '48%', backgroundColor: theme.colors.white, borderRadius: 12, padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   statTileRose:   { borderTopWidth: 3, borderTopColor: '#D7385E' },
   statTileViolet: { borderTopWidth: 3, borderTopColor: '#7c3aed' },
@@ -856,7 +1248,7 @@ const styles = StyleSheet.create({
   progressCard: {
     backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
     padding: 16, marginBottom: 12, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   progressCardStripe: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: theme.colors.primary,
@@ -895,7 +1287,7 @@ const styles = StyleSheet.create({
   picksBuilder: {
     backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
     padding: 16, marginBottom: 12, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   picksBuilderStripe: {
     position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: theme.colors.primary,
@@ -937,7 +1329,7 @@ const styles = StyleSheet.create({
   picksResults: {
     backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
     padding: 16, marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   picksResultsHead: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
   picksResultsTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
@@ -988,7 +1380,7 @@ const styles = StyleSheet.create({
   aiCard: {
     backgroundColor: theme.colors.white, marginHorizontal: 12, borderRadius: 14,
     padding: 16, marginBottom: 12, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   aiStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#7c3aed' },
   aiHead: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 14 },
@@ -1029,7 +1421,7 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: theme.colors.white, borderRadius: 12, marginBottom: 10,
     borderLeftWidth: 4, padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2,
+    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.05)', elevation: 2,
   },
   itemTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 10 },
   itemAvatar: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -1064,7 +1456,7 @@ const styles = StyleSheet.create({
   emptyItems: {
     backgroundColor: theme.colors.white, borderRadius: 14, padding: 24,
     alignItems: 'center', marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.04)', elevation: 1,
   },
   emptyItemsTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text, marginTop: 12, marginBottom: 4 },
   emptyItemsSub: { fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: 16 },
@@ -1158,7 +1550,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: theme.colors.white, borderRadius: 10, borderLeftWidth: 4,
     paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.04)', elevation: 1,
   },
   bookedAvatar: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   bookedAvatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
@@ -1184,4 +1576,79 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 8,
   },
   bookedEmptyText: { fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', lineHeight: 19 },
+
+  // Events button in hero
+  heroBtnEvents: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#7c3aed', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7,
+  },
+  heroBtnEventsText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
+  // Gear icon in event tabs
+  eventTabGear: {
+    width: 34, height: 34, borderRadius: 8,
+    borderWidth: 1, borderStyle: 'dashed', borderColor: '#cbd5e1',
+    alignItems: 'center', justifyContent: 'center', marginLeft: 2,
+  },
+
+  // Event Manager Modal
+  emSheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: theme.colors.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    maxHeight: '85%', paddingHorizontal: 18, paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+  },
+  emHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+  },
+  emHeaderTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+  emSectionTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 10 },
+  emEmpty: { fontSize: 13, color: theme.colors.textSecondary, textAlign: 'center', paddingVertical: 16 },
+
+  // allocations editor
+  emAllocWrap: { marginBottom: 18 },
+  emAllocRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
+  },
+  emAllocDot: { width: 10, height: 10, borderRadius: 5 },
+  emAllocName: { fontSize: 13, fontWeight: '600', color: '#334155', minWidth: 70, textTransform: 'capitalize' },
+  emAllocInputWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 8,
+    paddingHorizontal: 8,
+  },
+  emAllocCurrency: { fontSize: 11, fontWeight: '700', color: '#94a3b8' },
+  emAllocInput: { flex: 1, fontSize: 13, fontWeight: '600', color: '#1e293b', paddingVertical: 8 },
+  emAllocDelBtn: {
+    width: 28, height: 28, borderRadius: 7,
+    borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fff5f5',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // summary
+  emSummary: {
+    backgroundColor: '#f8fafc', borderRadius: 10, padding: 12, marginTop: 10,
+    borderWidth: 1, borderColor: '#e2e8f0', gap: 4,
+  },
+  emSummaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  emSummaryRowOver: {},
+  emSummaryLabel: { fontSize: 12, color: '#64748b' },
+  emSummaryVal: { fontSize: 12, fontWeight: '700', color: '#1e293b' },
+  emSaveBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#7c3aed', borderRadius: 10, paddingVertical: 12, marginTop: 12,
+  },
+  emSaveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  // add event type grid
+  emAddSection: { marginTop: 8, marginBottom: 12 },
+  emTypeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  emTypeBtn: {
+    width: '22%', alignItems: 'center', paddingVertical: 10, borderRadius: 10,
+    borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#fff',
+  },
+  emTypeEmoji: { fontSize: 22, marginBottom: 4 },
+  emTypeLabel: { fontSize: 11, fontWeight: '600', color: '#475569', textTransform: 'capitalize' },
 });

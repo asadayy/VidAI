@@ -2,37 +2,39 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #12121e;
+  background: #ffffff;
 }
 
 .cl-header {
-  padding: 1rem;
-  border-bottom: 1px solid #2a2a3e;
+  padding: 1.25rem 1rem 0.75rem;
 }
 
 .cl-header h2 {
-  font-size: 1.2rem;
-  color: #fff;
+  font-size: 1.25rem;
+  color: #111827;
   margin: 0 0 0.75rem;
+  font-weight: 700;
 }
 
 .cl-search {
   width: 100%;
-  background: #2a2a3e;
-  border: 1px solid #3a3a4e;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
-  color: #e0e0e0;
-  padding: 0.5rem 0.75rem;
+  color: #111827;
+  padding: 0.55rem 0.85rem;
   font-size: 0.85rem;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .cl-search:focus {
   border-color: #D7385E;
+  box-shadow: 0 0 0 3px rgba(215, 56, 94, 0.08);
 }
 
 .cl-search::placeholder {
-  color: #666;
+  color: #9ca3af;
 }
 
 .cl-items {
@@ -44,18 +46,19 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  padding: 0.8rem 1rem;
   cursor: pointer;
   transition: background 0.15s;
-  border-bottom: 1px solid #1e1e2e;
+  border-bottom: 1px solid #f3f4f6;
+  position: relative;
 }
 
 .cl-item:hover {
-  background: #1e1e2e;
+  background: #f9fafb;
 }
 
 .cl-item.active {
-  background: #1e1e30;
+  background: #fdf2f4;
   border-left: 3px solid #D7385E;
 }
 
@@ -64,25 +67,32 @@
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 50%;
-  background: #D7385E;
+  background: linear-gradient(135deg, #ec4899, #f97316);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.05rem;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.cl-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .cl-online-dot {
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 10px;
-  height: 10px;
+  bottom: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: #4caf50;
-  border: 2px solid #12121e;
+  background: #22c55e;
+  border: 2.5px solid #ffffff;
 }
 
 .cl-info {
@@ -100,7 +110,7 @@
 .cl-name {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #e0e0e0;
+  color: #111827;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -108,7 +118,7 @@
 
 .cl-time {
   font-size: 0.7rem;
-  color: #888;
+  color: #9ca3af;
   white-space: nowrap;
 }
 
@@ -117,12 +127,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
 }
 
 .cl-preview {
   font-size: 0.8rem;
-  color: #888;
+  color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -133,13 +143,14 @@
   color: #fff;
   font-size: 0.65rem;
   font-weight: 700;
-  min-width: 1.2rem;
-  height: 1.2rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 0 0.25rem;
 }
 
 .cl-empty {
@@ -148,12 +159,16 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #666;
+  color: #9ca3af;
   text-align: center;
   padding: 2rem;
 }
 
+.cl-empty svg {
+  opacity: 0.4;
+}
+
 .cl-empty p {
-  margin: 0.5rem 0 0;
+  margin: 0.75rem 0 0;
   font-size: 0.85rem;
 }

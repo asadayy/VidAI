@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
+    boxShadow: '0px 1px 6px rgba(0, 0, 0, 0.06)', elevation: 3,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAvatar: {
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   bubbleAI: {
     backgroundColor: '#fff', borderBottomLeftRadius: 4,
     borderWidth: 1, borderColor: '#f1f5f9',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.06)', elevation: 2,
   },
   bubbleUser: { borderBottomRightRadius: 4 },
   bubbleAIText: { fontSize: 14, color: '#1e293b', lineHeight: 21 },

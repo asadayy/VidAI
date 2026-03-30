@@ -12,7 +12,7 @@
   height: 64px;
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 200;
   box-shadow: var(--shadow-sm);
 }
 
@@ -85,8 +85,6 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding-right: 1rem;
-  border-right: 1px solid var(--gray-200);
 }
 
 .user-avatar {
@@ -100,6 +98,13 @@
   color: white;
   font-weight: 600;
   font-size: 0.9rem;
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-name {
@@ -112,19 +117,78 @@
   text-overflow: ellipsis;
 }
 
-.user-logout-btn {
-  color: var(--gray-500);
-  padding: 0.5rem;
-  border-radius: var(--radius-md);
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Profile Dropdown */
+.profile-dropdown-wrapper {
+  position: relative;
 }
 
-.user-logout-btn:hover {
-  background-color: var(--gray-100);
+.user-info-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid transparent;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-info-btn:hover {
+  background-color: var(--gray-50);
+  border-color: var(--gray-200);
+}
+
+.chevron-icon {
+  color: var(--gray-400);
+  transition: transform 0.2s;
+}
+
+.chevron-icon.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 180px;
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+  overflow: hidden;
+  animation: slideDown 0.15s ease-out;
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: none;
+  color: var(--gray-700);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.profile-dropdown-item:hover {
+  background-color: var(--gray-50);
+  color: var(--pink);
+}
+
+.profile-dropdown-item.logout:hover {
   color: var(--danger);
+}
+
+.profile-dropdown-divider {
+  height: 1px;
+  background: var(--gray-100);
 }
 
 /* Mobile Menu Toggle */
@@ -169,10 +233,12 @@
 
 .user-content {
   flex: 1;
+  min-height: 0;
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+  overflow: auto;
 }
 
 @keyframes slideDown {

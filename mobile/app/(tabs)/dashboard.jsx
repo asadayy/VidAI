@@ -178,9 +178,13 @@ export default function Dashboard() {
         <View style={styles.hero}>
           <View style={styles.heroGlow} />
           <View style={styles.heroBody}>
-            <View style={styles.avatarCircle}>
+            <TouchableOpacity
+              style={styles.avatarCircle}
+              onPress={() => router.push('/profile')}
+              activeOpacity={0.7}
+            >
               <Text style={styles.avatarText}>{getInitials(user?.name)}</Text>
-            </View>
+            </TouchableOpacity>
             <View style={styles.heroText}>
               <Text style={styles.heroGreeting}>{greeting} 👋</Text>
               <Text style={styles.heroName}>{firstName}</Text>
