@@ -25,10 +25,17 @@ import './UserBookings.css';
 /* -- Config ----------------------------------------------- */
 const STATUS_CFG = {
   pending:   { label: 'Pending',   cls: 'ub-badge--warn',    Icon: Clock        },
-  approved:  { label: 'Approved',  cls: 'ub-badge--success', Icon: CheckCircle2 },
+  approved:  { label: 'Awaiting Payment', cls: 'ub-badge--warn', Icon: AlertTriangle },
+  booked:    { label: 'Booked',    cls: 'ub-badge--success', Icon: CheckCircle2 },
   completed: { label: 'Completed', cls: 'ub-badge--info',    Icon: CheckCircle2 },
   cancelled: { label: 'Cancelled', cls: 'ub-badge--danger',  Icon: XCircle      },
   rejected:  { label: 'Rejected',  cls: 'ub-badge--danger',  Icon: XCircle      },
+};
+
+/** Derive display status: approved+paid → 'booked', otherwise raw status */
+const getDisplayStatus = (b) => {
+  if (b.status === 'approved' && b.paymentStatus === 'paid') return 'booked';
+  return b.status;
 };
 
 const PAYMENT_CFG = {
@@ -179,7 +186,8 @@ const UserBookings = () => {
       {/* Cards */}
       <div className="ub-list">
         {filtered.length > 0 ? filtered.map((b) => {
-          const scfg = STATUS_CFG[b.status] || STATUS_CFG.pending;
+          const displayStatus = getDisplayStatus(b);
+          const scfg = STATUS_CFG[displayStatus] || STATUS_CFG.pending;
           const pcfg = PAYMENT_CFG[b.paymentStatus] || PAYMENT_CFG.unpaid;
           const { Icon: SIcon } = scfg;
           const initial = (b.vendor?.businessName || '?')[0].toUpperCase();

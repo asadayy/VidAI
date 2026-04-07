@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, eventAPI } from '../../api';
 import { uploadAPI } from '../../api/upload';
-import { Camera, Save, User, MapPin, Calendar, Mail, Phone, Heart, Plus, Trash2 } from 'lucide-react';
+import { Camera, Save, User, MapPin, Calendar, Mail, Phone, Heart, Plus, Trash2, Sparkles, PenLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import './Profile.css';
 
@@ -198,14 +198,19 @@ export default function Profile() {
   return (
     <div className="profile-page">
       <div className="profile-header-card">
+        <div className="profile-header-banner">
+          <div className="profile-banner-deco" />
+        </div>
         <div className="profile-avatar-section">
           <div className="profile-avatar-wrapper">
-            <div className="profile-avatar-lg">
-              {user?.avatar?.url ? (
-                <img src={user.avatar.url} alt="" />
-              ) : (
-                <span>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
-              )}
+            <div className="profile-avatar-ring">
+              <div className="profile-avatar-lg">
+                {user?.avatar?.url ? (
+                  <img src={user.avatar.url} alt="" />
+                ) : (
+                  <span>{(user?.name || 'U').charAt(0).toUpperCase()}</span>
+                )}
+              </div>
             </div>
             <button
               className="profile-avatar-upload-btn"
@@ -225,16 +230,18 @@ export default function Profile() {
           </div>
           <div className="profile-header-info">
             <h1>{user?.name || 'User'}</h1>
-            <p className="profile-email">
-              <Mail size={14} />
-              {user?.email}
-            </p>
-            {memberSince && (
-              <p className="profile-member-since">
-                <Calendar size={14} />
-                Member since {memberSince}
-              </p>
-            )}
+            <div className="profile-header-meta">
+              <span className="profile-meta-pill">
+                <Mail size={12} />
+                {user?.email}
+              </span>
+              {memberSince && (
+                <span className="profile-meta-pill">
+                  <Calendar size={12} />
+                  {memberSince}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -242,7 +249,7 @@ export default function Profile() {
       <form className="profile-form" onSubmit={handleSubmit}>
         <div className="profile-section">
           <h2 className="profile-section-title">
-            <User size={18} />
+            <span className="profile-icon-badge pink"><User size={16} /></span>
             Personal Information
           </h2>
           <div className="profile-grid">
@@ -302,7 +309,7 @@ export default function Profile() {
 
         <div className="profile-section">
           <h2 className="profile-section-title">
-            <MapPin size={18} />
+            <span className="profile-icon-badge orange"><MapPin size={16} /></span>
             Location
           </h2>
           <div className="profile-grid">
@@ -343,7 +350,10 @@ export default function Profile() {
         </div>
 
         <div className="profile-section">
-          <h2 className="profile-section-title">About You</h2>
+          <h2 className="profile-section-title">
+            <span className="profile-icon-badge purple"><PenLine size={16} /></span>
+            About You
+          </h2>
           <div className="profile-field full-width">
             <label htmlFor="bio">Bio</label>
             <textarea
@@ -361,7 +371,7 @@ export default function Profile() {
 
         <div className="profile-section">
           <h2 className="profile-section-title">
-            <Heart size={18} />
+            <span className="profile-icon-badge red"><Heart size={16} /></span>
             Event Details
           </h2>
 
@@ -507,7 +517,11 @@ export default function Profile() {
 
           {events.length === 0 && (
             <div className="profile-event-empty">
-              <p>No events yet. Add your first event to start planning.</p>
+              <div className="profile-event-empty-icon">
+                <Heart size={28} />
+              </div>
+              <p className="profile-event-empty-title">No events yet</p>
+              <p className="profile-event-empty-desc">Add your first event to start planning your dream wedding.</p>
               <div className="profile-chip-group" style={{ justifyContent: 'center' }}>
                 {EVENT_TYPES.map(type => (
                   <button

@@ -133,6 +133,14 @@ export const addBudgetItem = asyncHandler(async (req, res) => {
   budget.items.push({ category, allocatedAmount, notes, weddingEvent: weddingEvent || null });
   await budget.save();
 
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'add_budget_item',
+    resourceType: 'Budget',
+    resourceId: budget._id,
+    details: `Added budget item: ${category} — PKR ${allocatedAmount}`,
+  });
+
   res.status(201).json({
     success: true,
     message: 'Budget item added.',
@@ -170,6 +178,14 @@ export const updateBudgetItem = asyncHandler(async (req, res) => {
 
   await budget.save();
 
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_budget_item',
+    resourceType: 'Budget',
+    resourceId: budget._id,
+    details: `Updated budget item: ${item.category}`,
+  });
+
   res.status(200).json({
     success: true,
     message: 'Budget item updated.',
@@ -198,8 +214,17 @@ export const deleteBudgetItem = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  const deletedCategory = item.category;
   item.deleteOne();
   await budget.save();
+
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'delete_budget_item',
+    resourceType: 'Budget',
+    resourceId: budget._id,
+    details: `Deleted budget item: ${deletedCategory}`,
+  });
 
   res.status(200).json({
     success: true,
@@ -275,6 +300,14 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
     }
     await budget.save();
 
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'generate_ai_plan',
+      resourceType: 'Budget',
+      resourceId: budget._id,
+      details: `AI budget plan generated for ${eventId ? targetEventType : 'full wedding'} — PKR ${targetBudget}`,
+    });
+
     res.status(200).json({
       success: true,
       message: 'AI budget plan generated.',
@@ -318,6 +351,14 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
       budget.aiPlan = fallbackPlan;
     }
     await budget.save();
+
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'generate_ai_plan',
+      resourceType: 'Budget',
+      resourceId: budget._id,
+      details: `AI plan fallback generated for ${eventId ? targetEventType : 'full wedding'} — PKR ${targetBudget} (AI unavailable)`,
+    });
 
     res.status(200).json({
       success: true,
@@ -454,6 +495,13 @@ export const recommendVendors = asyncHandler(async (req, res) => {
       },
     });
   }
+
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'ai_vendor_recommendation',
+    resourceType: 'Budget',
+    details: `AI vendor recommendation \u2014 ${categories.map(c => c.name).join(', ')} (${picks.length} match${picks.length !== 1 ? 'es' : ''})`,
+  });
 
   res.status(200).json({
     success: true,

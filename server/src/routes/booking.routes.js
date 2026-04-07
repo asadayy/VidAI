@@ -5,6 +5,7 @@ import {
   getVendorBookings,
   getBookingById,
   updateBookingStatus,
+  updatePaymentStatus,
   cancelBooking,
 } from '../controllers/booking.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
@@ -19,6 +20,7 @@ router.get('/my-bookings', protect, authorize('user'), getUserBookings);
 // Vendor routes
 router.get('/vendor-bookings', protect, authorize('vendor'), getVendorBookings);
 router.patch('/:id/status', protect, authorize('vendor'), updateBookingStatus);
+router.patch('/:id/payment', protect, authorize('vendor'), updatePaymentStatus);
 
 // Shared routes
 router.get('/:id', protect, getBookingById);

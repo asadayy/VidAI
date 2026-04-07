@@ -25,10 +25,17 @@ import Toast from 'react-native-toast-message';
 
 const STATUS_CFG = {
   pending:   { label: 'Pending',   bg: '#fef3c7', text: '#92400e', icon: 'time-outline',            accent: '#f59e0b' },
-  approved:  { label: 'Approved',  bg: '#d1fae5', text: '#065f46', icon: 'checkmark-circle-outline', accent: '#10b981' },
+  approved:  { label: 'Awaiting Payment', bg: '#fef3c7', text: '#92400e', icon: 'alert-circle-outline', accent: '#f59e0b' },
+  booked:    { label: 'Booked',    bg: '#d1fae5', text: '#065f46', icon: 'checkmark-circle-outline', accent: '#10b981' },
   completed: { label: 'Completed', bg: '#dbeafe', text: '#1e40af', icon: 'checkmark-done-outline',   accent: '#3b82f6' },
   cancelled: { label: 'Cancelled', bg: '#fee2e2', text: '#991b1b', icon: 'close-circle-outline',     accent: '#ef4444' },
   rejected:  { label: 'Rejected',  bg: '#fee2e2', text: '#991b1b', icon: 'close-circle-outline',     accent: '#ef4444' },
+};
+
+/** Derive display status: approved+paid → 'booked', otherwise raw status */
+const getDisplayStatus = (b) => {
+  if (b.status === 'approved' && b.paymentStatus === 'paid') return 'booked';
+  return b.status;
 };
 
 const PAYMENT_CFG = {
@@ -129,7 +136,8 @@ export default function Bookings() {
   if (loading) return <Loading fullScreen message="Loading bookings..." />;
 
   const renderBooking = ({ item: b }) => {
-    const scfg = STATUS_CFG[b.status] || STATUS_CFG.pending;
+    const displayStatus = getDisplayStatus(b);
+    const scfg = STATUS_CFG[displayStatus] || STATUS_CFG.pending;
     const pcfg = PAYMENT_CFG[b.paymentStatus] || PAYMENT_CFG.unpaid;
     const avcfg = AVATAR_COLORS[b.status] || AVATAR_COLORS.pending;
     const initial = (b.vendor?.businessName || '?')[0].toUpperCase();

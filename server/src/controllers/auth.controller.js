@@ -253,6 +253,16 @@ export const updateProfile = asyncHandler(async (req, res) => {
     runValidators: true,
   });
 
+  // Log profile update
+  const changedFields = Object.keys(updates).map(k => k.replace('onboarding.', '')).join(', ');
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_profile',
+    resourceType: 'User',
+    resourceId: req.user._id,
+    details: `Profile updated: ${changedFields}`,
+  });
+
   res.status(200).json({
     success: true,
     data: {
@@ -373,6 +383,17 @@ export const resetPassword = asyncHandler(async (req, res) => {
   user.passwordResetExpires = undefined;
   await user.save();
 
+  // Log password reset
+  await ActivityLog.create({
+    user: user._id,
+    action: 'reset_password',
+    resourceType: 'User',
+    resourceId: user._id,
+    details: 'Password reset via email token',
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+  });
+
   res.status(200).json({
     success: true,
     message: 'Password reset successful. You can now log in with your new password.',
@@ -417,6 +438,17 @@ export const updatePassword = asyncHandler(async (req, res) => {
 
   user.password = newPassword;
   await user.save();
+
+  // Log password change
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_password',
+    resourceType: 'User',
+    resourceId: req.user._id,
+    details: 'Password changed',
+    ipAddress: req.ip,
+    userAgent: req.get('User-Agent'),
+  });
 
   const accessToken = user.generateAccessToken();
 
@@ -591,6 +623,15 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
   }
 
   await user.save();
+
+  // Log onboarding completion
+  await ActivityLog.create({
+    user: user._id,
+    action: 'complete_onboarding',
+    resourceType: 'User',
+    resourceId: user._id,
+    details: `Onboarding completed — events: ${(eventTypes || []).join(', ')}, budget: PKR ${totalBudget || 0}`,
+  });
 
   res.status(200).json({
     success: true,

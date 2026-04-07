@@ -137,6 +137,14 @@ export const updateEvent = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_event',
+    resourceType: 'WeddingEvent',
+    resourceId: event._id,
+    details: `Updated ${event.eventType} event: ${Object.keys(updates).join(', ')}`,
+  });
+
   res.status(200).json({
     success: true,
     message: 'Event updated.',
@@ -241,6 +249,13 @@ export const updateBulkAllocations = asyncHandler(async (req, res) => {
   }
 
   const events = await WeddingEvent.find({ user: req.user._id }).sort('sortOrder eventDate');
+
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_bulk_allocations',
+    resourceType: 'Budget',
+    details: `Updated budget allocations for ${allocations.length} event(s)`,
+  });
 
   res.status(200).json({
     success: true,

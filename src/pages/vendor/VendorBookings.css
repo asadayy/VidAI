@@ -317,6 +317,11 @@
   border: 1px solid var(--gray-200);
 }
 
+.vb-btn-paid {
+  background: #059669;
+  color: #fff;
+}
+
 /* â”€â”€ Empty state â”€â”€ */
 .vb-empty {
   text-align: center;

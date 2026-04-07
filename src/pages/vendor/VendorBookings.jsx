@@ -22,6 +22,7 @@ import {
   CircleDot,
   DollarSign,
   Flag,
+  Banknote,
 } from 'lucide-react';
 import './VendorBookings.css';
 
@@ -48,6 +49,13 @@ const STATUS_ICON = {
   rejected:  <Ban         size={13} />,
   completed: <CircleCheck size={13} />,
   cancelled: <X           size={13} />,
+};
+
+const PAYMENT_CFG = {
+  unpaid:   { label: 'Unpaid',   bg: '#FFFBEB', color: '#92400E' },
+  partial:  { label: 'Partial',  bg: '#EDE9FE', color: '#5B21B6' },
+  paid:     { label: 'Paid',     bg: '#ECFDF5', color: '#065F46' },
+  refunded: { label: 'Refunded', bg: '#EEF2FF', color: '#3730A3' },
 };
 
 const getInitials = (name = '') =>
@@ -81,10 +89,12 @@ const formatPrice = (price) => {
   return `PKR ${price.toLocaleString('en-PK')}`;
 };
 
-function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustomer }) {
+function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustomer, onMarkPaid }) {
   const cfg = STATUS_CONFIG[b.status] || STATUS_CONFIG.pending;
+  const pcfg = PAYMENT_CFG[b.paymentStatus] || PAYMENT_CFG.unpaid;
   const isPending = b.status === 'pending';
   const canCancel = ['pending', 'approved'].includes(b.status);
+  const canMarkPaid = b.status === 'approved' && b.paymentStatus !== 'paid';
   const initials = (b.user?.name || b.user?.email || 'U')
     .split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
   const price = formatPrice(b.agreedPrice);
@@ -108,6 +118,10 @@ function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustom
           <span className="vb-badge" style={{ background: cfg.bg, color: cfg.textColor }}>
             {STATUS_ICON[b.status]}
             {cfg.label}
+          </span>
+          <span className="vb-badge" style={{ background: pcfg.bg, color: pcfg.color }}>
+            <DollarSign size={12} />
+            {pcfg.label}
           </span>
         </div>
 
@@ -162,6 +176,11 @@ function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustom
             {b.user?._id && (
               <button type="button" className="vb-btn vb-btn-cancel" onClick={() => onReportCustomer(b)}>
                 <Flag size={12} /> Report customer
+              </button>
+            )}
+            {canMarkPaid && (
+              <button type="button" className="vb-btn vb-btn-paid" onClick={() => onMarkPaid(b)}>
+                <Banknote size={13} /> Mark as Paid
               </button>
             )}
             {isPending && (
@@ -267,6 +286,17 @@ function VendorBookings() {
     }
   };
 
+  const handleMarkPaid = async (booking) => {
+    if (!window.confirm('Mark this booking as paid? The customer will be notified.')) return;
+    try {
+      await bookingAPI.updatePayment(booking._id, { paymentStatus: 'paid' });
+      toast.success('Booking marked as paid');
+      await fetchBookings(pagination.page);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to update payment status');
+    }
+  };
+
   const openReportCustomer = (booking) => {
     setReportTarget(booking);
   };
@@ -350,6 +380,7 @@ function VendorBookings() {
                 onReject={openReject}
                 onCancel={handleCancel}
                 onReportCustomer={openReportCustomer}
+                onMarkPaid={handleMarkPaid}
               />
             ))}
           </div>

@@ -262,6 +262,27 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Prevent double booking: ensure vendor doesn't already have an approved booking on the same date
+  if (status === 'approved') {
+    const eventStart = new Date(booking.eventDate);
+    eventStart.setHours(0, 0, 0, 0);
+    const eventEnd = new Date(booking.eventDate);
+    eventEnd.setHours(23, 59, 59, 999);
+
+    const conflict = await Booking.findOne({
+      vendor: vendor._id,
+      _id: { $ne: booking._id },
+      eventDate: { $gte: eventStart, $lte: eventEnd },
+      status: 'approved',
+    });
+
+    if (conflict) {
+      const error = new Error('You already have an approved booking on this date. Cannot approve another.');
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
   booking.status = status;
   booking.vendorResponse = {
     message: responseMessage || '',
@@ -383,6 +404,86 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Booking cancelled.',
+    data: { booking },
+  });
+});
+
+/**
+ * @route   PATCH /api/v1/bookings/:id/payment
+ * @desc    Vendor marks a booking as paid
+ * @access  Private (Vendor)
+ */
+export const updatePaymentStatus = asyncHandler(async (req, res) => {
+  const { paymentStatus } = req.body;
+
+  if (!['unpaid', 'partial', 'paid'].includes(paymentStatus)) {
+    const error = new Error('Payment status must be "unpaid", "partial", or "paid".');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const vendor = await Vendor.findOne({ user: req.user._id });
+  if (!vendor) {
+    const error = new Error('Vendor profile not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const booking = await Booking.findOne({
+    _id: req.params.id,
+    vendor: vendor._id,
+  }).populate('user', 'name email');
+
+  if (!booking) {
+    const error = new Error('Booking not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (booking.status !== 'approved') {
+    const error = new Error('Can only update payment for approved bookings.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const prevStatus = booking.paymentStatus;
+  booking.paymentStatus = paymentStatus;
+  if (paymentStatus === 'paid') {
+    booking.paymentAmount = booking.agreedPrice || 0;
+  }
+  await booking.save();
+
+  // Notify user when marked as paid
+  if (paymentStatus === 'paid' && prevStatus !== 'paid') {
+    await Notification.create({
+      recipient: booking.user._id,
+      type: 'booking_approved',
+      title: 'Booking Payment Confirmed',
+      message: `Your booking with ${vendor.businessName} has been marked as paid and is now confirmed.`,
+      relatedModel: 'Booking',
+      relatedId: booking._id,
+      channels: { inApp: true, email: true },
+    });
+
+    await sendEmail({
+      to: booking.user.email,
+      subject: 'VidAI - Booking Payment Confirmed',
+      text: `Your booking with ${vendor.businessName} has been marked as paid and is now confirmed.`,
+    });
+  }
+
+  // Log activity
+  await ActivityLog.create({
+    user: req.user._id,
+    action: 'update_payment_status',
+    resourceType: 'Booking',
+    resourceId: booking._id,
+    details: `Payment status changed from ${prevStatus} to ${paymentStatus} by vendor ${vendor.businessName}`,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: `Payment status updated to ${paymentStatus}.`,
     data: { booking },
   });
 });

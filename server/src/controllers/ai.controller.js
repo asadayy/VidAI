@@ -1,5 +1,6 @@
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { logger } from '../config/logger.js';
+import ActivityLog from '../models/ActivityLog.model.js';
 
 /**
  * Helper: call AI microservice
@@ -93,6 +94,13 @@ export const getRecommendations = asyncHandler(async (req, res) => {
       userId: req.user._id.toString(),
     });
 
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'ai_recommendation',
+      resourceType: 'System',
+      details: `AI vendor recommendations requested — category: ${category || 'all'}, city: ${city || 'any'}, budget: ${budget || 'any'}`,
+    });
+
     res.status(200).json({
       success: true,
       data: aiResponse.data,
@@ -132,6 +140,13 @@ export const getBudgetPlan = asyncHandler(async (req, res) => {
       eventType: eventType || 'full_wedding',
       preferences,
       userId: req.user._id.toString(),
+    });
+
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'ai_budget_plan',
+      resourceType: 'Budget',
+      details: `AI budget plan requested — PKR ${totalBudget}, type: ${eventType || 'full_wedding'}`,
     });
 
     res.status(200).json({
