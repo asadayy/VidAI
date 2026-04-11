@@ -344,7 +344,7 @@
   text-decoration: none;
   transition: color 0.18s;
 }
-.am-toggle-btn:hover { color: #ad1457; text-decoration: underline; }
+.am-toggle-btn:hover { color: #ad1457; text-decoration: none; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 440px) {

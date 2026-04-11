@@ -156,7 +156,7 @@
   font-weight: 600;
   padding: 0;
 }
-.vs-clear-btn:hover { text-decoration: underline; }
+.vs-clear-btn:hover { text-decoration: none; }
 
 /* Filter sections */
 .vs-filter-section {

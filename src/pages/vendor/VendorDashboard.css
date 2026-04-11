@@ -174,7 +174,7 @@
   white-space: nowrap;
 }
 
-.vd-banner-link:hover { text-decoration: underline; }
+.vd-banner-link:hover { text-decoration: none; }
 
 /* â”€â”€ Profile completeness bar â”€â”€ */
 .vd-completeness {
@@ -207,7 +207,7 @@
   text-decoration: none;
 }
 
-.vd-completeness-link:hover { text-decoration: underline; }
+.vd-completeness-link:hover { text-decoration: none; }
 
 .vd-completeness-track {
   height: 6px;

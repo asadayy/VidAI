@@ -701,7 +701,7 @@
   font-size: 0.82rem; font-weight: 600; cursor: pointer;
   font-family: 'Outfit', sans-serif; padding: 0;
 }
-.vl-link-btn:hover { text-decoration: underline; }
+.vl-link-btn:hover { text-decoration: none; }
 
 /* Submit */
 .vl-submit-btn {
