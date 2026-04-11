@@ -12,7 +12,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy requirements file
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install heavy/compiled packages first (grpcio via binary wheel to avoid memory-heavy compilation)
+RUN pip install --no-cache-dir grpcio grpcio-status --only-binary=:all:
+
+# Install remaining Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code

@@ -136,7 +136,7 @@
   max-width: 78%;
 }
 .ac-row--ai  { align-self: flex-start; animation: acSlideInLeft .25s ease both; }
-.ac-row--user { align-self: flex-end; flex-direction: row-reverse; animation: acSlideIn .25s ease both; }
+.ac-row--user { align-self: flex-end; animation: acSlideIn .25s ease both; }
 
 .ac-bubble-wrap {
   display: flex;

@@ -1,5 +1,6 @@
 import Budget from '../models/Budget.model.js';
 import Vendor from '../models/Vendor.model.js';
+import Booking from '../models/Booking.model.js';
 import WeddingEvent from '../models/WeddingEvent.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
@@ -374,7 +375,7 @@ export const generateAIPlan = asyncHandler(async (req, res) => {
  * @access  Private (User)
  */
 export const recommendVendors = asyncHandler(async (req, res) => {
-  const { categories } = req.body;
+  const { categories, eventId } = req.body;
 
   if (!categories || !Array.isArray(categories) || categories.length === 0) {
     const err = new Error('categories array is required.');
@@ -389,7 +390,7 @@ export const recommendVendors = asyncHandler(async (req, res) => {
     throw err;
   }
 
-  // Get user's total budget from their saved budget document
+  // Get user's budget document
   const budget = await Budget.findOne({ user: req.user._id });
   if (!budget) {
     const err = new Error('No budget found. Please create a budget first.');
@@ -397,7 +398,28 @@ export const recommendVendors = asyncHandler(async (req, res) => {
     throw err;
   }
 
-  const totalBudget = budget.totalBudget;
+  // Determine active budget scope: event-specific or global
+  let totalBudget = budget.totalBudget;
+  let activeEventType = null;
+  let activeEventDate = null;
+
+  if (eventId) {
+    // Per-event scope: use that event's allocated budget
+    const eventEntry = budget.events.find(e => e.weddingEvent?.toString() === eventId);
+    if (eventEntry && eventEntry.allocatedAmount > 0) {
+      totalBudget = eventEntry.allocatedAmount;
+      activeEventType = eventEntry.eventType || null;
+    }
+    // Fetch full event details for date context
+    try {
+      const weddingEvent = await WeddingEvent.findById(eventId).lean();
+      if (weddingEvent) {
+        activeEventDate = weddingEvent.eventDate || null;
+        activeEventType = activeEventType || weddingEvent.eventType;
+      }
+    } catch { /* non-critical */ }
+  }
+
   const preferences = req.user.onboarding || {};
 
   // Call AI service for category analysis
@@ -413,6 +435,7 @@ export const recommendVendors = asyncHandler(async (req, res) => {
         categoriesWithPercentages: categories.map(c => ({ name: c.name, percentage: Number(c.percentage) })),
         preferences,
         userId: req.user._id.toString(),
+        eventType: activeEventType || '',
       }),
     });
 
@@ -432,7 +455,31 @@ export const recommendVendors = asyncHandler(async (req, res) => {
 
   // For each AI pick, find the best matching vendor in the DB
   const city = preferences.weddingLocation || '';
+  const eventDate = activeEventDate || preferences.eventDate || null;
   const picks = [];
+
+  // Get booked vendor IDs for the event date to exclude them
+  let bookedVendorIds = new Set();
+  if (eventDate) {
+    try {
+      const dayStart = new Date(eventDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const bookingsOnDate = await Booking.find({
+        eventDate: { $gte: dayStart, $lt: dayEnd },
+        status: { $in: ['pending', 'approved'] },
+      }).select('vendor').lean();
+
+      bookedVendorIds = new Set(bookingsOnDate.map(b => b.vendor?.toString()).filter(Boolean));
+      if (bookedVendorIds.size > 0) {
+        logger.info(`Excluding ${bookedVendorIds.size} vendor(s) booked on ${eventDate}`);
+      }
+    } catch (err) {
+      logger.warn('Failed to check vendor bookings: %s', err.message);
+    }
+  }
 
   for (const pick of aiPicks) {
     const sourceCat = categories.find(c => c.name === pick.category);
@@ -440,42 +487,75 @@ export const recommendVendors = asyncHandler(async (req, res) => {
 
     const pct = Number(sourceCat.percentage);
     const budgetAmount = Math.round(totalBudget * pct / 100);
+    const maxPrice = Math.round(budgetAmount * 1.10); // 10% above budget cap
     const categoryEnums = CATEGORY_ENUM_MAP[pick.category] || [pick.vendorCategory];
 
-    // Build vendor query with progressive fallback
-    const baseFilter = { category: { $in: categoryEnums }, verificationStatus: 'approved' };
+    const baseFilter = {
+      category: { $in: categoryEnums },
+      verificationStatus: 'approved',
+      ...(bookedVendorIds.size > 0 ? { _id: { $nin: [...bookedVendorIds].map(id => id) } } : {}),
+    };
+    const selectFields = 'businessName slug city startingPrice ratingsAverage coverImage category';
 
     let vendor = null;
 
-    // Try: city + within budget
+    // Try: city + within 10% of budget — sorted by price closest to budget
     if (city) {
-      vendor = await Vendor.findOne({ ...baseFilter, city: new RegExp(city, 'i'), startingPrice: { $lte: budgetAmount } })
-        .sort({ ratingsAverage: -1 })
-        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+      const candidates = await Vendor.find({
+        ...baseFilter,
+        city: new RegExp(city, 'i'),
+        startingPrice: { $gt: 0, $lte: maxPrice },
+      })
+        .select(selectFields)
+        .lean();
+
+      if (candidates.length > 0) {
+        // Sort by price proximity to budget (closest first, prefer cheaper)
+        candidates.sort((a, b) => {
+          const diffA = Math.abs((a.startingPrice || 0) - budgetAmount);
+          const diffB = Math.abs((b.startingPrice || 0) - budgetAmount);
+          if (diffA !== diffB) return diffA - diffB;
+          return (a.startingPrice || 0) - (b.startingPrice || 0); // prefer cheaper
+        });
+        vendor = candidates[0];
+      }
     }
 
-    // Fallback: city only
+    // Fallback: city only (no price filter)
     if (!vendor && city) {
       vendor = await Vendor.findOne({ ...baseFilter, city: new RegExp(city, 'i') })
         .sort({ ratingsAverage: -1 })
-        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+        .select(selectFields);
     }
 
-    // Fallback: any city within budget
+    // Fallback: any city within budget — closest price match
     if (!vendor) {
-      vendor = await Vendor.findOne({ ...baseFilter, startingPrice: { $lte: budgetAmount } })
-        .sort({ ratingsAverage: -1 })
-        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+      const candidates = await Vendor.find({
+        ...baseFilter,
+        startingPrice: { $gt: 0, $lte: maxPrice },
+      })
+        .select(selectFields)
+        .lean();
+
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => {
+          const diffA = Math.abs((a.startingPrice || 0) - budgetAmount);
+          const diffB = Math.abs((b.startingPrice || 0) - budgetAmount);
+          if (diffA !== diffB) return diffA - diffB;
+          return (a.startingPrice || 0) - (b.startingPrice || 0);
+        });
+        vendor = candidates[0];
+      }
     }
 
-    // Fallback: any approved vendor in category
+    // Final fallback: any approved vendor in category
     if (!vendor) {
       vendor = await Vendor.findOne(baseFilter)
         .sort({ ratingsAverage: -1 })
-        .select('businessName slug city startingPrice ratingsAverage coverImage category');
+        .select(selectFields);
     }
 
-    if (!vendor) continue; // skip if truly no vendor exists for this category
+    if (!vendor) continue;
 
     picks.push({
       category: pick.category,
@@ -500,13 +580,19 @@ export const recommendVendors = asyncHandler(async (req, res) => {
     user: req.user._id,
     action: 'ai_vendor_recommendation',
     resourceType: 'Budget',
-    details: `AI vendor recommendation \u2014 ${categories.map(c => c.name).join(', ')} (${picks.length} match${picks.length !== 1 ? 'es' : ''})`,
+    details: `AI vendor recommendation — ${categories.map(c => c.name).join(', ')} (${picks.length} match${picks.length !== 1 ? 'es' : ''})${activeEventType ? ` for ${activeEventType}` : ''} — budget PKR ${totalBudget}`,
   });
 
   res.status(200).json({
     success: true,
     message: `Found ${picks.length} vendor pick(s).`,
-    data: { picks, totalBudget, currency: 'PKR' },
+    data: {
+      picks,
+      totalBudget,
+      currency: 'PKR',
+      eventId: eventId || null,
+      eventType: activeEventType || null,
+    },
   });
 });
 

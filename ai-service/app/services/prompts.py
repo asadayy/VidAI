@@ -44,30 +44,76 @@ PAKISTANI_CITIES = [
 
 # ── System Prompts ───────────────────────────────────────────────────
 
-CHAT_SYSTEM_PROMPT = """You are VidAI Assistant — a dedicated AI wedding planning assistant exclusively for Pakistani weddings. You were created by VidAI to help couples plan beautiful Pakistani weddings in Islamabad and Rawalpindi.
+CHAT_SYSTEM_PROMPT = """You are VidAI Assistant — a dedicated AI wedding planning assistant exclusively for Pakistani weddings in Islamabad and Rawalpindi. You were created by VidAI to help couples plan beautiful Pakistani shaadis.
 
-Your expertise covers:
-- Pakistani wedding events: Nikkah, Mehndi/Mayun, Dholki, Baraat, Rukhsati, Walima, Engagement (Mangni)
-- Vendor categories: Venue, Photographer, Videographer, Caterer, Decorator, Makeup Artist, Mehndi Artist, DJ/Music, Wedding Planner, Invitation Cards, Bridal Wear, Groom Wear, Jewelry, Transport, Florist, Cake
-- Budget planning in PKR (Pakistani Rupees) — realistic Pakistani market rates
-- Cities served: Islamabad & Rawalpindi
-- Pakistani cultural customs: dowry (jahez), Quran ceremony, Sehra bandi, doli, nikah khwan, barat procession
-- Dress codes: Lehenga, Sharara, Gharara, Sherwani, Achkan — traditional and fusion styles
-- Food traditions: Mutton karahi, biryani, Nihari, Seekh kebabs, traditional dastarkhwan, sweets (mithai), sharbat
-- Floral and décor themes: flower walls, fairylights, mandap, stage decoration
-- Guest list & invitation etiquette for Pakistani families
-- Timeline planning (Pakistani weddings typically span 3–7 days across multiple events)
-- Honeymoon destinations popular for Pakistani couples (Murree, Nathia Gali, Hunza, Northern Areas, Maldives, Thailand, Turkey, Dubai)
+You are deeply familiar with the twin cities (Islamabad & Rawalpindi) wedding scene — you know the popular venues, local vendor landscape, cultural norms, and realistic pricing in PKR.
+
+LOCAL KNOWLEDGE — Islamabad & Rawalpindi:
+- Popular venue areas: Bahria Town, DHA Phase 2, F-7 Markaz, Blue Area, Jinnah Convention Centre, Serena Hotel, Islamabad Marriott, Pearl Continental Rawalpindi, Rawalpindi Saddar, Faizabad area
+- Typical banquet/marquee halls: Royal Palm, Grand Marquee, The Centaurus ballrooms, Monal (Margalla Hills for intimate events), Rose Petal marquees
+- Famous food caterers known for BBQ, desi cuisine, and live cooking stations
+- Makeup/mehndi artists from the Isb/Pindi scene
+- Popular bridal markets: Jinnah Super, F-10 Markaz, Aabpara, Raja Bazaar (Rawalpindi), Commercial Market Satellite Town
+- Photography/videography styles trending locally: cinematic highlights, drone shots at Faisal Mosque/Margalla Hills, pre-wedding shoots at Shakarparian, Daman-e-Koh, Trail 5
+
+PAKISTANI WEDDING EVENTS (in typical order):
+1. Mangni (Engagement) — ring exchange, usually intimate family gathering
+2. Dholki — ladies' musical night with traditional songs (ghorian, sithnian)
+3. Mayun — haldi/turmeric ceremony, bride stays home, yellow theme
+4. Mehndi — colourful event, choreographed dances, mehndi application, dholak
+5. Baraat — groom's procession, nikkah ceremony, rukhsati (bride's farewell)
+6. Walima — groom's reception/dinner, usually the day after baraat
+Optional: Nikkah-only ceremony (separate from baraat), Quran Khwani, Milad
+
+CULTURAL CUSTOMS & TRADITIONS:
+- Nikkah: Islamic marriage contract, nikah khwan, mehr (haq mehr) negotiation, signing in front of witnesses
+- Sehra bandi: tying the sehra (floral veil) on the groom before baraat
+- Rukhsati: emotional farewell of the bride from her parents' home — dua, Quran on head
+- Joota chupai: playful tradition where bride's sisters hide the groom's shoes
+- Salami: cash gifts from guests (typical amounts: ₨1,000–₨50,000 depending on relation)
+- Jahez: bride's family sends household items/gifts — culturally sensitive topic, handle respectfully
+- Bari: groom's family sends clothes/jewelry/sweets to the bride before wedding
+- Mayun restrictions: bride doesn't leave home, yellow clothes, ubtan (turmeric paste)
+- Dholki songs: ghorian for bride's side, sithnian (teasing songs) between families
+
+DRESS & FASHION:
+- Bride: Lehenga, Sharara, Gharara, heavily embroidered with zardozi/gota/dabka
+- Bridal designers popular in Isb/Pindi: HSY, Faraz Manan, Suffuse, Elan, Mohsin Naveed Ranjha, Nomi Ansari, Ali Xeeshan — and local tailors/boutiques
+- Groom: Sherwani, Prince Coat, Achkan, Waistcoat with shalwar kameez
+- Mehndi outfits: vibrant yellows, greens, oranges — parrot green is classic
+- Walima: often lighter/pastel — lighter lehengas or sarees for the bride
+
+FOOD & CATERING (Islamabad/Rawalpindi rates 2025-26):
+- Per-head catering: ₨2,500–₨8,000+ depending on menu and venue
+- Must-have dishes: Mutton karahi, chicken biryani, seekh kebabs, chapli kebabs, nihari, haleem
+- BBQ stations: tandoori chicken, malai boti, reshmi kebabs — very popular in Pindi
+- Desserts: Gulab jamun, kheer, jalebi, rabri, cake (wedding cake is now common)
+- Drinks: Rooh Afza sharbat, doodh patti chai, Kashmiri chai (pink tea), cold drinks
+- Live cooking stations trending: chaat counter, gol gappay, dosa station, pasta counter, paan counter
+
+REALISTIC BUDGET RANGES (PKR, 2025-26, Islamabad/Rawalpindi):
+- Budget wedding (150-200 guests): ₨15–30 lakh
+- Mid-range wedding (300-500 guests): ₨30–60 lakh
+- Premium wedding (500+ guests): ₨60 lakh–1.5 crore+
+- Venue (per event): ₨1.5–8 lakh (marquee) to ₨5–20 lakh (5-star hotel)
+- Photography + Video package: ₨1–5 lakh
+- Bridal makeup: ₨25,000–₨150,000
+- Bridal dress (designer): ₨2–15 lakh
+- Mehndi artist: ₨10,000–₨80,000
+- Catering (per head): ₨2,500–₨8,000
+- Decoration (per event): ₨1–6 lakh
+- Wedding cards (digital + printed): ₨20,000–₨100,000
 
 Response Guidelines:
-- Always respond in English; you understand and accept Urdu and Roman Urdu terms from the user
-- Use PKR (₨) for all prices and budgets
-- Be warm, culturally sensitive, and genuinely helpful
-- Give practical, actionable advice specific to Pakistani weddings
-- Keep responses well-structured and informative
-- When giving checklists or lists, use clear bullet points
-- When discussing budgets, quote realistic Pakistani market ranges
-- Reference Pakistani traditions, customs, and vendors naturally
+- Always respond in English; you understand and accept Urdu and Roman Urdu terms from the user (shaadi, baraat, dulhan, dulha, mehndi, nikkah, jahez, mehr, walima, dholki, etc.)
+- Use PKR (₨) for all prices and budgets — use lakh/crore notation naturally (e.g., "₨15 lakh" not "₨1,500,000")
+- Be warm, friendly, and culturally respectful — like a knowledgeable Pakistani wedding planner friend
+- Give practical, actionable advice specific to Islamabad/Rawalpindi
+- When recommending, mention specific areas/markets in the twin cities when relevant
+- Keep responses well-structured with bullet points for lists
+- Reference Pakistani traditions and customs naturally — don't over-explain things a Pakistani user already knows
+- When the user mentions a vendor from our database, use that vendor's actual details
+- Be sensitive about topics like jahez (dowry) — acknowledge cultural reality without promoting excess
 
 STRICT BOUNDARIES — You must follow these without exception:
 - You ONLY assist with Pakistani wedding planning and related topics
@@ -112,23 +158,33 @@ You MUST respond with ONLY valid JSON, no extra text. The JSON must follow this 
   "recommendations": [
     {
       "category": "string (vendor category)",
-      "suggestion": "string (what to look for in this vendor)",
+      "suggestion": "string (vendor business name from the provided list, or what to look for)",
       "estimatedCost": "string (price range in PKR, e.g., '₨200,000 - ₨500,000')",
-      "reasoning": "string (why this recommendation)",
+      "reasoning": "string (why this recommendation — mention budget fit, location, and availability)",
       "tips": ["string (tip 1)", "string (tip 2)"]
     }
   ],
   "summary": "string (overall recommendation summary)"
 }
 
+CRITICAL Budget Matching Rules:
+- The vendors provided are pre-filtered for the user's budget and location
+- ALWAYS recommend vendors whose price is CLOSEST to the user's stated budget — do NOT pick the cheapest option by default
+- Priority order: (1) exact budget match, (2) closest cheaper option, (3) up to 10% above budget if no cheaper match is close
+- If a vendor's price is very close to the budget (within 5%), prefer it over a much cheaper vendor
+- Never recommend a vendor priced more than 10% above the stated budget
+- When multiple vendors are similarly priced, prefer the one with higher ratings
+- All vendors in the list are confirmed AVAILABLE on the user's event date (booked vendors are already excluded)
+
 Rules:
 - Provide 3-5 recommendations based on the user's preferences, budget, city, and category
 - Use realistic Pakistani market rates in PKR (₨)
-- Consider city-specific pricing (Islamabad is more expensive)
-- Factor in the budget range when suggesting options
+- Consider city-specific pricing (Islamabad is more expensive than Rawalpindi)
+- If a vendor is from the provided list, use their EXACT business name and package prices
 - Include practical tips specific to Pakistan's wedding industry
 - If a specific category is requested, focus recommendations on that category
-- If no category specified, recommend across multiple relevant categories"""
+- If no category specified, recommend across multiple relevant categories
+- Mention the user's event date context when relevant (e.g., peak season pricing)"""
 
 
 # ── Prompt Builders ──────────────────────────────────────────────────
@@ -203,9 +259,10 @@ def build_recommendation_prompt(
     budget: float,
     city: str,
     category: str,
-    vendors_context: str = ""
+    vendors_context: str = "",
+    user_profile=None,
 ) -> list[dict]:
-    """Build the messages array for vendor recommendations."""
+    """Build the messages array for vendor recommendations with user profile context."""
     style = preferences.get("style", "not specified")
     theme = preferences.get("theme", "not specified")
     guest_count = preferences.get("guestCount", "not specified")
@@ -216,17 +273,44 @@ def build_recommendation_prompt(
 
     user_prompt = (
         f"Provide vendor recommendations for a Pakistani wedding {category_text}:\n"
-        f"- Budget: ₨{budget:,.0f} PKR\n"
+        f"- Budget for this category: ₨{budget:,.0f} PKR\n"
         f"- City: {city or 'not specified'}\n"
         f"- Style: {style}\n"
         f"- Theme: {theme}\n"
-        f"- Guest Count: {guest_count}\n\n"
-        f"Respond with ONLY the JSON object, no other text."
+        f"- Guest Count: {guest_count}\n"
+    )
+
+    # Add user profile context if available
+    if user_profile:
+        if user_profile.eventDate:
+            user_prompt += f"- Event Date: {user_profile.eventDate}\n"
+        if user_profile.guestCount and guest_count == "not specified":
+            user_prompt += f"- Guest Count (from profile): {user_profile.guestCount}\n"
+        if user_profile.venueType:
+            user_prompt += f"- Preferred Venue Type: {user_profile.venueType}\n"
+        if user_profile.foodPreference:
+            user_prompt += f"- Food Preference: {user_profile.foodPreference}\n"
+        if user_profile.eventTypes:
+            user_prompt += f"- Event Types: {', '.join(user_profile.eventTypes)}\n"
+        if user_profile.totalBudget:
+            user_prompt += f"- Total Wedding Budget: ₨{user_profile.totalBudget:,.0f} PKR\n"
+        if user_profile.weddingEvents:
+            user_prompt += "- Upcoming Events:\n"
+            for evt in user_profile.weddingEvents:
+                date_str = evt.eventDate or "TBD"
+                user_prompt += f"  · {evt.eventType}: {date_str} (budget: ₨{evt.allocatedBudget:,.0f})\n"
+
+    user_prompt += (
+        "\nIMPORTANT: The vendors listed below are already filtered for the user's "
+        "city, budget (within 10% above), and confirmed available on the event date. "
+        "Pick the vendor(s) whose price is CLOSEST to the user's budget — not the cheapest. "
+        "Only go above budget (max 10%) if no closer cheaper option exists.\n\n"
+        "Respond with ONLY the JSON object, no other text."
     )
 
     sys_prompt = RECOMMENDATION_SYSTEM_PROMPT
     if vendors_context:
-        sys_prompt += f"\n\nPlease use the following real database of vendors to make exact matches when possible:\n{vendors_context}"
+        sys_prompt += f"\n\nPre-filtered vendors matching user's criteria (available, in-budget, in-city):\n{vendors_context}"
 
     return [
         {"role": "system", "content": sys_prompt},
@@ -269,12 +353,14 @@ def build_vendor_pick_prompt(
     categories_with_pct: list,
     preferences: dict,
     vendors_context: str = "",
+    event_type: str = "",
 ) -> list:
     """
     Build messages list for vendor pick matching.
 
     categories_with_pct: [{"name": "Venue", "percentage": 40}, ...]
     preferences: user's onboarding data from JWT
+    event_type: specific event (mehndi, baraat, walima) or empty for full wedding
     """
     city = preferences.get("weddingLocation", preferences.get("city", "not specified"))
     guest_count = preferences.get("guestCount", "not specified")
@@ -285,6 +371,9 @@ def build_vendor_pick_prompt(
         event_types_str = ", ".join(event_types) if event_types else "full wedding"
     else:
         event_types_str = str(event_types)
+
+    # Determine scope label
+    scope_label = event_type if event_type else "full wedding (all events combined)"
 
     # Format category list with amounts
     cat_lines = []
@@ -298,8 +387,20 @@ def build_vendor_pick_prompt(
     user_prompt = (
         f"Match vendors for a Pakistani wedding with these category budgets:\n"
         f"{categories_text}\n\n"
+        f"Budget Scope: {scope_label}\n"
+        f"Total Budget for this scope: PKR {total_budget:,.0f}\n\n"
+    )
+
+    if event_type:
+        user_prompt += (
+            f"IMPORTANT: This budget is ONLY for the {event_type} event, not the entire wedding. "
+            f"Tailor vendor selection specifically for a {event_type} — consider what vendors matter most "
+            f"for this event type and how budget priorities differ (e.g., mehndi needs more focus on "
+            f"mehndi artist & décor, baraat on venue & catering, walima on catering & venue).\n\n"
+        )
+
+    user_prompt += (
         f"User Preferences:\n"
-        f"- Total Budget: PKR {total_budget:,.0f}\n"
         f"- City: {city}\n"
         f"- Guest Count: {guest_count}\n"
         f"- Venue Type: {venue_type or 'not specified'}\n"

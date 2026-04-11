@@ -77,17 +77,79 @@ const AIChat = () => {
     setIsTyping(true);
     inputRef.current?.focus();
 
+    // Placeholder for the streaming assistant message
+    const assistantMsg = { role: 'assistant', content: '', time: new Date() };
+    setMessages((prev) => [...prev, assistantMsg]);
+
     try {
-      const response = await client.post('/ai/chat', {
-        message: content,
-        conversationHistory: messages,
+      // Get auth token for the fetch request
+      const token = localStorage.getItem('vidai_access_token');
+      const baseUrl = client.defaults.baseURL;
+
+      const response = await fetch(`${baseUrl}/ai/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          message: content,
+          conversationHistory: messages,
+        }),
       });
-      const reply =
-        response.data.data?.response ||
-        response.data.response ||
-        "I'm not sure how to respond to that.";
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply, time: new Date() }]);
+
+      if (!response.ok) throw new Error('Stream request failed');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.error) throw new Error(parsed.error);
+              if (parsed.text) {
+                accumulated += parsed.text;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    ...updated[updated.length - 1],
+                    content: accumulated,
+                  };
+                  return updated;
+                });
+              }
+            } catch (e) {
+              if (e.message && !e.message.includes('JSON')) throw e;
+            }
+          }
+        }
+      }
+
+      // If stream returned nothing, set a fallback
+      if (!accumulated) {
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            content: "I'm not sure how to respond to that.",
+          };
+          return updated;
+        });
+      }
     } catch {
+      // Remove the empty assistant placeholder and show error
+      setMessages((prev) => prev.filter((m) => m !== assistantMsg));
       toast.error('Failed to get response from AI assistant');
     } finally {
       setIsTyping(false);

@@ -473,7 +473,8 @@ const BudgetPlanner = () => {
       setPicksLoading(true);
       toast.loading('Finding best vendors...', { id: 'picks-toast' });
       const res = await budgetAPI.recommendVendors(
-        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) }))
+        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) })),
+        activeEventId
       );
       const picks = res.data?.data?.picks || [];
       setVendorPicks(picks);

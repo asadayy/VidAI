@@ -1,6 +1,9 @@
 import { asyncHandler } from '../middleware/error.middleware.js';
 import { logger } from '../config/logger.js';
 import ActivityLog from '../models/ActivityLog.model.js';
+import User from '../models/User.model.js';
+import WeddingEvent from '../models/WeddingEvent.model.js';
+import Booking from '../models/Booking.model.js';
 
 /**
  * Helper: call AI microservice
@@ -78,6 +81,64 @@ export const chatWithAI = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route   POST /api/v1/ai/chat/stream
+ * @desc    Stream chat with AI assistant (SSE)
+ * @access  Private
+ */
+export const chatWithAIStream = asyncHandler(async (req, res) => {
+  const { message, conversationHistory } = req.body;
+
+  if (!message || message.trim().length === 0) {
+    const error = new Error('Message is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  try {
+    const response = await fetch(`${AI_SERVICE_URL}/api/v1/chat/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        conversationHistory: conversationHistory || [],
+        userId: req.user._id.toString(),
+      }),
+      signal: AbortSignal.timeout(200000),
+    });
+
+    if (!response.ok) {
+      res.write(`data: ${JSON.stringify({ error: 'AI service error' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      return res.end();
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(decoder.decode(value, { stream: true }));
+    }
+
+    res.end();
+  } catch (error) {
+    logger.error('AI Stream Chat error:', error.message);
+    res.write(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  }
+});
+
+/**
  * @route   POST /api/v1/ai/recommendations
  * @desc    Get AI vendor recommendations
  * @access  Private
@@ -86,19 +147,46 @@ export const getRecommendations = asyncHandler(async (req, res) => {
   const { preferences, budget, city, category } = req.body;
 
   try {
+    // Fetch user profile for smart matching
+    const user = await User.findById(req.user._id).select('onboarding city');
+    const onboarding = user?.onboarding || {};
+
+    // Fetch user's wedding events for event date context
+    const weddingEvents = await WeddingEvent.find({ user: req.user._id })
+      .select('eventType eventDate guestCount allocatedBudget venueType')
+      .lean();
+
+    const userProfile = {
+      city: city || onboarding.weddingLocation || user?.city || '',
+      eventDate: onboarding.eventDate || null,
+      guestCount: onboarding.guestCount || 0,
+      totalBudget: onboarding.totalBudget || 0,
+      venueType: onboarding.venueType || '',
+      foodPreference: onboarding.foodPreference || '',
+      eventTypes: onboarding.eventTypes || [],
+      weddingEvents: weddingEvents.map(e => ({
+        eventType: e.eventType,
+        eventDate: e.eventDate,
+        guestCount: e.guestCount,
+        allocatedBudget: e.allocatedBudget,
+        venueType: e.venueType,
+      })),
+    };
+
     const aiResponse = await callAIService('/api/v1/recommendations', {
       preferences,
       budget,
-      city,
+      city: userProfile.city,
       category,
       userId: req.user._id.toString(),
+      userProfile,
     });
 
     await ActivityLog.create({
       user: req.user._id,
       action: 'ai_recommendation',
       resourceType: 'System',
-      details: `AI vendor recommendations requested — category: ${category || 'all'}, city: ${city || 'any'}, budget: ${budget || 'any'}`,
+      details: `AI vendor recommendations requested — category: ${category || 'all'}, city: ${userProfile.city || 'any'}, budget: ${budget || 'any'}`,
     });
 
     res.status(200).json({

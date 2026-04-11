@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   StatusBar,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,7 +99,10 @@ export default function MessagesScreen() {
   });
 
   const renderItem = ({ item: conv }) => {
-    const name = conv.vendor?.businessName || conv.otherParticipant?.name || 'Chat';
+    const isVendorUser = user?.role === 'vendor';
+    const name = isVendorUser
+      ? (conv.otherParticipant?.name || 'Customer')
+      : (conv.vendor?.businessName || conv.otherParticipant?.name || 'Chat');
     const initial = name.charAt(0).toUpperCase();
     const otherId = conv.otherParticipant?._id;
     const online = otherId && isOnline(otherId);
@@ -106,6 +110,11 @@ export default function MessagesScreen() {
     const timeStr = formatTimeAgo(conv.lastMessage?.createdAt || conv.updatedAt);
     const isSentByMe = String(conv.lastMessage?.sender) === String(user?._id || user?.id);
     const previewText = conv.lastMessage?.text || 'No messages yet';
+
+    // Profile image: vendor cover image for customers, user avatar for vendors
+    const avatarUrl = isVendorUser
+      ? (conv.otherParticipant?.avatar?.url || null)
+      : (conv.vendor?.coverImage?.url || null);
 
     return (
       <TouchableOpacity
@@ -115,7 +124,11 @@ export default function MessagesScreen() {
       >
         <View style={styles.avatarWrap}>
           <View style={[styles.avatar, online && styles.avatarOnline]}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </View>
           {online && <View style={styles.onlineDot} />}
         </View>
@@ -253,6 +266,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   avatarOnline: {},
   avatarText: {

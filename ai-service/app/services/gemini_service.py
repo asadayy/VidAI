@@ -160,4 +160,62 @@ Design the card as a premium, print-ready wedding invitation with a portrait asp
         response = await loop.run_in_executor(None, chat_session.send_message, full_message)
         return response.text
 
+    async def chat_stream(self, user_message: str, conversation_history: list[dict], vendors_context: str = ""):
+        """Stream chat response chunks from Gemini."""
+        import asyncio
+
+        if not self.model:
+            raise Exception("Gemini API key not configured")
+
+        from app.services.prompts import CHAT_SYSTEM_PROMPT
+
+        sys_prompt = CHAT_SYSTEM_PROMPT
+        if vendors_context:
+            sys_prompt += (
+                "\n\nHere are some vendors from our database that you can recommend if relevant "
+                f"(use them instead of making up fictional ones):\n{vendors_context}"
+            )
+
+        history = []
+        for msg in conversation_history[-10:]:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            gemini_role = "model" if role == "assistant" else "user"
+            history.append({"role": gemini_role, "parts": [{"text": content}]})
+
+        chat_session = self.model.start_chat(history=history)
+        full_message = f"{sys_prompt}\n\n{user_message}" if not history else user_message
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None, lambda: chat_session.send_message(full_message, stream=True)
+        )
+
+        # Iterate synchronous Gemini stream in a thread to avoid blocking the event loop
+        import queue
+        import threading
+
+        chunk_queue = queue.Queue()
+        sentinel = object()
+
+        def _drain():
+            try:
+                for chunk in response:
+                    if chunk.text:
+                        chunk_queue.put(chunk.text)
+            except Exception as exc:
+                chunk_queue.put(exc)
+            finally:
+                chunk_queue.put(sentinel)
+
+        threading.Thread(target=_drain, daemon=True).start()
+
+        while True:
+            item = await loop.run_in_executor(None, chunk_queue.get)
+            if item is sentinel:
+                break
+            if isinstance(item, Exception):
+                raise item
+            yield item
+
 gemini_service = GeminiService()

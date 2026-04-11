@@ -1,7 +1,8 @@
 """
 VidAI AI Service — API Router
-Three endpoints matching the backend proxy contract:
+Four endpoints matching the backend proxy contract:
   POST /api/v1/chat
+  POST /api/v1/chat/stream
   POST /api/v1/recommendations
   POST /api/v1/budget-plan
 """
@@ -10,6 +11,7 @@ import logging
 import json
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 import httpx
 
 from app.models.schemas import (
@@ -95,6 +97,60 @@ async def chat_with_ai(request: ChatRequest):
         ) from exc
 
 
+# ── Streaming Chat Endpoint ──────────────────────────────────────────
+
+
+@router.post("/chat/stream")
+async def chat_with_ai_stream(request: ChatRequest):
+    """
+    Streaming chat with the VidAI wedding planning assistant.
+    Returns Server-Sent Events with text chunks.
+    """
+    try:
+        # Fetch vendors from DB for context
+        try:
+            vendors = await db_client.get_all_vendors()
+            vendors_context = json.dumps(vendors, indent=2) if vendors else ""
+        except Exception as e:
+            logger.error("Failed to fetch vendors context for stream chat: %r", e)
+            vendors_context = ""
+
+        history_dicts = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.conversationHistory
+        ]
+
+        async def event_generator():
+            try:
+                async for chunk in gemini_service.chat_stream(
+                    user_message=request.message,
+                    conversation_history=history_dicts,
+                    vendors_context=vendors_context,
+                ):
+                    yield f"data: {json.dumps({'text': chunk})}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as exc:
+                logger.error("Stream chat error: %r", exc)
+                yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    except Exception as exc:
+        logger.error("Stream chat setup error: %r", exc)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service unavailable: {type(exc).__name__}: {exc or 'connection error'}",
+        ) from exc
+
+
 # ── Recommendations Endpoint ─────────────────────────────────────────
 
 
@@ -102,23 +158,43 @@ async def chat_with_ai(request: ChatRequest):
 async def get_recommendations(request: RecommendationRequest):
     """
     Get AI-powered vendor recommendations for a Pakistani wedding.
-    Returns structured JSON with recommendations, costs, and tips.
+    Uses user profile for smart filtering: city, budget proximity, availability.
     """
     try:
-        # Fetch vendors from DB
+        # Determine user context from profile
+        profile = request.userProfile
+        effective_city = request.city
+        event_date = None
+
+        if profile:
+            effective_city = effective_city or profile.city
+            event_date = profile.eventDate
+            # If there are wedding events, use the nearest future event date
+            if profile.weddingEvents:
+                for evt in profile.weddingEvents:
+                    if evt.eventDate:
+                        event_date = event_date or evt.eventDate
+
+        # Smart vendor query: filter by category, city, budget, availability
         try:
-            vendors = await db_client.get_all_vendors()
+            vendors = await db_client.get_matching_vendors(
+                category=request.category,
+                city=effective_city,
+                budget=request.budget,
+                event_date=event_date,
+            )
             vendors_context = json.dumps(vendors, indent=2) if vendors else ""
         except Exception as e:
-            logger.error("Failed to fetch vendors context for recommendations: %r", e)
+            logger.error("Failed to fetch matching vendors: %r", e)
             vendors_context = ""
 
         messages = build_recommendation_prompt(
             preferences=request.preferences,
             budget=request.budget,
-            city=request.city,
+            city=effective_city,
             category=request.category,
-            vendors_context=vendors_context
+            vendors_context=vendors_context,
+            user_profile=profile,
         )
 
         result = await ollama_service.generate_json(messages)
@@ -294,6 +370,7 @@ async def get_vendor_picks(request: VendorPickRequest):
             categories_with_pct=categories_with_pct,
             preferences=request.preferences,
             vendors_context=vendors_context,
+            event_type=request.eventType,
         )
 
         result = await ollama_service.generate_json(messages)

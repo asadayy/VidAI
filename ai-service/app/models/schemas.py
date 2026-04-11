@@ -3,6 +3,7 @@ VidAI AI Service — Pydantic Request/Response Schemas
 Defines the data contracts for all AI endpoints.
 """
 
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -46,6 +47,29 @@ class ChatResponse(BaseModel):
 # ── Recommendations ──────────────────────────────────
 
 
+class WeddingEventInfo(BaseModel):
+    """Event details for availability checking."""
+
+    eventType: str = Field(default="")
+    eventDate: Optional[str] = Field(default=None)
+    guestCount: int = Field(default=0)
+    allocatedBudget: float = Field(default=0)
+    venueType: str = Field(default="")
+
+
+class UserProfile(BaseModel):
+    """User profile data for smart vendor matching."""
+
+    city: str = Field(default="")
+    eventDate: Optional[str] = Field(default=None)
+    guestCount: int = Field(default=0)
+    totalBudget: float = Field(default=0)
+    venueType: str = Field(default="")
+    foodPreference: str = Field(default="")
+    eventTypes: list[str] = Field(default_factory=list)
+    weddingEvents: list[WeddingEventInfo] = Field(default_factory=list)
+
+
 class RecommendationRequest(BaseModel):
     """POST /api/v1/recommendations request body."""
 
@@ -57,6 +81,9 @@ class RecommendationRequest(BaseModel):
     city: str = Field(default="", description="City name in Pakistan")
     category: str = Field(default="", description="Vendor category")
     userId: str = Field(default="", description="User ID from backend")
+    userProfile: Optional[UserProfile] = Field(
+        default=None, description="User profile for smart matching"
+    )
 
 
 class RecommendationItem(BaseModel):
@@ -149,6 +176,10 @@ class VendorPickRequest(BaseModel):
         default_factory=dict, description="User onboarding preferences"
     )
     userId: str = Field(default="", description="User ID from backend")
+    eventType: str = Field(
+        default="",
+        description="Active event type (e.g. mehndi, baraat, walima). Empty = all events / full wedding.",
+    )
 
 
 class VendorPickItem(BaseModel):

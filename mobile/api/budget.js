@@ -8,6 +8,7 @@ export const budgetAPI = {
   deleteItem: (itemId) => client.delete(`/budget/items/${itemId}`),
   generateAIPlan: (eventId) =>
     client.post(`/budget/ai-plan${eventId ? `?eventId=${eventId}` : ''}`),
-  recommendVendors: (categories) => client.post('/budget/vendor-picks', { categories }),
+  recommendVendors: (categories, eventId) =>
+    client.post('/budget/vendor-picks', { categories, eventId: eventId || null }),
   getEventSummary: () => client.get('/budget/event-summary'),
 };

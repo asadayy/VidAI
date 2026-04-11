@@ -370,7 +370,8 @@ export default function Budget() {
       setPicksLoading(true);
       Toast.show({ type: 'info', text1: 'Finding best vendors...' });
       const res = await budgetAPI.recommendVendors(
-        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) }))
+        picksCategories.map(c => ({ name: c.name, percentage: Number(c.percentage) })),
+        activeEventId
       );
       const picks = res.data?.data?.picks || [];
       setVendorPicks(picks);

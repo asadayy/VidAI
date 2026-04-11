@@ -63,6 +63,7 @@ class OllamaService:
             "model": self.model,
             "messages": messages,
             "stream": False,
+            "keep_alive": "30m",
             "options": {
                 "temperature": 0.7,
                 "top_p": 0.9,
