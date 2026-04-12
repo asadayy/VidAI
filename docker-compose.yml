@@ -12,6 +12,7 @@ services:
       - OLLAMA_MAX_LOADED_MODELS=1
     networks:
       - vidai-network
+    restart: unless-stopped
 
   # --- Ollama Setup (Pull the model automatically) ---
   ollama-setup:
@@ -44,6 +45,10 @@ services:
       - vidai-network
     # Hot reload command
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    develop:
+      watch:
+        - action: rebuild
+          path: ./ai-service/requirements.txt
 
   # --- Backend Server (Node.js/Express) ---
   backend:
@@ -68,21 +73,55 @@ services:
       - vidai-network
     # Hot reload command
     command: npm run dev
+    develop:
+      watch:
+        - action: rebuild
+          path: ./server/package.json
+
+  # --- Ngrok Tunnel (exposes backend for mobile) ---
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: vidai-ngrok
+    ports:
+      - "4040:4040"
+    env_file:
+      - ./server/.env
+    command: http backend:5000 --domain cyetic-feetless-bridgette.ngrok-free.dev
+    depends_on:
+      - backend
+    networks:
+      - vidai-network
+    restart: unless-stopped
 
   # --- Frontend (React/Vite) ---
   frontend:
     build:
       context: .
+      target: build  # Use the Node.js stage only (skip nginx)
       args:
         - VITE_API_URL=http://localhost:5000/api/v1
         - VITE_AI_API_URL=http://localhost:8000
     container_name: vidai-frontend
     ports:
-      - "3000:80"
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.js:/app/vite.config.js
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000/api/v1
+      - VITE_AI_API_URL=http://localhost:8000
     depends_on:
       - backend
     networks:
       - vidai-network
+    command: npx vite --host 0.0.0.0
+    develop:
+      watch:
+        - action: rebuild
+          path: package.json
 
 networks:
   vidai-network:

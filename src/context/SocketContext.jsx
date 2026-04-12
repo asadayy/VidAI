@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import toast from 'react-hot-toast';
 
 const SocketContext = createContext(null);
 
@@ -9,12 +10,7 @@ function getSocketUrl() {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/api\/v1\/?$/, '');
   }
-  const isLocalhost =
-    typeof window !== 'undefined' &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  return isLocalhost
-    ? 'http://localhost:5000'
-    : 'https://cyetic-feetless-bridgette.ngrok-free.dev';
+  return 'http://localhost:5000';
 }
 
 export function SocketProvider({ children }) {
@@ -23,6 +19,7 @@ export function SocketProvider({ children }) {
   const [isConnected, setIsConnected] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const socketRef = useRef(null);
+  const disconnectToastRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
@@ -41,16 +38,39 @@ export function SocketProvider({ children }) {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.3,
     });
 
     newSocket.on('connect', () => {
       setIsConnected(true);
+      // Dismiss any active disconnection toast
+      if (disconnectToastRef.current) {
+        toast.dismiss(disconnectToastRef.current);
+        disconnectToastRef.current = null;
+        toast.success('Reconnected', { duration: 2000 });
+      }
     });
 
-    newSocket.on('disconnect', () => {
+    newSocket.on('disconnect', (reason) => {
       setIsConnected(false);
+      // Only show toast for unexpected disconnects (not user-initiated)
+      if (reason !== 'io client disconnect') {
+        disconnectToastRef.current = toast.loading(
+          'Connection lost. Reconnecting…',
+          { duration: Infinity }
+        );
+      }
+    });
+
+    newSocket.io.on('reconnect_failed', () => {
+      if (disconnectToastRef.current) {
+        toast.dismiss(disconnectToastRef.current);
+        disconnectToastRef.current = null;
+      }
+      toast.error('Unable to reconnect. Please refresh the page.', { duration: 10000 });
     });
 
     newSocket.on('user_online', ({ userId }) => {
@@ -77,6 +97,10 @@ export function SocketProvider({ children }) {
       socketRef.current = null;
       setSocket(null);
       setIsConnected(false);
+      if (disconnectToastRef.current) {
+        toast.dismiss(disconnectToastRef.current);
+        disconnectToastRef.current = null;
+      }
     };
   }, [isAuthenticated, token]);
 

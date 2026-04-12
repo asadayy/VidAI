@@ -265,8 +265,25 @@
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
   transition: transform .2s, box-shadow .2s;
   border: 1px solid #f1f5f9;
+  position: relative;
 }
 .bp-stat:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+.bp-stat-edit {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color .2s, background .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bp-stat-edit:hover { color: #D7385E; background: #fdf2f8; }
 .bp-stat-icon {
   width: 44px; height: 44px;
   border-radius: 12px;
@@ -764,6 +781,7 @@
   border: 1px solid #f1f5f9;
   position: relative;
   overflow: hidden;
+  margin-bottom: 1.5rem;
 }
 .bp-picks-builder .bp-card-stripe {
   position: absolute;

@@ -23,7 +23,10 @@ import {
   DollarSign,
   Flag,
   Banknote,
+  List,
+  CalendarDays,
 } from 'lucide-react';
+import BookingCalendar from '../../components/BookingCalendar';
 import './VendorBookings.css';
 
 const STATUS_TABS = [
@@ -32,6 +35,7 @@ const STATUS_TABS = [
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
   { value: 'completed', label: 'Completed' },
+  { value: 'expired', label: 'Expired' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
@@ -40,6 +44,7 @@ const STATUS_CONFIG = {
   approved:  { label: 'Approved',  accent: '#10B981', bg: '#ECFDF5', textColor: '#065F46' },
   rejected:  { label: 'Rejected',  accent: '#EF4444', bg: '#FEF2F2', textColor: '#991B1B' },
   completed: { label: 'Completed', accent: '#6366F1', bg: '#EEF2FF', textColor: '#3730A3' },
+  expired:   { label: 'Expired',   accent: '#9CA3AF', bg: '#F3F4F6', textColor: '#6B7280' },
   cancelled: { label: 'Cancelled', accent: '#9CA3AF', bg: '#F9FAFB', textColor: '#4B5563' },
 };
 
@@ -48,6 +53,7 @@ const STATUS_ICON = {
   approved:  <BadgeCheck  size={13} />,
   rejected:  <Ban         size={13} />,
   completed: <CircleCheck size={13} />,
+  expired:   <Clock       size={13} />,
   cancelled: <X           size={13} />,
 };
 
@@ -207,10 +213,12 @@ function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustom
 
 function VendorBookings() {
   const [bookings, setBookings] = useState([]);
+  const [calendarBookings, setCalendarBookings] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [allStats, setAllStats] = useState({});
+  const [viewMode, setViewMode] = useState('list');
 
   const [respondTarget, setRespondTarget] = useState(null);
   const [respondAction, setRespondAction] = useState('');
@@ -239,7 +247,7 @@ function VendorBookings() {
     try {
       const counts = {};
       await Promise.all(
-        ['pending', 'approved', 'completed'].map(async (s) => {
+        ['pending', 'approved', 'completed', 'expired'].map(async (s) => {
           const { data } = await bookingAPI.getVendorBookings({ page: 1, limit: 1, status: s });
           counts[s] = data.data.pagination.total;
         })
@@ -250,6 +258,21 @@ function VendorBookings() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
   useEffect(() => { fetchBookings(1); }, [fetchBookings]);
+
+  // Fetch all bookings (unpaginated) for calendar view
+  useEffect(() => {
+    if (viewMode !== 'calendar') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const params = { page: 1, limit: 500 };
+        if (statusFilter) params.status = statusFilter;
+        const { data } = await bookingAPI.getVendorBookings(params);
+        if (!cancelled) setCalendarBookings(data.data.bookings);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [viewMode, statusFilter]);
 
   const openApprove  = (b) => { setRespondTarget(b); setRespondAction('approved'); setRespondMessage(''); };
   const openReject   = (b) => { setRespondTarget(b); setRespondAction('rejected'); setRespondMessage(''); };
@@ -339,26 +362,47 @@ function VendorBookings() {
           <StatCard label="Pending"   value={allStats.pending   ?? '—'} accent="#F59E0B" />
           <StatCard label="Approved"  value={allStats.approved  ?? '—'} accent="#10B981" />
           <StatCard label="Completed" value={allStats.completed ?? '—'} accent="#6366F1" />
+          <StatCard label="Expired"   value={allStats.expired   ?? '—'} accent="#9CA3AF" />
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="vb-filter-bar">
-        {STATUS_TABS.map((tab) => (
+      {/* Filter tabs + view toggle */}
+      <div className="vb-toolbar">
+        <div className="vb-filter-bar">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              className={`vb-tab ${statusFilter === tab.value ? 'vb-tab--active' : ''}`}
+              onClick={() => setStatusFilter(tab.value)}
+            >
+              {tab.value && STATUS_ICON[tab.value]}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="vb-view-toggle">
           <button
-            key={tab.value}
-            type="button"
-            className={`vb-tab ${statusFilter === tab.value ? 'vb-tab--active' : ''}`}
-            onClick={() => setStatusFilter(tab.value)}
+            className={`vb-view-btn ${viewMode === 'list' ? 'vb-view-btn--active' : ''}`}
+            onClick={() => setViewMode('list')}
+            title="List view"
           >
-            {tab.value && STATUS_ICON[tab.value]}
-            {tab.label}
+            <List size={16} />
           </button>
-        ))}
+          <button
+            className={`vb-view-btn ${viewMode === 'calendar' ? 'vb-view-btn--active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+            title="Calendar view"
+          >
+            <CalendarDays size={16} />
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <Loading message="Loading bookings..." />
+      ) : viewMode === 'calendar' ? (
+        <BookingCalendar bookings={calendarBookings} />
       ) : bookings.length === 0 ? (
         <div className="vb-empty">
           <div className="vb-empty-icon"><CalendarCheck size={40} /></div>

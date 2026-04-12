@@ -7,6 +7,26 @@ import { asyncHandler } from '../middleware/error.middleware.js';
 import { sendEmail } from '../config/email.js';
 
 /**
+ * Auto-transition approved bookings whose event date has passed:
+ *  • paid   → completed
+ *  • unpaid/partial → expired
+ * Called before listing bookings so users always see up-to-date statuses.
+ */
+const autoTransitionBookings = async (filter) => {
+  const now = new Date();
+  // Mark paid bookings as completed
+  await Booking.updateMany(
+    { ...filter, status: 'approved', paymentStatus: 'paid', eventDate: { $lt: now } },
+    { $set: { status: 'completed' } }
+  );
+  // Mark unpaid/partial bookings as expired
+  await Booking.updateMany(
+    { ...filter, status: 'approved', paymentStatus: { $in: ['unpaid', 'partial'] }, eventDate: { $lt: now } },
+    { $set: { status: 'expired' } }
+  );
+};
+
+/**
  * @route   POST /api/v1/bookings
  * @desc    Create a new booking request
  * @access  Private (User only)
@@ -14,7 +34,8 @@ import { sendEmail } from '../config/email.js';
 export const createBooking = asyncHandler(async (req, res) => {
   const {
     vendorId, packageId, eventType, eventDate, eventEndDate,
-    eventLocation, guestCount, notes,
+    eventLocation, guestCount, notes, timeSlot, numberOfPeople,
+    venueType, eventTime,
   } = req.body;
 
   // Verify vendor exists and is approved
@@ -31,26 +52,63 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Category-specific required-field validation
+  const category = vendor.category;
+  const fieldErrors = [];
+
+  if (['venue', 'caterer'].includes(category)) {
+    if (!guestCount && guestCount !== 0) fieldErrors.push('Guest count is required.');
+    if (!timeSlot) fieldErrors.push('Time slot (morning/evening) is required.');
+  }
+
+  if (['makeup_artist', 'mehndi_artist'].includes(category)) {
+    if (!numberOfPeople || numberOfPeople < 1) fieldErrors.push('Number of people is required.');
+    if (!eventTime) fieldErrors.push('Event time is required.');
+  }
+
+  if (category === 'photographer') {
+    if (!timeSlot) fieldErrors.push('Time slot (morning/evening) is required.');
+  }
+
+  if (category === 'decorator') {
+    if (!venueType) fieldErrors.push('Venue type is required.');
+    if (!eventLocation) fieldErrors.push('Venue address is required.');
+  }
+
+  if (fieldErrors.length > 0) {
+    const error = new Error(fieldErrors.join(' '));
+    error.statusCode = 400;
+    throw error;
+  }
+
   // Check for booking conflicts (same vendor, overlapping dates)
-  // Convert to start/end of day to handle timezone and multi-day events properly
   const eventStart = new Date(eventDate);
   eventStart.setHours(0, 0, 0, 0);
   const eventEnd = new Date(eventDate);
   eventEnd.setHours(23, 59, 59, 999);
 
-  const conflictingBooking = await Booking.findOne({
+  const conflictQuery = {
     vendor: vendorId,
     eventDate: {
       $gte: eventStart,
       $lte: eventEnd,
     },
     status: { $in: ['pending', 'approved'] },
-  });
+  };
 
-  if (conflictingBooking) {
-    const error = new Error('This vendor already has a booking on the selected date.');
-    error.statusCode = 409;
-    throw error;
+  // For categories with timeSlot, only conflict within the same slot
+  if (timeSlot && ['venue', 'caterer', 'photographer'].includes(category)) {
+    conflictQuery.timeSlot = timeSlot;
+  }
+
+  // Makeup/mehndi artists can serve multiple clients per day — skip conflict check
+  if (!['makeup_artist', 'mehndi_artist'].includes(category)) {
+    const conflictingBooking = await Booking.findOne(conflictQuery);
+    if (conflictingBooking) {
+      const error = new Error('This vendor already has a booking on the selected date.');
+      error.statusCode = 409;
+      throw error;
+    }
   }
 
   // Find package details if packageId provided
@@ -61,6 +119,11 @@ export const createBooking = asyncHandler(async (req, res) => {
     if (pkg) {
       packageName = pkg.name;
       agreedPrice = pkg.price;
+
+      // Makeup/mehndi: price × number of people
+      if (['makeup_artist', 'mehndi_artist'].includes(category) && numberOfPeople > 1) {
+        agreedPrice = pkg.price * numberOfPeople;
+      }
     }
   }
 
@@ -76,6 +139,10 @@ export const createBooking = asyncHandler(async (req, res) => {
     guestCount,
     notes,
     agreedPrice,
+    timeSlot,
+    numberOfPeople,
+    venueType,
+    eventTime,
   });
 
   // Notify vendor
@@ -122,6 +189,9 @@ export const getUserBookings = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
+  // Auto-transition past-date bookings before querying
+  await autoTransitionBookings({ user: req.user._id });
+
   const filter = { user: req.user._id };
   if (req.query.status) filter.status = req.query.status;
 
@@ -160,6 +230,9 @@ export const getVendorBookings = asyncHandler(async (req, res) => {
     error.statusCode = 404;
     throw error;
   }
+
+  // Auto-transition past-date bookings before querying
+  await autoTransitionBookings({ vendor: vendor._id });
 
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -377,7 +450,7 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     throw error;
   }
 
-  if (['cancelled', 'completed'].includes(booking.status)) {
+  if (['cancelled', 'completed', 'expired'].includes(booking.status)) {
     const error = new Error(`Cannot cancel a booking that is already ${booking.status}.`);
     error.statusCode = 400;
     throw error;

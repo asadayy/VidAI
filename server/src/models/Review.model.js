@@ -32,6 +32,12 @@ const reviewSchema = new mongoose.Schema(
       trim: true,
       maxlength: [1000, 'Comment cannot exceed 1000 characters'],
     },
+    photos: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String, required: true },
+      },
+    ],
     // Admin moderation
     isApproved: {
       type: Boolean,

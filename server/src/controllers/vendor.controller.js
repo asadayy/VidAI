@@ -1,9 +1,12 @@
 import Vendor from '../models/Vendor.model.js';
 import User from '../models/User.model.js';
+import Booking from '../models/Booking.model.js';
 import ActivityLog from '../models/ActivityLog.model.js';
 import { asyncHandler } from '../middleware/error.middleware.js';
 import slugify from 'slugify';
 import Review from '../models/Review.model.js';
+import { v2 as cloudinary } from 'cloudinary';
+import { configureCloudinary } from '../config/cloudinary.js';
 
 const serializePortfolioItem = (item) => {
   if (!item) return null;
@@ -441,6 +444,31 @@ export const addReview = asyncHandler(async (req, res) => {
     throw error;
   }
 
+  // Upload photos to Cloudinary (if any)
+  let photos = [];
+  if (req.files && req.files.length > 0) {
+    configureCloudinary();
+    const uploads = req.files.map(
+      (file) =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: 'vidai/reviews',
+              resource_type: 'image',
+              transformation: [
+                { width: 1200, height: 1200, crop: 'limit' },
+                { quality: 'auto', fetch_format: 'auto' },
+              ],
+            },
+            (err, result) => (err ? reject(err) : resolve(result))
+          );
+          stream.end(file.buffer);
+        })
+    );
+    const results = await Promise.all(uploads);
+    photos = results.map((r) => ({ url: r.secure_url, publicId: r.public_id }));
+  }
+
   // Database unique index ensures a user can only review once
   try {
     const review = await Review.create({
@@ -448,7 +476,8 @@ export const addReview = asyncHandler(async (req, res) => {
       vendor: vendorId,
       rating: Number(rating),
       title,
-      comment
+      comment,
+      photos,
     });
 
     // Log activity
@@ -630,6 +659,224 @@ export const deletePortfolioComment = asyncHandler(async (req, res) => {
     message: 'Comment deleted successfully.',
     data: {
       portfolioItem: serializePortfolioItem(populatedItem),
+    },
+  });
+});
+
+/**
+ * @route   GET /api/v1/vendors/me/analytics
+ * @desc    Get vendor sales analytics (monthly/annual)
+ * @access  Private (vendor)
+ */
+export const getVendorAnalytics = asyncHandler(async (req, res) => {
+  const vendor = await Vendor.findOne({ user: req.user._id });
+  if (!vendor) {
+    const err = new Error('Vendor profile not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const now = new Date();
+  const year = parseInt(req.query.year) || now.getFullYear();
+  const month = parseInt(req.query.month) || now.getMonth() + 1;
+  const period = req.query.period || 'monthly';
+
+  let startDate, endDate, prevStartDate, prevEndDate;
+
+  if (period === 'monthly') {
+    startDate = new Date(year, month - 1, 1);
+    endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    prevStartDate = new Date(year, month - 2, 1);
+    prevEndDate = new Date(year, month - 1, 0, 23, 59, 59, 999);
+  } else {
+    startDate = new Date(year, 0, 1);
+    endDate = new Date(year, 11, 31, 23, 59, 59, 999);
+    prevStartDate = new Date(year - 1, 0, 1);
+    prevEndDate = new Date(year - 1, 11, 31, 23, 59, 59, 999);
+  }
+
+  const baseMatch = { vendor: vendor._id };
+  const periodMatch = { ...baseMatch, createdAt: { $gte: startDate, $lte: endDate } };
+  const prevPeriodMatch = { ...baseMatch, createdAt: { $gte: prevStartDate, $lte: prevEndDate } };
+
+  // Summary stats
+  const [currentSummary] = await Booking.aggregate([
+    { $match: periodMatch },
+    {
+      $group: {
+        _id: null,
+        totalBookings: { $sum: 1 },
+        totalRevenue: {
+          $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$paymentAmount', 0] },
+        },
+        pendingRevenue: {
+          $sum: {
+            $cond: [
+              { $and: [{ $eq: ['$status', 'approved'] }, { $in: ['$paymentStatus', ['unpaid', 'partial']] }] },
+              '$agreedPrice',
+              0,
+            ],
+          },
+        },
+        completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        cancelledBookings: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+        approvedBookings: { $sum: { $cond: [{ $eq: ['$status', 'approved'] }, 1, 0] } },
+        rejectedBookings: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } },
+        pendingBookings: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+        expiredBookings: { $sum: { $cond: [{ $eq: ['$status', 'expired'] }, 1, 0] } },
+        totalAgreed: { $sum: { $cond: [{ $gt: ['$agreedPrice', 0] }, '$agreedPrice', 0] } },
+        agreedCount: { $sum: { $cond: [{ $gt: ['$agreedPrice', 0] }, 1, 0] } },
+      },
+    },
+  ]);
+
+  const s = currentSummary || {
+    totalBookings: 0, totalRevenue: 0, pendingRevenue: 0,
+    completedBookings: 0, cancelledBookings: 0, approvedBookings: 0,
+    rejectedBookings: 0, pendingBookings: 0, expiredBookings: 0, totalAgreed: 0, agreedCount: 0,
+  };
+
+  // Previous period comparison
+  const [prevSummary] = await Booking.aggregate([
+    { $match: prevPeriodMatch },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$paymentAmount', 0] } },
+        totalBookings: { $sum: 1 },
+        completedBookings: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        cancelledBookings: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+      },
+    },
+  ]);
+  const prev = prevSummary || { totalRevenue: 0, totalBookings: 0, completedBookings: 0, cancelledBookings: 0 };
+
+  const pctChange = (curr, p) => p > 0 ? Math.round(((curr - p) / p) * 100) : curr > 0 ? 100 : 0;
+
+  // Monthly trend (12 months)
+  const trendStart = period === 'monthly'
+    ? new Date(year, month - 12, 1)
+    : new Date(year - 1, 0, 1);
+
+  const monthlyTrend = await Booking.aggregate([
+    { $match: { ...baseMatch, createdAt: { $gte: trendStart, $lte: endDate } } },
+    {
+      $group: {
+        _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } },
+        revenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$paymentAmount', 0] } },
+        bookings: { $sum: 1 },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ['$status', 'cancelled'] }, 1, 0] } },
+      },
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } },
+  ]);
+
+  const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const trendMap = {};
+  monthlyTrend.forEach((m) => { trendMap[`${m._id.year}-${m._id.month}`] = m; });
+
+  const trend = [];
+  if (period === 'annual') {
+    for (let m = 0; m < 12; m++) {
+      const key = `${year}-${m + 1}`;
+      const d = trendMap[key];
+      trend.push({ month: MONTH_NAMES[m], revenue: d?.revenue || 0, bookings: d?.bookings || 0, completed: d?.completed || 0, cancelled: d?.cancelled || 0 });
+    }
+  } else {
+    for (let i = 11; i >= 0; i--) {
+      const dt = new Date(year, month - 1 - i, 1);
+      const key = `${dt.getFullYear()}-${dt.getMonth() + 1}`;
+      const d = trendMap[key];
+      trend.push({ month: MONTH_NAMES[dt.getMonth()], revenue: d?.revenue || 0, bookings: d?.bookings || 0, completed: d?.completed || 0, cancelled: d?.cancelled || 0 });
+    }
+  }
+
+  // Status distribution
+  const statusDist = await Booking.aggregate([
+    { $match: periodMatch },
+    { $group: { _id: '$status', count: { $sum: 1 } } },
+  ]);
+  const statusMap = {};
+  statusDist.forEach((item) => { statusMap[item._id] = item.count; });
+
+  // Payment breakdown
+  const paymentDist = await Booking.aggregate([
+    { $match: periodMatch },
+    { $group: { _id: '$paymentStatus', count: { $sum: 1 } } },
+  ]);
+  const paymentMap = {};
+  paymentDist.forEach((p) => { paymentMap[p._id] = p.count; });
+
+  // Event type breakdown
+  const eventBreakdown = await Booking.aggregate([
+    { $match: periodMatch },
+    {
+      $group: {
+        _id: '$eventType',
+        count: { $sum: 1 },
+        revenue: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'paid'] }, '$paymentAmount', 0] } },
+      },
+    },
+    { $sort: { count: -1 } },
+  ]);
+
+  const avgDealValue = s.agreedCount > 0 ? Math.round(s.totalAgreed / s.agreedCount) : 0;
+  const conversionRate = s.totalBookings > 0 ? Math.round((s.completedBookings / s.totalBookings) * 100) : 0;
+  const cancellationRate = s.totalBookings > 0 ? Math.round((s.cancelledBookings / s.totalBookings) * 100) : 0;
+
+  res.status(200).json({
+    success: true,
+    data: {
+      period,
+      year,
+      month,
+      summary: {
+        totalRevenue: s.totalRevenue,
+        pendingRevenue: s.pendingRevenue,
+        totalBookings: s.totalBookings,
+        completedBookings: s.completedBookings,
+        cancelledBookings: s.cancelledBookings,
+        approvedBookings: s.approvedBookings,
+        rejectedBookings: s.rejectedBookings,
+        pendingBookings: s.pendingBookings,
+        expiredBookings: s.expiredBookings,
+        avgDealValue,
+        conversionRate,
+        cancellationRate,
+      },
+      comparison: {
+        revenue: pctChange(s.totalRevenue, prev.totalRevenue),
+        bookings: pctChange(s.totalBookings, prev.totalBookings),
+        completed: pctChange(s.completedBookings, prev.completedBookings),
+        cancelled: pctChange(s.cancelledBookings, prev.cancelledBookings),
+      },
+      trend,
+      statusDistribution: {
+        pending: statusMap.pending || 0,
+        approved: statusMap.approved || 0,
+        completed: statusMap.completed || 0,
+        rejected: statusMap.rejected || 0,
+        cancelled: statusMap.cancelled || 0,
+        expired: statusMap.expired || 0,
+      },
+      paymentBreakdown: {
+        unpaid: paymentMap.unpaid || 0,
+        partial: paymentMap.partial || 0,
+        paid: paymentMap.paid || 0,
+        refunded: paymentMap.refunded || 0,
+      },
+      eventBreakdown: eventBreakdown.map((e) => ({
+        eventType: e._id || 'other',
+        count: e.count,
+        revenue: e.revenue,
+      })),
+      profile: {
+        profileViews: vendor.profileViews || 0,
+        ratingsAverage: vendor.ratingsAverage || 0,
+        ratingsCount: vendor.ratingsCount || 0,
+        totalBookingsAllTime: vendor.totalBookings || 0,
+      },
     },
   });
 });

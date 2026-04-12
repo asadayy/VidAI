@@ -111,6 +111,45 @@ export const getMyBudget = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route   GET /api/v1/budget/summary
+ * @desc    Get lightweight budget summary (totals only, no items array)
+ * @access  Private (User)
+ */
+export const getBudgetSummary = asyncHandler(async (req, res) => {
+  const result = await Budget.aggregate([
+    { $match: { user: req.user._id } },
+    {
+      $project: {
+        totalBudget: 1,
+        eventType: 1,
+        itemCount: { $size: { $ifNull: ['$items', []] } },
+        totalSpent: {
+          $reduce: {
+            input: { $ifNull: ['$items', []] },
+            initialValue: 0,
+            in: { $add: ['$$value', { $ifNull: ['$$this.spentAmount', 0] }] },
+          },
+        },
+        totalAllocated: {
+          $reduce: {
+            input: { $ifNull: ['$items', []] },
+            initialValue: 0,
+            in: { $add: ['$$value', { $ifNull: ['$$this.allocatedAmount', 0] }] },
+          },
+        },
+      },
+    },
+  ]);
+
+  const summary = result[0] || null;
+
+  res.status(200).json({
+    success: true,
+    data: { summary },
+  });
+});
+
+/**
  * @route   POST /api/v1/budget/items
  * @desc    Add a budget item
  * @access  Private (User)

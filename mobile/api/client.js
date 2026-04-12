@@ -9,12 +9,10 @@ export const setNavigation = (nav) => {
   navigation = nav;
 };
 
-const NGROK_URL = 'https://cyetic-feetless-bridgette.ngrok-free.dev/api/v1';
-
 const API_BASE_URL =
   Constants.expoConfig?.extra?.apiUrl ||
   process.env.EXPO_PUBLIC_API_URL ||
-  NGROK_URL;
+  'http://localhost:5000/api/v1';
 
 const client = axios.create({
   baseURL: API_BASE_URL,

@@ -197,6 +197,8 @@ const AIChat = () => {
       <div className="ac-messages" ref={listRef} onScroll={handleScroll}>
         {messages.map((msg, i) => {
           const isUser = msg.role === 'user';
+          // Hide empty assistant bubble while streaming (typing dots replace it)
+          if (!isUser && !msg.content && isTyping) return null;
           return (
             <div key={i} className={`ac-row ${isUser ? 'ac-row--user' : 'ac-row--ai'}`}>
               {!isUser && (

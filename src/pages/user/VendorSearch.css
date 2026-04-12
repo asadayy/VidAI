@@ -112,11 +112,9 @@
   background: #fff;
   border: 1px solid #e8e8ea;
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   position: sticky;
   top: 128px;
-  max-height: calc(100vh - 148px);
-  overflow-y: auto;
 }
 
 .vs-sidebar-header {
@@ -239,12 +237,50 @@
   gap: 0.1rem 0.5rem;
 }
 
-/* Staff grid */
-.vs-staff-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.1rem 0.5rem;
+/* Custom amount */
+.vs-custom-amount {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #e5e7eb;
 }
+.vs-custom-amount-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+.vs-custom-amount-row {
+  display: flex;
+  gap: 0.4rem;
+  max-width: 100%;
+}
+.vs-custom-amount-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e0e0e5;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.vs-custom-amount-input:focus { border-color: #D7385E; }
+.vs-custom-amount-input::placeholder { color: #b0b0b8; }
+.vs-custom-amount-btn {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.4rem 0.65rem;
+  white-space: nowrap;
+  background: #D7385E;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.vs-custom-amount-btn:disabled { opacity: 0.45; cursor: default; }
+.vs-custom-amount-btn:hover:not(:disabled) { opacity: 0.85; }
 
 .vs-check-item {
   display: flex;
@@ -437,6 +473,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.vs-card-cat {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #D7385E;
 }
 
 .vs-card-rating {

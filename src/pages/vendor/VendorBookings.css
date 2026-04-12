@@ -64,13 +64,63 @@
   letter-spacing: 0.04em;
 }
 
-/* â”€â”€ Filter bar â”€â”€ */
+/* â"€â"€ Toolbar â"€â"€ */
+.vb-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* â"€â"€ Filter bar â"€â"€ */
 .vb-filter-bar {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  margin-bottom: 1.25rem;
   flex-wrap: wrap;
+}
+
+/* â"€â"€ View toggle â"€â"€ */
+.vb-view-toggle {
+  display: flex;
+  border: 1.5px solid var(--gray-200, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vb-view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 36px;
+  border: none;
+  background: #fff;
+  color: var(--gray-400, #9ca3af);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vb-view-btn:not(:last-child) {
+  border-right: 1.5px solid var(--gray-200, #e5e7eb);
+}
+
+.vb-view-btn:hover {
+  color: #d7385e;
+  background: #fff1f3;
+}
+
+.vb-view-btn--active {
+  background: #d7385e;
+  color: #fff;
+}
+
+.vb-view-btn--active:hover {
+  background: #b82a4d;
+  color: #fff;
 }
 
 .vb-tab {

@@ -12,6 +12,7 @@ import {
   MessageSquareDot,
   PanelLeftClose,
   PanelLeftOpen,
+  BarChart3,
 } from 'lucide-react';
 import NotificationDropdown from '../NotificationDropdown';
 import './VendorLayout.css';
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
   { to: '/vendor/portfolio', icon: ImageIcon, label: 'Portfolio' },
   { to: '/vendor/services', icon: Package, label: 'Services' },
   { to: '/vendor/bookings', icon: CalendarCheck, label: 'Bookings' },
+  { to: '/vendor/analytics', icon: BarChart3, label: 'Analytics' },
   { to: '/vendor/messages', icon: MessageSquareDot, label: 'Messages' },
   { to: '/vendor/reviews', icon: Star, label: 'Reviews' },
   { to: '/vendor/profile', icon: UserCircle, label: 'Profile' },

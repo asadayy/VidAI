@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import * as WebBrowser from 'expo-web-browser';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import BookingCalendar from '../../components/BookingCalendar';
 import Toast from 'react-native-toast-message';
 
 // -- config --
@@ -28,6 +29,7 @@ const STATUS_CFG = {
   approved:  { label: 'Awaiting Payment', bg: '#fef3c7', text: '#92400e', icon: 'alert-circle-outline', accent: '#f59e0b' },
   booked:    { label: 'Booked',    bg: '#d1fae5', text: '#065f46', icon: 'checkmark-circle-outline', accent: '#10b981' },
   completed: { label: 'Completed', bg: '#dbeafe', text: '#1e40af', icon: 'checkmark-done-outline',   accent: '#3b82f6' },
+  expired:   { label: 'Expired',   bg: '#f3f4f6', text: '#6b7280', icon: 'alert-circle-outline',     accent: '#9ca3af' },
   cancelled: { label: 'Cancelled', bg: '#fee2e2', text: '#991b1b', icon: 'close-circle-outline',     accent: '#ef4444' },
   rejected:  { label: 'Rejected',  bg: '#fee2e2', text: '#991b1b', icon: 'close-circle-outline',     accent: '#ef4444' },
 };
@@ -49,11 +51,12 @@ const AVATAR_COLORS = {
   pending:   { bg: '#fde68a', text: '#92400e' },
   approved:  { bg: '#a7f3d0', text: '#065f46' },
   completed: { bg: '#bfdbfe', text: '#1e40af' },
+  expired:   { bg: '#e5e7eb', text: '#6b7280' },
   cancelled: { bg: '#fecaca', text: '#991b1b' },
   rejected:  { bg: '#fecaca', text: '#991b1b' },
 };
 
-const FILTERS = ['all', 'pending', 'approved', 'completed', 'cancelled'];
+const FILTERS = ['all', 'pending', 'approved', 'completed', 'expired', 'cancelled'];
 
 // -- helpers --
 
@@ -77,6 +80,7 @@ export default function Bookings() {
   const [filter, setFilter] = useState('all');
   const [cancelModal, setCancelModal] = useState({ open: false, bookingId: null });
   const [payingId, setPayingId] = useState(null);
+  const [viewMode, setViewMode] = useState('list');
 
   useEffect(() => { fetchBookings(); }, []);
 
@@ -142,7 +146,7 @@ export default function Bookings() {
     const avcfg = AVATAR_COLORS[b.status] || AVATAR_COLORS.pending;
     const initial = (b.vendor?.businessName || '?')[0].toUpperCase();
     const canPay = b.status === 'approved' && b.paymentStatus === 'unpaid';
-    const canCancel = b.status === 'pending';
+    const canCancel = ['pending', 'approved'].includes(b.status);
 
     return (
       <View style={[styles.card, { borderLeftColor: scfg.accent }]}>
@@ -253,8 +257,36 @@ export default function Bookings() {
             <Text style={styles.heroBadgeNum}>{bookings.length}</Text>
             <Text style={styles.heroBadgeLbl}>Total</Text>
           </View>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              style={[styles.viewToggleBtn, viewMode === 'list' && styles.viewToggleBtnActive]}
+              onPress={() => setViewMode('list')}
+            >
+              <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : theme.colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.viewToggleBtn, viewMode === 'calendar' && styles.viewToggleBtnActive]}
+              onPress={() => setViewMode('calendar')}
+            >
+              <Ionicons name="calendar-outline" size={16} color={viewMode === 'calendar' ? '#fff' : theme.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
+        {/* filter tabs + content */}
+        {viewMode === 'calendar' ? (
+          <ScrollView
+            contentContainerStyle={styles.calendarWrap}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+          >
+            <BookingCalendar
+              bookings={bookings}
+              getDisplayStatus={getDisplayStatus}
+              onBookingPress={(b) => router.push(`/vendors/${b.vendor?.slug || b.vendor?._id}`)}
+            />
+          </ScrollView>
+        ) : (
+        <>
         {/* filter tabs */}
         <ScrollView
           horizontal
@@ -309,6 +341,9 @@ export default function Bookings() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
           />
+        )}
+
+        </>
         )}
 
         {/* cancel modal */}
@@ -397,6 +432,33 @@ const styles = StyleSheet.create({
   },
   heroBadgeNum: { fontSize: 18, fontWeight: '800', color: '#fff' },
   heroBadgeLbl: { fontSize: 10, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+
+  // view toggle
+  viewToggle: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.surface,
+    borderRadius: 10,
+    padding: 3,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  viewToggleBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewToggleBtnActive: {
+    backgroundColor: theme.colors.primary,
+  },
+
+  // calendar wrapper
+  calendarWrap: {
+    padding: 14,
+    paddingBottom: 80,
+  },
 
   // filter bar
   filterBar: {

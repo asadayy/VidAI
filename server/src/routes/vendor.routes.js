@@ -15,9 +15,11 @@ import {
   togglePortfolioLike,
   addPortfolioComment,
   deletePortfolioComment,
+  getVendorAnalytics,
 } from '../controllers/vendor.controller.js';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 import { validateVendorProfile } from '../middleware/validate.middleware.js';
+import { upload } from '../controllers/upload.controller.js';
 
 const router = express.Router();
 
@@ -30,13 +32,14 @@ router.get('/slug/:slug', getVendorBySlug);
 router.post('/profile', protect, authorize('vendor'), validateVendorProfile, createVendorProfile);
 router.get('/me/profile', protect, authorize('vendor'), getMyVendorProfile);
 router.put('/me/profile', protect, authorize('vendor'), validateVendorProfile, updateVendorProfile);
+router.get('/me/analytics', protect, authorize('vendor'), getVendorAnalytics);
 
 // Parameterised public routes (keep after named routes)
 router.get('/:id', getVendorById);
 router.get('/:id/reviews', getReviews);
 
 // Review management
-router.post('/:id/reviews', protect, authorize('user', 'admin'), addReview);
+router.post('/:id/reviews', protect, authorize('user', 'admin'), upload.array('photos', 5), addReview);
 
 // Portfolio social interactions
 router.post('/:id/portfolio/:itemId/like', protect, authorize('user', 'admin'), togglePortfolioLike);

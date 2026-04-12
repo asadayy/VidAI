@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { bookingAPI } from '../../api/bookings';
-import { budgetAPI } from '../../api/budget';
+import { useDashboardBookings, useUpcomingCount, useBudgetSummary } from '../../hooks/queries';
 import Loading from '../../components/Loading';
 import {
   Calendar,
@@ -50,34 +49,17 @@ const getInitials = (name = '') =>
 /* -- Component -------------------------------------------- */
 const UserDashboard = () => {
   const { user } = useAuth();
-  const [loading, setLoading]   = useState(true);
-  const [bookings, setBookings] = useState([]);
-  const [budget, setBudget]     = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [bkRes, bdRes] = await Promise.all([
-          bookingAPI.getMyBookings({ limit: 4 }).catch(() => ({ data: { data: { bookings: [] } } })),
-          budgetAPI.getMine().catch(() => ({ data: null })),
-        ]);
-        setBookings(bkRes.data.data.bookings || []);
-        setBudget(bdRes.data?.data?.budget || null);
-      } catch (err) {
-        console.error('Dashboard fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const { data: bookings = [], isLoading: bkLoading } = useDashboardBookings();
+  const { data: upcomingCount = 0, isLoading: ucLoading } = useUpcomingCount();
+  const { data: budget, isLoading: bdLoading } = useBudgetSummary();
+  const loading = bkLoading || ucLoading || bdLoading;
 
   if (loading) return <Loading fullScreen message="Loading dashboard…" />;
 
   const totalBudget    = budget?.totalBudget || 0;
-  const totalSpent     = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
+  const totalSpent     = budget?.totalSpent || 0;
   const remaining      = totalBudget - totalSpent;
   const spentPct       = totalBudget ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
-  const upcomingCount  = bookings.filter((b) => b.status === 'approved' && new Date(b.eventDate) > new Date()).length;
   const firstName      = user?.name?.split(' ')[0] || 'there';
   const hour           = new Date().getHours();
   const greeting       = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';

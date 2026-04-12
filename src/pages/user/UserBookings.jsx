@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { Link, useSearchParams } from 'react-router-dom';
 import { bookingAPI } from '../../api/bookings';
 import { paymentAPI } from '../../api/payments';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMyBookings } from '../../hooks/queries';
 import Loading from '../../components/Loading';
 import toast from 'react-hot-toast';
 import {
@@ -14,12 +16,16 @@ import {
   XCircle,
   CheckCircle2,
   AlertTriangle,
+  AlertOctagon,
   ExternalLink,
   CreditCard,
   Loader2,
   Sparkles,
   Search,
+  List,
+  CalendarDays,
 } from 'lucide-react';
+import BookingCalendar from '../../components/BookingCalendar';
 import './UserBookings.css';
 
 /* -- Config ----------------------------------------------- */
@@ -28,6 +34,7 @@ const STATUS_CFG = {
   approved:  { label: 'Awaiting Payment', cls: 'ub-badge--warn', Icon: AlertTriangle },
   booked:    { label: 'Booked',    cls: 'ub-badge--success', Icon: CheckCircle2 },
   completed: { label: 'Completed', cls: 'ub-badge--info',    Icon: CheckCircle2 },
+  expired:   { label: 'Expired',   cls: 'ub-badge--muted',   Icon: AlertOctagon },
   cancelled: { label: 'Cancelled', cls: 'ub-badge--danger',  Icon: XCircle      },
   rejected:  { label: 'Rejected',  cls: 'ub-badge--danger',  Icon: XCircle      },
 };
@@ -45,7 +52,7 @@ const PAYMENT_CFG = {
   refunded: { label: 'Refunded',  cls: 'ub-pay--info'    },
 };
 
-const FILTERS = ['all', 'pending', 'approved', 'completed', 'cancelled'];
+const FILTERS = ['all', 'pending', 'approved', 'completed', 'expired', 'cancelled'];
 
 /* -- Helpers ---------------------------------------------- */
 const fmtDate = (ds) =>
@@ -79,26 +86,13 @@ function CancelModal({ onConfirm, onClose }) {
 
 /* -- Main component --------------------------------------- */
 const UserBookings = () => {
-  const [bookings, setBookings]         = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const queryClient = useQueryClient();
+  const { data: bookings = [], isLoading: loading, refetch: fetchBookings } = useMyBookings();
   const [filter, setFilter]             = useState('all');
+  const [viewMode, setViewMode]         = useState('list');
   const [cancelModal, setCancelModal]   = useState({ open: false, bookingId: null });
   const [payingId, setPayingId]         = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const fetchBookings = async () => {
-    try {
-      setLoading(true);
-      const res = await bookingAPI.getMyBookings();
-      setBookings(res.data.data.bookings || []);
-    } catch {
-      toast.error('Failed to load bookings');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchBookings(); }, []);
 
   useEffect(() => {
     const status = searchParams.get('payment');
@@ -120,6 +114,7 @@ const UserBookings = () => {
       await bookingAPI.cancel(cancelModal.bookingId, { reason: 'User cancelled' });
       toast.success('Booking cancelled');
       fetchBookings();
+      queryClient.invalidateQueries({ queryKey: ['bookings', 'dashboard'] });
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to cancel booking');
     } finally {
@@ -169,22 +164,45 @@ const UserBookings = () => {
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div className="ub-filters">
-        {FILTERS.map((f) => (
+      {/* Filter pills + view toggle */}
+      <div className="ub-toolbar">
+        <div className="ub-filters">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              className={`ub-filter ${filter === f ? 'ub-filter--active' : ''}`}
+              onClick={() => setFilter(f)}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+              {counts[f] > 0 && <span className="ub-filter-count">{counts[f]}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="ub-view-toggle">
           <button
-            key={f}
-            className={`ub-filter ${filter === f ? 'ub-filter--active' : ''}`}
-            onClick={() => setFilter(f)}
+            className={`ub-view-btn ${viewMode === 'list' ? 'ub-view-btn--active' : ''}`}
+            onClick={() => setViewMode('list')}
+            title="List view"
           >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-            {counts[f] > 0 && <span className="ub-filter-count">{counts[f]}</span>}
+            <List size={16} />
           </button>
-        ))}
+          <button
+            className={`ub-view-btn ${viewMode === 'calendar' ? 'ub-view-btn--active' : ''}`}
+            onClick={() => setViewMode('calendar')}
+            title="Calendar view"
+          >
+            <CalendarDays size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* Cards */}
-      <div className="ub-list">
+      {/* Calendar view */}
+      {viewMode === 'calendar' && (
+        <BookingCalendar bookings={filtered} getDisplayStatus={getDisplayStatus} />
+      )}
+
+      {/* Cards (list view) */}
+      {viewMode === 'list' && <div className="ub-list">
         {filtered.length > 0 ? filtered.map((b) => {
           const displayStatus = getDisplayStatus(b);
           const scfg = STATUS_CFG[displayStatus] || STATUS_CFG.pending;
@@ -243,7 +261,7 @@ const UserBookings = () => {
                     </button>
                   )}
 
-                  {b.status === 'pending' && (
+                  {['pending', 'approved'].includes(b.status) && (
                     <button
                       className="ub-btn ub-btn--cancel"
                       onClick={() => setCancelModal({ open: true, bookingId: b._id })}
@@ -269,7 +287,7 @@ const UserBookings = () => {
             </Link>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Cancel modal */}
       {cancelModal.open && (

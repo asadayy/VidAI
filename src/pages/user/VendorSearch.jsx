@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { vendorAPI } from '../../api/vendors';
+import { useVendors } from '../../hooks/queries';
 import Loading from '../../components/Loading';
 import {
   MapPin, Star, Search, X, SlidersHorizontal,
@@ -11,7 +11,7 @@ import {
 import './VendorSearch.css';
 
 /* ─── Static filter data ───────────────────────────────── */
-const CITIES = ['Lahore', 'Islamabad', 'Rawalpindi', 'Karachi'];
+const CITIES = ['Islamabad', 'Rawalpindi'];
 
 const CATEGORIES = [
   { value: 'venue',         label: 'Venues' },
@@ -28,8 +28,6 @@ const BUDGET_RANGES = [
   { label: '70,001 - 1,00,000', min: 70001,  max: 100000 },
   { label: '1,00,000+',         min: 100001, max: null   },
 ];
-
-const STAFF_OPTIONS = ['Male', 'Female', 'Transgender'];
 
 const SORT_OPTIONS = [
   { value: '',           label: 'RELEVANCE'       },
@@ -67,22 +65,33 @@ const VendorSearch = () => {
     const c = searchParams.get('category'); return c ? [c] : [];
   });
   const [selectedRanges, setSelectedRanges] = useState([]);
-  const [selectedStaff, setSelectedStaff]   = useState([]);
+  const [customMinAmount, setCustomMinAmount] = useState('');
   const [sortBy, setSortBy]                 = useState('');
   const [viewMode, setViewMode]             = useState('list');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  const [vendors, setVendors]       = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  const [loading, setLoading]       = useState(true);
+  const queryParams = useMemo(() => {
+    const params = Object.fromEntries([...searchParams]);
+    Object.keys(params).forEach(k => !params[k] && delete params[k]);
+    return params;
+  }, [searchParams]);
+
+  const { data, isLoading: loading, isError } = useVendors(queryParams, {
+    keepPreviousData: true,
+    placeholderData: (prev) => prev,
+  });
+  if (isError) toast.error('Failed to load vendors.');
+  const vendors = data?.vendors || [];
+  const pagination = data?.pagination || { page: 1, pages: 1, total: 0 };
 
   const applyWith = useCallback((overrides = {}) => {
-    const text   = overrides.text   !== undefined ? overrides.text   : searchText;
-    const cities = overrides.cities !== undefined ? overrides.cities : selectedCities;
-    const cats   = overrides.cats   !== undefined ? overrides.cats   : selectedCats;
-    const ranges = overrides.ranges !== undefined ? overrides.ranges : selectedRanges;
-    const sort   = overrides.sort   !== undefined ? overrides.sort   : sortBy;
-    const page   = overrides.page   !== undefined ? overrides.page   : 1;
+    const text      = overrides.text      !== undefined ? overrides.text      : searchText;
+    const cities    = overrides.cities    !== undefined ? overrides.cities    : selectedCities;
+    const cats      = overrides.cats      !== undefined ? overrides.cats      : selectedCats;
+    const ranges    = overrides.ranges    !== undefined ? overrides.ranges    : selectedRanges;
+    const customMin = overrides.customMin !== undefined ? overrides.customMin : customMinAmount;
+    const sort      = overrides.sort      !== undefined ? overrides.sort      : sortBy;
+    const page      = overrides.page      !== undefined ? overrides.page      : 1;
 
     const p = {};
     if (text.trim())   p.search   = text.trim();
@@ -93,37 +102,14 @@ const VendorSearch = () => {
       p.minPrice = sorted[0].min;
       const last = sorted[sorted.length - 1];
       if (last.max) p.maxPrice = last.max;
+    } else if (customMin && Number(customMin) > 0) {
+      p.minPrice = Number(customMin);
     }
     if (sort) p.sort = sort;
     p.page = page;
     setSearchParams(p);
     setMobileSidebarOpen(false);
-  }, [searchText, selectedCities, selectedCats, selectedRanges, sortBy, setSearchParams]);
-
-  useEffect(() => {
-    const fetchVendors = async () => {
-      setLoading(true);
-      try {
-        const params = Object.fromEntries([...searchParams]);
-        Object.keys(params).forEach(k => !params[k] && delete params[k]);
-
-        const res = params.search
-          ? await vendorAPI.search({ q: params.search, ...params })
-          : await vendorAPI.getAll(params);
-
-        const list = res.data?.data?.vendors || res.data?.vendors || [];
-        setVendors(list);
-        const pg = res.data?.data?.pagination;
-        if (pg) setPagination({ ...pg, total: pg.total ?? list.length });
-        else    setPagination({ page: 1, pages: 1, total: list.length });
-      } catch {
-        toast.error('Failed to load vendors.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchVendors();
-  }, [searchParams]);
+  }, [searchText, selectedCities, selectedCats, selectedRanges, customMinAmount, sortBy, setSearchParams]);
 
   const clearFilters = () => {
     setSearchText('');
@@ -131,7 +117,7 @@ const VendorSearch = () => {
     setSubArea('');
     setSelectedCats([]);
     setSelectedRanges([]);
-    setSelectedStaff([]);
+    setCustomMinAmount('');
     setSortBy('');
     setSearchParams({});
   };
@@ -161,10 +147,9 @@ const VendorSearch = () => {
     applyWith({ ranges: next });
   };
 
-  const toggleStaff = (s) => {
-    setSelectedStaff(prev =>
-      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
-    );
+  const handleCustomAmountApply = () => {
+    setSelectedRanges([]);
+    applyWith({ ranges: [], customMin: customMinAmount });
   };
 
   const handlePageChange = (p) => {
@@ -173,7 +158,7 @@ const VendorSearch = () => {
   };
 
   const activeCount =
-    selectedCities.length + selectedCats.length + selectedRanges.length + selectedStaff.length;
+    selectedCities.length + selectedCats.length + selectedRanges.length + (customMinAmount ? 1 : 0);
 
   /* ── Sidebar ── */
   const Sidebar = () => (
@@ -187,6 +172,20 @@ const VendorSearch = () => {
           <button className="vs-clear-btn" onClick={clearFilters}>Clear all</button>
         )}
       </div>
+
+      <FilterSection title="Category">
+        <div className="vs-city-chips">
+          {CATEGORIES.map(c => (
+            <button
+              key={c.value}
+              className={`vs-city-chip${selectedCats.includes(c.value) ? ' vs-city-chip--active' : ''}`}
+              onClick={() => toggleCat(c.value)}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </FilterSection>
 
       <FilterSection title="City">
         <div className="vs-city-chips">
@@ -219,26 +218,33 @@ const VendorSearch = () => {
             const checked = selectedRanges.some(x => rangeKey(x) === key);
             return (
               <label key={key} className="vs-check-item">
-                <input type="checkbox" checked={checked} onChange={() => toggleRange(r)} />
+                <input type="checkbox" checked={checked} onChange={() => { setCustomMinAmount(''); toggleRange(r); }} />
                 {r.label}
               </label>
             );
           })}
         </div>
-      </FilterSection>
-
-      <FilterSection title="Staff">
-        <div className="vs-staff-grid">
-          {STAFF_OPTIONS.map(s => (
-            <label key={s} className="vs-check-item">
-              <input
-                type="checkbox"
-                checked={selectedStaff.includes(s)}
-                onChange={() => toggleStaff(s)}
-              />
-              {s}
-            </label>
-          ))}
+        <div className="vs-custom-amount">
+          <label className="vs-custom-amount-label">Custom minimum</label>
+          <div className="vs-custom-amount-row">
+            <input
+              className="vs-custom-amount-input"
+              type="number"
+              min="0"
+              placeholder="e.g. 50000"
+              value={customMinAmount}
+              onChange={e => setCustomMinAmount(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCustomAmountApply(); } }}
+            />
+            <button
+              className="vs-custom-amount-btn"
+              type="button"
+              onClick={handleCustomAmountApply}
+              disabled={!customMinAmount}
+            >
+              Apply
+            </button>
+          </div>
         </div>
       </FilterSection>
     </aside>
@@ -262,6 +268,7 @@ const VendorSearch = () => {
 
       <div className="vs-card-body">
         <div className="vs-card-top">
+          <span className="vs-card-cat">{vendor.category?.replace(/_/g, ' ') || 'General'}</span>
           <h3 className="vs-card-name">{vendor.businessName}</h3>
 
           {vendor.ratingsCount > 0 && (

@@ -42,16 +42,33 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    // Category-specific fields
+    timeSlot: {
+      type: String,
+      enum: ['morning', 'evening'],
+    },
+    numberOfPeople: {
+      type: Number,
+      min: 1,
+    },
+    venueType: {
+      type: String,
+      enum: ['personal_residence', 'booked_venue'],
+    },
+    eventTime: {
+      type: String,
+      trim: true,
+    },
     notes: {
       type: String,
       trim: true,
       maxlength: [1000, 'Notes cannot exceed 1000 characters'],
       default: '',
     },
-    // Booking status workflow: pending → approved/rejected → completed/cancelled
+    // Booking status workflow: pending → approved/rejected → completed/cancelled/expired
     status: {
       type: String,
-      enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled'],
+      enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled', 'expired'],
       default: 'pending',
     },
     // Pricing

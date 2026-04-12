@@ -216,6 +216,8 @@ export default function Budget() {
   // event manager
   const [showEventManager, setShowEventManager] = useState(false);
   const [eventSaving, setEventSaving] = useState(false);
+  const [editBudgetVisible, setEditBudgetVisible] = useState(false);
+  const [editBudgetAmount, setEditBudgetAmount] = useState('');
 
   // vendor picks
   const [showPicksBuilder, setShowPicksBuilder] = useState(false);
@@ -263,6 +265,22 @@ export default function Budget() {
       fetchBudget();
     } catch {
       Toast.show({ type: 'error', text1: 'Failed to create budget' });
+    }
+  };
+
+  const handleUpdateBudget = async () => {
+    if (!editBudgetAmount || isNaN(editBudgetAmount) || Number(editBudgetAmount) <= 0) {
+      Toast.show({ type: 'error', text1: 'Please enter a valid amount' });
+      return;
+    }
+    try {
+      await budgetAPI.create({ totalBudget: Number(editBudgetAmount) });
+      Toast.show({ type: 'success', text1: 'Budget updated!' });
+      setEditBudgetVisible(false);
+      setEditBudgetAmount('');
+      fetchBudget();
+    } catch {
+      Toast.show({ type: 'error', text1: 'Failed to update budget' });
     }
   };
 
@@ -593,6 +611,12 @@ export default function Budget() {
               <Ionicons name="wallet-outline" size={18} color="#D7385E" />
               <Text style={styles.statLabel}>Total Budget</Text>
               <Text style={[styles.statValue, { color: '#D7385E' }]}>{fmtCurrency(activeBudgetTotal)}</Text>
+              <TouchableOpacity
+                style={styles.statEditBtn}
+                onPress={() => { setEditBudgetAmount(String(budget?.totalBudget || '')); setEditBudgetVisible(true); }}
+              >
+                <Ionicons name="pencil-outline" size={13} color="#94a3b8" />
+              </TouchableOpacity>
             </View>
             <View style={[styles.statTile, styles.statTileViolet]}>
               <Ionicons name="flag-outline" size={18} color="#7c3aed" />
@@ -1044,6 +1068,39 @@ export default function Budget() {
           </View>
         </Modal>
 
+        {/* edit total budget modal */}
+        <Modal
+          visible={editBudgetVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setEditBudgetVisible(false)}
+        >
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEditBudgetVisible(false)} />
+          <View style={styles.deleteSheet}>
+            <View style={[styles.deleteIconWrap, { backgroundColor: '#fdf2f8' }]}>  
+              <Ionicons name="wallet-outline" size={28} color="#D7385E" />
+            </View>
+            <Text style={styles.deleteTitle}>Edit Total Budget</Text>
+            <Text style={styles.deleteSub}>Update your overall wedding budget amount.</Text>
+            <TextInput
+              style={[styles.setupInput, { marginVertical: 12 }]}
+              placeholder="Enter new amount (PKR)"
+              placeholderTextColor="#94a3b8"
+              keyboardType="numeric"
+              value={editBudgetAmount}
+              onChangeText={setEditBudgetAmount}
+            />
+            <View style={styles.deleteActions}>
+              <TouchableOpacity style={styles.deleteCancelBtn} onPress={() => { setEditBudgetVisible(false); setEditBudgetAmount(''); }}>
+                <Text style={styles.deleteCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.deleteConfirmBtn, { backgroundColor: '#D7385E' }]} onPress={handleUpdateBudget}>
+                <Text style={styles.deleteConfirmText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* event manager modal */}
         <Modal
           visible={showEventManager}
@@ -1244,6 +1301,9 @@ const styles = StyleSheet.create({
   statTileRed:    { borderTopWidth: 3, borderTopColor: '#dc2626' },
   statLabel: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 6, marginBottom: 2 },
   statValue: { fontSize: 14, fontWeight: '700' },
+  statEditBtn: {
+    position: 'absolute', top: 6, right: 6, padding: 4, borderRadius: 6,
+  },
 
   // progress card
   progressCard: {

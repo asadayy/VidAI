@@ -7,4 +7,5 @@ export const eventAPI = {
   update: (id, data) => client.put(`/events/${id}`, data),
   delete: (id) => client.delete(`/events/${id}`),
   updateAllocations: (allocations) => client.put('/events/bulk-allocations', { allocations }),
+  getUpcomingCount: () => client.get('/events/upcoming-count'),
 };

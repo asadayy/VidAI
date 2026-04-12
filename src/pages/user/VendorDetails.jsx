@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { MapPin, Mail, Phone, Calendar, Users, Check, X, ZoomIn, ChevronLeft, ChevronRight, ArrowLeft, BadgeCheck, Flag, Heart, MessageCircle, MessageSquareDot, Play } from 'lucide-react';
+import { MapPin, Mail, Phone, Calendar, Users, Check, X, ZoomIn, ChevronLeft, ChevronRight, ArrowLeft, BadgeCheck, Flag, Heart, MessageCircle, MessageSquareDot, Play, ImagePlus } from 'lucide-react';
 import { vendorAPI } from '../../api/vendors';
 import { reportAPI, chatAPI } from '../../api';
 import client from '../../api/client';
@@ -10,6 +10,7 @@ import Loading from '../../components/Loading';
 import AuthModal from '../../components/auth/AuthModal';
 import ReportModal from '../../components/ReportModal';
 import { useAuth } from '../../context/AuthContext';
+import { getBookingFields, getInitialBookingData, EVENT_TYPE_OPTIONS, TIME_SLOT_OPTIONS, VENUE_TYPE_OPTIONS } from '../../utils/bookingFields';
 import './VendorDetails.css';
 
 const VendorDetails = () => {
@@ -29,8 +30,10 @@ const VendorDetails = () => {
   // Reviews State
   const [reviews, setReviews] = useState([]);
   const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
+  const [reviewPhotos, setReviewPhotos] = useState([]);
   const [submittingReview, setSubmittingReview] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const [reviewLightbox, setReviewLightbox] = useState({ open: false, photos: [], index: 0 });
 
   const [commentDrafts, setCommentDrafts] = useState({});
   const [portfolioUpdatingId, setPortfolioUpdatingId] = useState('');
@@ -62,7 +65,12 @@ const VendorDetails = () => {
     eventDate: '',
     eventType: 'wedding',
     guestCount: '',
-    notes: ''
+    notes: '',
+    timeSlot: '',
+    numberOfPeople: '',
+    venueType: '',
+    eventLocation: '',
+    eventTime: '',
   });
 
   const COMMENTS_PAGE_SIZE = 6;
@@ -104,7 +112,7 @@ const VendorDetails = () => {
   const handleModalClose = () => {
     setShowModal(false);
     setSelectedPackage(null);
-    setBookingData({ eventDate: '', eventType: 'wedding', guestCount: '', notes: '' });
+    setBookingData({ eventDate: '', eventType: 'wedding', guestCount: '', notes: '', timeSlot: '', numberOfPeople: '', venueType: '', eventLocation: '', eventTime: '' });
   };
 
   const handleInputChange = (e) => {
@@ -117,12 +125,22 @@ const VendorDetails = () => {
     if (!vendor || !selectedPackage) return;
     setSubmitting(true);
     try {
-      await client.post('/bookings', {
+      const payload = {
         vendorId: vendor._id,
         packageId: selectedPackage._id,
-        ...bookingData,
-        guestCount: Number(bookingData.guestCount)
-      });
+        eventDate: bookingData.eventDate,
+        eventType: bookingData.eventType,
+        notes: bookingData.notes,
+      };
+      // Category-specific fields
+      if (bookingData.guestCount) payload.guestCount = Number(bookingData.guestCount);
+      if (bookingData.timeSlot) payload.timeSlot = bookingData.timeSlot;
+      if (bookingData.numberOfPeople) payload.numberOfPeople = Number(bookingData.numberOfPeople);
+      if (bookingData.venueType) payload.venueType = bookingData.venueType;
+      if (bookingData.eventLocation) payload.eventLocation = bookingData.eventLocation;
+      if (bookingData.eventTime) payload.eventTime = bookingData.eventTime;
+
+      await client.post('/bookings', payload);
       toast.success('Booking request sent successfully!');
       handleModalClose();
     } catch (error) {
@@ -142,11 +160,15 @@ const VendorDetails = () => {
     }
     setSubmittingReview(true);
     try {
-      const res = await client.post(`/vendors/${vendor._id}/reviews`, reviewData);
+      const res = await vendorAPI.addReview(vendor._id, {
+        ...reviewData,
+        photos: reviewPhotos,
+      });
       toast.success('Review added successfully!');
       fetchVendorDetails();
       setReviews(prev => [res.data.data.review, ...prev]);
       setReviewData({ rating: 5, title: '', comment: '' });
+      setReviewPhotos([]);
     } catch (error) {
       console.error('Review error:', error);
       toast.error(error.response?.data?.message || 'Failed to submit review.');
@@ -729,6 +751,42 @@ const VendorDetails = () => {
                     />
                   </div>
 
+                  {/* Photo upload */}
+                  <div className="vd-field">
+                    <label>Photos (optional, up to 5)</label>
+                    <div className="vd-photo-upload-area">
+                      {reviewPhotos.map((file, i) => (
+                        <div key={i} className="vd-photo-preview">
+                          <img src={URL.createObjectURL(file)} alt={`Preview ${i + 1}`} />
+                          <button
+                            type="button"
+                            className="vd-photo-remove"
+                            onClick={() => setReviewPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      {reviewPhotos.length < 5 && (
+                        <label className="vd-photo-add-btn">
+                          <ImagePlus size={20} />
+                          <span>Add</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            multiple
+                            hidden
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              setReviewPhotos(prev => [...prev, ...files].slice(0, 5));
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
                   <button type="submit" className="vd-submit-btn" disabled={submittingReview}>
                     {submittingReview ? 'Submitting…' : 'Submit Review'}
                   </button>
@@ -760,6 +818,19 @@ const VendorDetails = () => {
                         </div>
                         {review.title && <p className="vd-review-title-text">{review.title}</p>}
                         <p className="vd-review-body">{review.comment}</p>
+                        {review.photos && review.photos.length > 0 && (
+                          <div className="vd-review-photos">
+                            {review.photos.map((photo, i) => (
+                              <img
+                                key={i}
+                                src={photo.url}
+                                alt={`Review photo ${i + 1}`}
+                                className="vd-review-thumb"
+                                onClick={() => setReviewLightbox({ open: true, photos: review.photos, index: i })}
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -846,68 +917,160 @@ const VendorDetails = () => {
               <p className="vd-modal-pkg-label">Booking Request</p>
               <h2 className="vd-modal-title">{selectedPackage?.name}</h2>
               {selectedPackage?.price && (
-                <span className="vd-modal-price">Rs. {selectedPackage.price.toLocaleString()}</span>
+                <span className="vd-modal-price">
+                  Rs. {(['makeup_artist', 'mehndi_artist'].includes(vendor?.category) && Number(bookingData.numberOfPeople) > 1
+                    ? (selectedPackage.price * Number(bookingData.numberOfPeople)).toLocaleString()
+                    : selectedPackage.price.toLocaleString()
+                  )}
+                  {['makeup_artist', 'mehndi_artist'].includes(vendor?.category) && Number(bookingData.numberOfPeople) > 1 && (
+                    <span style={{ fontSize: '0.75em', opacity: 0.7, marginLeft: 6 }}>
+                      ({bookingData.numberOfPeople} × Rs. {selectedPackage.price.toLocaleString()})
+                    </span>
+                  )}
+                </span>
               )}
               <button className="vd-modal-close" onClick={handleModalClose}><X size={16} /></button>
             </div>
 
             <div className="vd-modal-body">
-              <form onSubmit={handleBookingSubmit} className="vd-modal-form">
+              {(() => {
+                const fields = vendor ? getBookingFields(vendor.category) : {};
+                return (
+                  <form onSubmit={handleBookingSubmit} className="vd-modal-form">
 
-                <div className="vd-modal-row">
-                  <div className="vd-field">
-                    <label><Calendar size={12} style={{ marginRight: 4 }} />Event Date</label>
-                    <input
-                      type="date"
-                      name="eventDate"
-                      value={bookingData.eventDate}
-                      onChange={handleInputChange}
-                      required
-                      min={new Date().toISOString().split('T')[0]}
-                    />
-                  </div>
-                  <div className="vd-field">
-                    <label><Users size={12} style={{ marginRight: 4 }} />Guest Count</label>
-                    <input
-                      type="number"
-                      name="guestCount"
-                      value={bookingData.guestCount}
-                      onChange={handleInputChange}
-                      placeholder="e.g. 200"
-                      min="1"
-                      required
-                    />
-                  </div>
-                </div>
+                    {/* Row: Date + GuestCount or Date + TimeSlot or Date + Time */}
+                    <div className="vd-modal-row">
+                      {fields.eventDate && (
+                        <div className="vd-field">
+                          <label><Calendar size={12} style={{ marginRight: 4 }} />Event Date {fields.eventDate.required && '*'}</label>
+                          <input
+                            type="date"
+                            name="eventDate"
+                            value={bookingData.eventDate}
+                            onChange={handleInputChange}
+                            required={fields.eventDate.required}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                      )}
 
-                <div className="vd-field">
-                  <label>Event Type</label>
-                  <select name="eventType" value={bookingData.eventType} onChange={handleInputChange} required>
-                    <option value="wedding">Wedding</option>
-                    <option value="engagement">Engagement</option>
-                    <option value="mehndi">Mehndi</option>
-                    <option value="baraat">Baraat</option>
-                    <option value="walima">Walima</option>
-                    <option value="nikkah">Nikkah</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
+                      {fields.guestCount && (
+                        <div className="vd-field">
+                          <label><Users size={12} style={{ marginRight: 4 }} />Guest Count {fields.guestCount.required && '*'}</label>
+                          <input
+                            type="number"
+                            name="guestCount"
+                            value={bookingData.guestCount}
+                            onChange={handleInputChange}
+                            placeholder="e.g. 200"
+                            min="1"
+                            required={fields.guestCount.required}
+                          />
+                        </div>
+                      )}
 
-                <div className="vd-field">
-                  <label>Special Requirements / Notes</label>
-                  <textarea
-                    name="notes"
-                    value={bookingData.notes}
-                    onChange={handleInputChange}
-                    placeholder="Any specific requests or details…"
-                    rows={3}
-                  />
-                </div>
+                      {fields.timeSlot && (
+                        <div className="vd-field">
+                          <label>Morning / Evening {fields.timeSlot.required && '*'}</label>
+                          <select name="timeSlot" value={bookingData.timeSlot} onChange={handleInputChange} required={fields.timeSlot.required}>
+                            <option value="" disabled>Select slot</option>
+                            {TIME_SLOT_OPTIONS.map(o => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
-                <button type="submit" className="vd-form-confirm-btn" disabled={submitting}>
-                  {submitting ? 'Submitting…' : 'Confirm Booking Request'}
-                </button>
-              </form>
+                      {fields.eventTime && (
+                        <div className="vd-field">
+                          <label>Time {fields.eventTime.required && '*'}</label>
+                          <input
+                            type="time"
+                            name="eventTime"
+                            value={bookingData.eventTime}
+                            onChange={handleInputChange}
+                            required={fields.eventTime.required}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Number of people (makeup/mehndi) */}
+                    {fields.numberOfPeople && (
+                      <div className="vd-field">
+                        <label>No. of People {fields.numberOfPeople.required && '*'}</label>
+                        <input
+                          type="number"
+                          name="numberOfPeople"
+                          value={bookingData.numberOfPeople}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 1"
+                          min="1"
+                          required={fields.numberOfPeople.required}
+                        />
+                      </div>
+                    )}
+
+                    {/* Venue type (decorator) */}
+                    {fields.venueType && (
+                      <div className="vd-field">
+                        <label>Venue Type {fields.venueType.required && '*'}</label>
+                        <select name="venueType" value={bookingData.venueType} onChange={handleInputChange} required={fields.venueType.required}>
+                          <option value="" disabled>Select venue type</option>
+                          {VENUE_TYPE_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Venue address (decorator) */}
+                    {fields.eventLocation && (
+                      <div className="vd-field">
+                        <label>Venue Address {fields.eventLocation.required && '*'}</label>
+                        <input
+                          type="text"
+                          name="eventLocation"
+                          value={bookingData.eventLocation}
+                          onChange={handleInputChange}
+                          placeholder="Enter venue address"
+                          required={fields.eventLocation.required}
+                        />
+                      </div>
+                    )}
+
+                    {/* Event Type */}
+                    {fields.eventType && (
+                      <div className="vd-field">
+                        <label>Event Type {fields.eventType.required && '*'}</label>
+                        <select name="eventType" value={bookingData.eventType} onChange={handleInputChange} required={fields.eventType.required}>
+                          {EVENT_TYPE_OPTIONS.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Notes */}
+                    {fields.notes !== undefined && (
+                      <div className="vd-field">
+                        <label>Special Details / Notes</label>
+                        <textarea
+                          name="notes"
+                          value={bookingData.notes}
+                          onChange={handleInputChange}
+                          placeholder="Any specific requests or details…"
+                          rows={3}
+                        />
+                      </div>
+                    )}
+
+                    <button type="submit" className="vd-form-confirm-btn" disabled={submitting}>
+                      {submitting ? 'Submitting…' : 'Confirm Booking Request'}
+                    </button>
+                  </form>
+                );
+              })()}
             </div>
           </div>
         </div>,
@@ -1096,6 +1259,36 @@ const VendorDetails = () => {
         submitting={reportSubmitting}
         submitLabel="Submit Report"
       />
+
+      {/* Review photo lightbox */}
+      {reviewLightbox.open && createPortal(
+        <div className="vd-lightbox-overlay" onClick={() => setReviewLightbox(prev => ({ ...prev, open: false }))}>
+          <div className="vd-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button className="vd-lightbox-close" onClick={() => setReviewLightbox(prev => ({ ...prev, open: false }))}>
+              <X size={22} />
+            </button>
+            <img src={reviewLightbox.photos[reviewLightbox.index]?.url} alt={`Review photo ${reviewLightbox.index + 1}`} className="vd-lightbox-img" />
+            <div className="vd-lightbox-counter">{reviewLightbox.index + 1} / {reviewLightbox.photos.length}</div>
+            {reviewLightbox.photos.length > 1 && (
+              <>
+                <button
+                  className="vd-lightbox-nav vd-lightbox-prev"
+                  onClick={() => setReviewLightbox(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }))}
+                >
+                  <ChevronLeft size={28} />
+                </button>
+                <button
+                  className="vd-lightbox-nav vd-lightbox-next"
+                  onClick={() => setReviewLightbox(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }))}
+                >
+                  <ChevronRight size={28} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

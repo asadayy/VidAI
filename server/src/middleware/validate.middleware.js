@@ -109,7 +109,7 @@ export const validateVendorProfile = (req, res, next) => {
  */
 export const validateBooking = (req, res, next) => {
   const errors = [];
-  const { vendorId, eventDate, eventType } = req.body;
+  const { vendorId, eventDate, eventType, timeSlot, venueType } = req.body;
 
   if (!vendorId) errors.push('Vendor ID is required.');
   if (!eventDate) errors.push('Event date is required.');
@@ -126,6 +126,16 @@ export const validateBooking = (req, res, next) => {
   const validEventTypes = ['wedding', 'engagement', 'mehndi', 'baraat', 'walima', 'nikkah', 'other'];
   if (eventType && !validEventTypes.includes(eventType)) {
     errors.push(`Invalid event type. Must be one of: ${validEventTypes.join(', ')}`);
+  }
+
+  const validTimeSlots = ['morning', 'evening'];
+  if (timeSlot && !validTimeSlots.includes(timeSlot)) {
+    errors.push(`Invalid time slot. Must be one of: ${validTimeSlots.join(', ')}`);
+  }
+
+  const validVenueTypes = ['personal_residence', 'booked_venue'];
+  if (venueType && !validVenueTypes.includes(venueType)) {
+    errors.push(`Invalid venue type. Must be one of: ${validVenueTypes.join(', ')}`);
   }
 
   if (errors.length > 0) {

@@ -54,10 +54,11 @@ function VendorLanding() {
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
-  if (isAuthenticated && hasRole('vendor')) {
-    navigate('/vendor', { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (isAuthenticated && hasRole('vendor')) {
+      navigate('/vendor', { replace: true });
+    }
+  }, [isAuthenticated, hasRole, navigate]);
 
   const closeModals = () => {
     setShowLogin(false);

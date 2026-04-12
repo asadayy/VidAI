@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { vendorAPI } from '../../api/vendors';
 import { reportAPI } from '../../api';
@@ -12,6 +13,9 @@ import {
   CalendarDays,
   BadgeCheck,
   Flag,
+  X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import './VendorReviews.css';
 
@@ -36,6 +40,7 @@ function VendorReviews() {
   const [hasProfile, setHasProfile] = useState(true);
   const [reportingReview, setReportingReview] = useState(null);
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [lightbox, setLightbox] = useState({ open: false, photos: [], index: 0 });
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -194,6 +199,19 @@ function VendorReviews() {
 
                 {review.title && <h3 className="vrev-review-title">{review.title}</h3>}
                 {review.comment && <p className="vrev-comment">{review.comment}</p>}
+                {review.photos && review.photos.length > 0 && (
+                  <div className="vrev-review-photos">
+                    {review.photos.map((photo, i) => (
+                      <img
+                        key={i}
+                        src={photo.url}
+                        alt={`Review photo ${i + 1}`}
+                        className="vrev-review-thumb"
+                        onClick={() => setLightbox({ open: true, photos: review.photos, index: i })}
+                      />
+                    ))}
+                  </div>
+                )}
                 <div className="vrev-card-actions">
                   <button type="button" className="vrev-report-btn" onClick={() => openReportReview(review)}>
                     <Flag size={13} /> Report review
@@ -220,6 +238,35 @@ function VendorReviews() {
         onSubmit={handleSubmitReviewReport}
         submitting={reportSubmitting}
       />
+
+      {lightbox.open && createPortal(
+        <div className="vd-lightbox-overlay" onClick={() => setLightbox(prev => ({ ...prev, open: false }))}>
+          <div className="vd-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <button className="vd-lightbox-close" onClick={() => setLightbox(prev => ({ ...prev, open: false }))}>
+              <X size={22} />
+            </button>
+            <img src={lightbox.photos[lightbox.index]?.url} alt={`Review photo ${lightbox.index + 1}`} className="vd-lightbox-img" />
+            <div className="vd-lightbox-counter">{lightbox.index + 1} / {lightbox.photos.length}</div>
+            {lightbox.photos.length > 1 && (
+              <>
+                <button
+                  className="vd-lightbox-nav vd-lightbox-prev"
+                  onClick={() => setLightbox(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }))}
+                >
+                  <ChevronLeft size={28} />
+                </button>
+                <button
+                  className="vd-lightbox-nav vd-lightbox-next"
+                  onClick={() => setLightbox(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }))}
+                >
+                  <ChevronRight size={28} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -238,7 +238,7 @@
 
 .vd-portfolio-item {
   position: relative;
-  aspect-ratio: 1 / 1.08;
+  aspect-ratio: 1;
   border-radius: 10px;
   overflow: hidden;
   background: #f0ecea;
@@ -247,7 +247,7 @@
 
 .vd-portfolio-media {
   width: 100%;
-  height: 64%;
+  height: 100%;
   object-fit: cover;
   display: block;
   background: #111827;
@@ -280,7 +280,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 64%;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -298,7 +298,7 @@
   position: absolute;
   right: 0.45rem;
   bottom: 0.45rem;
-  z-index: 2;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
@@ -323,9 +323,8 @@
 
 .vd-portfolio-social {
   position: absolute;
-  top: calc(64% + 0.4rem);
-  left: 0.5rem;
-  right: 0.5rem;
+  bottom: 0.45rem;
+  left: 0.45rem;
   z-index: 2;
   display: flex;
   align-items: center;
@@ -1119,6 +1118,168 @@
   font-size: 0.86rem;
 }
 
+/* ── Review photo upload ─── */
+.vd-photo-upload-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.vd-photo-preview {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid #e5e7eb;
+}
+
+.vd-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vd-photo-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.vd-photo-add-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1.5px dashed #d1d5db;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #9ca3af;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.vd-photo-add-btn:hover {
+  border-color: #d7385e;
+  color: #d7385e;
+}
+
+/* ── Review photo thumbnails (in review cards) ─── */
+.vd-review-photos {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.vd-review-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1.5px solid #ede8e4;
+  transition: transform 0.15s, border-color 0.15s;
+}
+
+.vd-review-thumb:hover {
+  transform: scale(1.08);
+  border-color: #d7385e;
+}
+
+/* ── Review photo lightbox ─── */
+.vd-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vd-lightbox-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.vd-lightbox-img {
+  max-width: 90vw;
+  max-height: 82vh;
+  border-radius: 10px;
+  object-fit: contain;
+  display: block;
+}
+
+.vd-lightbox-close {
+  position: absolute;
+  top: -36px;
+  right: 0;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.vd-lightbox-close:hover {
+  opacity: 1;
+}
+
+.vd-lightbox-counter {
+  text-align: center;
+  color: #fff;
+  font-size: 0.82rem;
+  margin-top: 0.6rem;
+  opacity: 0.8;
+}
+
+.vd-lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.vd-lightbox-nav:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.vd-lightbox-prev {
+  left: -54px;
+}
+
+.vd-lightbox-next {
+  right: -54px;
+}
+
 .vd-no-reviews {
   text-align: center;
   color: #9ca3af;
@@ -1268,11 +1429,14 @@
   max-width: 520px;
   max-height: 92vh;
   overflow-y: auto;
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE/Edge */
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
   animation: vdSlideUp 0.3s ease;
 }
+.vd-modal::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
 
 @keyframes vdSlideUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -1438,7 +1602,7 @@
   }
 
   .vd-portfolio-item {
-    aspect-ratio: 1 / 1.12;
+    aspect-ratio: 1;
   }
 
   .vd-portfolio-comment-item {

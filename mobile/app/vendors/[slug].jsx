@@ -19,6 +19,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import * as ImagePicker from 'expo-image-picker';
 import { vendorAPI } from '../../api/vendors.js';
 import { bookingAPI } from '../../api/bookings.js';
 import { reportAPI } from '../../api/reports.js';
@@ -28,6 +29,7 @@ import Loading from '../../components/Loading';
 import Toast from 'react-native-toast-message';
 import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
+import { getBookingFields, EVENT_TYPE_OPTIONS, TIME_SLOT_OPTIONS, VENUE_TYPE_OPTIONS } from '../../utils/bookingFields';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 320;
@@ -116,20 +118,30 @@ export default function VendorDetails() {
     guestCount: '',
     packageId: '',
     notes: '',
+    eventType: 'wedding',
+    timeSlot: '',
+    numberOfPeople: '',
+    venueType: '',
+    eventLocation: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showEventTypePicker, setShowEventTypePicker] = useState(false);
+  const [showTimeSlotPicker, setShowTimeSlotPicker] = useState(false);
+  const [showVenueTypePicker, setShowVenueTypePicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(new Date());
 
   // Reviews
   const [reviews, setReviews] = useState([]);
   const [reviewModal, setReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState({ rating: 5, title: '', comment: '' });
+  const [reviewPhotos, setReviewPhotos] = useState([]);
   const [submittingReview, setSubmittingReview] = useState(false);
 
   // Lightbox
   const [lightbox, setLightbox] = useState({ visible: false, index: 0 });
+  const [reviewLightbox, setReviewLightbox] = useState({ visible: false, photos: [], index: 0 });
 
   // Portfolio social
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -211,23 +223,42 @@ export default function VendorDetails() {
       router.push('/(auth)/login');
       return;
     }
-    if (!bookingData.eventDate || !bookingData.guestCount || !bookingData.packageId) {
+
+    const category = vendor?.category;
+    const fields = getBookingFields(category);
+
+    // Validate required fields dynamically
+    const missing = [];
+    if (!bookingData.packageId) missing.push('Select a package first');
+    for (const [key, cfg] of Object.entries(fields)) {
+      if (cfg.required && !bookingData[key]) missing.push(cfg.label);
+    }
+    if (missing.length > 0) {
       Toast.show({
         type: 'error',
         text1: 'Please fill in all required fields',
-        text2: !bookingData.packageId ? 'Select a package first' : !bookingData.eventDate ? 'Pick an event date' : 'Enter guest count',
+        text2: missing[0],
       });
       return;
     }
+
     setSubmitting(true);
     try {
-      await bookingAPI.create({
+      const payload = {
         vendorId: vendor._id,
         packageId: bookingData.packageId,
         eventDate: bookingData.eventDate,
-        guestCount: parseInt(bookingData.guestCount),
+        eventType: bookingData.eventType,
         notes: bookingData.notes,
-      });
+      };
+      if (bookingData.guestCount) payload.guestCount = parseInt(bookingData.guestCount);
+      if (bookingData.timeSlot) payload.timeSlot = bookingData.timeSlot;
+      if (bookingData.numberOfPeople) payload.numberOfPeople = parseInt(bookingData.numberOfPeople);
+      if (bookingData.venueType) payload.venueType = bookingData.venueType;
+      if (bookingData.eventLocation) payload.eventLocation = bookingData.eventLocation;
+      if (bookingData.eventTime) payload.eventTime = bookingData.eventTime;
+
+      await bookingAPI.create(payload);
       Toast.show({ type: 'success', text1: 'Booking created successfully!' });
       setBookingModal(false);
       router.push('/(tabs)/bookings');
@@ -256,11 +287,13 @@ export default function VendorDetails() {
         rating: reviewData.rating,
         title: reviewData.title,
         comment: reviewData.comment,
+        photos: reviewPhotos,
       });
       Toast.show({ type: 'success', text1: 'Review added successfully!' });
       setReviewModal(false);
       setReviews(prev => [res.data.data.review, ...prev]);
       setReviewData({ rating: 5, title: '', comment: '' });
+      setReviewPhotos([]);
       fetchVendor();
     } catch (error) {
       const message = error.response?.data?.message || 'Failed to submit review';
@@ -790,6 +823,24 @@ export default function VendorDetails() {
             </View>
             {review.title && <Text style={styles.reviewTitle}>{review.title}</Text>}
             <Text style={styles.reviewComment}>{review.comment}</Text>
+            {review.photos?.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.reviewPhotosRow}
+                contentContainerStyle={styles.reviewPhotosContent}
+              >
+                {review.photos.map((photo, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => setReviewLightbox({ visible: true, photos: review.photos, index: idx })}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: photo.url }} style={styles.reviewPhotoThumb} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
           </View>
         ))
       ) : (
@@ -990,7 +1041,15 @@ export default function VendorDetails() {
             <View>
               <Text style={styles.modalTitle}>Create Booking</Text>
               {selectedPkg && (
-                <Text style={styles.modalSubtitle}>{selectedPkg.name} — Rs. {selectedPkg.price?.toLocaleString()}</Text>
+                <Text style={styles.modalSubtitle}>
+                  {selectedPkg.name} — Rs.{' '}
+                  {['makeup_artist', 'mehndi_artist'].includes(vendor?.category) && Number(bookingData.numberOfPeople) > 1
+                    ? (selectedPkg.price * Number(bookingData.numberOfPeople)).toLocaleString()
+                    : selectedPkg.price?.toLocaleString()}
+                  {['makeup_artist', 'mehndi_artist'].includes(vendor?.category) && Number(bookingData.numberOfPeople) > 1
+                    ? ` (${bookingData.numberOfPeople} × Rs. ${selectedPkg.price?.toLocaleString()})`
+                    : ''}
+                </Text>
               )}
             </View>
             <TouchableOpacity
@@ -1002,128 +1061,242 @@ export default function VendorDetails() {
           </View>
 
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            {/* Package selector (if no pkg already selected) */}
-            {!selectedPkg && packages.length > 0 && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalLabel}>Select Package *</Text>
-                {packages.map((pkg) => {
-                  const sel = bookingData.packageId === pkg._id;
-                  return (
-                    <TouchableOpacity
-                      key={pkg._id}
-                      style={[styles.modalPkgOption, sel && styles.modalPkgOptionSel]}
-                      onPress={() => setBookingData(prev => ({ ...prev, packageId: pkg._id }))}
-                    >
-                      <View style={styles.modalPkgRow}>
-                        <Text style={[styles.modalPkgName, sel && { color: theme.colors.primary }]}>{pkg.name}</Text>
-                        <Text style={styles.modalPkgPrice}>Rs. {pkg.price?.toLocaleString()}</Text>
+            {(() => {
+              const category = vendor?.category;
+              const fields = getBookingFields(category);
+              const packages = vendor?.packages?.filter(p => p.isActive !== false) || [];
+
+              return (
+                <>
+                  {/* Package selector */}
+                  {!selectedPkg && packages.length > 0 && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Select Package *</Text>
+                      {packages.map((pkg) => {
+                        const sel = bookingData.packageId === pkg._id;
+                        return (
+                          <TouchableOpacity
+                            key={pkg._id}
+                            style={[styles.modalPkgOption, sel && styles.modalPkgOptionSel]}
+                            onPress={() => setBookingData(prev => ({ ...prev, packageId: pkg._id }))}
+                          >
+                            <View style={styles.modalPkgRow}>
+                              <Text style={[styles.modalPkgName, sel && { color: theme.colors.primary }]}>{pkg.name}</Text>
+                              <Text style={styles.modalPkgPrice}>Rs. {pkg.price?.toLocaleString()}</Text>
+                            </View>
+                            {sel && (
+                              <View style={styles.modalPkgCheck}>
+                                <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+
+                  {/* Date row */}
+                  {fields.eventDate && (
+                    <View style={styles.modalRow}>
+                      <View style={fields.timeSlot || fields.eventTime ? styles.modalCol : { flex: 1 }}>
+                        <Text style={styles.modalLabel}>Event Date *</Text>
+                        <TouchableOpacity
+                          style={styles.modalPickerBtn}
+                          onPress={() => setShowDatePicker(true)}
+                          activeOpacity={0.75}
+                        >
+                          <Ionicons
+                            name="calendar-outline"
+                            size={16}
+                            color={bookingData.eventDate ? theme.colors.primary : '#94a3b8'}
+                          />
+                          <Text style={[styles.modalPickerText, !bookingData.eventDate && styles.modalPickerPlaceholder]}>
+                            {bookingData.eventDate ? fmtDisplayDate(bookingData.eventDate) : 'Pick date'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                      {sel && (
-                        <View style={styles.modalPkgCheck}>
-                          <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />
+
+                      {/* Time slot (morning/evening) for venue, caterer, photographer */}
+                      {fields.timeSlot && (
+                        <View style={styles.modalCol}>
+                          <Text style={styles.modalLabel}>Morning / Evening *</Text>
+                          <TouchableOpacity
+                            style={styles.modalPickerBtn}
+                            onPress={() => setShowTimeSlotPicker(true)}
+                            activeOpacity={0.75}
+                          >
+                            <Ionicons
+                              name="sunny-outline"
+                              size={16}
+                              color={bookingData.timeSlot ? theme.colors.primary : '#94a3b8'}
+                            />
+                            <Text style={[styles.modalPickerText, !bookingData.timeSlot && styles.modalPickerPlaceholder]}>
+                              {bookingData.timeSlot ? TIME_SLOT_OPTIONS.find(o => o.value === bookingData.timeSlot)?.label : 'Select'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
                       )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
 
-            {/* Date & Time */}
-            <View style={styles.modalRow}>
-              <View style={styles.modalCol}>
-                <Text style={styles.modalLabel}>Event Date *</Text>
-                <TouchableOpacity
-                  style={styles.modalPickerBtn}
-                  onPress={() => setShowDatePicker(true)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={16}
-                    color={bookingData.eventDate ? theme.colors.primary : '#94a3b8'}
-                  />
-                  <Text style={[styles.modalPickerText, !bookingData.eventDate && styles.modalPickerPlaceholder]}>
-                    {bookingData.eventDate ? fmtDisplayDate(bookingData.eventDate) : 'Pick date'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.modalCol}>
-                <Text style={styles.modalLabel}>Time</Text>
-                <TouchableOpacity
-                  style={styles.modalPickerBtn}
-                  onPress={() => setShowTimePicker(true)}
-                  activeOpacity={0.75}
-                >
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={bookingData.eventTime ? theme.colors.primary : '#94a3b8'}
-                  />
-                  <Text style={[styles.modalPickerText, !bookingData.eventTime && styles.modalPickerPlaceholder]}>
-                    {bookingData.eventTime || 'Pick time'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+                      {/* Time picker for makeup/mehndi */}
+                      {fields.eventTime && (
+                        <View style={styles.modalCol}>
+                          <Text style={styles.modalLabel}>Time *</Text>
+                          <TouchableOpacity
+                            style={styles.modalPickerBtn}
+                            onPress={() => setShowTimePicker(true)}
+                            activeOpacity={0.75}
+                          >
+                            <Ionicons
+                              name="time-outline"
+                              size={16}
+                              color={bookingData.eventTime ? theme.colors.primary : '#94a3b8'}
+                            />
+                            <Text style={[styles.modalPickerText, !bookingData.eventTime && styles.modalPickerPlaceholder]}>
+                              {bookingData.eventTime || 'Pick time'}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  )}
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={pickerDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                minimumDate={new Date()}
-                onChange={handleDateChange}
-              />
-            )}
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={pickerDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+                      minimumDate={new Date()}
+                      onChange={handleDateChange}
+                    />
+                  )}
 
-            <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Guest Count *</Text>
-              <TextInput
-                style={styles.modalInput}
-                placeholder="e.g. 200"
-                placeholderTextColor="#94a3b8"
-                keyboardType="numeric"
-                value={bookingData.guestCount}
-                onChangeText={(text) => setBookingData(prev => ({ ...prev, guestCount: text }))}
-              />
-            </View>
+                  {/* Guest count for venue, caterer */}
+                  {fields.guestCount && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Guest Count {fields.guestCount.required ? '*' : ''}</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="e.g. 200"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="numeric"
+                        value={bookingData.guestCount}
+                        onChangeText={(text) => setBookingData(prev => ({ ...prev, guestCount: text }))}
+                      />
+                    </View>
+                  )}
 
-            <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>Special Requirements / Notes</Text>
-              <TextInput
-                style={[styles.modalInput, styles.modalTextArea]}
-                placeholder="Any specific requests or details..."
-                placeholderTextColor="#94a3b8"
-                multiline
-                numberOfLines={4}
-                value={bookingData.notes}
-                onChangeText={(text) => setBookingData(prev => ({ ...prev, notes: text }))}
-              />
-            </View>
+                  {/* Number of people for makeup/mehndi */}
+                  {fields.numberOfPeople && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>No. of People *</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="e.g. 1"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="numeric"
+                        value={bookingData.numberOfPeople}
+                        onChangeText={(text) => setBookingData(prev => ({ ...prev, numberOfPeople: text }))}
+                      />
+                    </View>
+                  )}
 
-            <TouchableOpacity
-              style={[styles.confirmBtn, submitting && { opacity: 0.65 }]}
-              onPress={handleBooking}
-              disabled={submitting}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={[theme.colors.primary, theme.colors.primaryDark]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.confirmBtnGradient}
-              >
-                {submitting ? (
-                  <Text style={styles.confirmBtnText}>Submitting...</Text>
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={styles.confirmBtnText}>Confirm Booking</Text>
-                  </>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+                  {/* Venue type for decorator */}
+                  {fields.venueType && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Venue Type *</Text>
+                      <TouchableOpacity
+                        style={styles.modalPickerBtn}
+                        onPress={() => setShowVenueTypePicker(true)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons
+                          name="home-outline"
+                          size={16}
+                          color={bookingData.venueType ? theme.colors.primary : '#94a3b8'}
+                        />
+                        <Text style={[styles.modalPickerText, !bookingData.venueType && styles.modalPickerPlaceholder]}>
+                          {bookingData.venueType ? VENUE_TYPE_OPTIONS.find(o => o.value === bookingData.venueType)?.label : 'Select venue type'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Venue address for decorator */}
+                  {fields.eventLocation && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Venue Address *</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        placeholder="Enter venue address"
+                        placeholderTextColor="#94a3b8"
+                        value={bookingData.eventLocation}
+                        onChangeText={(text) => setBookingData(prev => ({ ...prev, eventLocation: text }))}
+                      />
+                    </View>
+                  )}
+
+                  {/* Event type */}
+                  {fields.eventType && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Event Type *</Text>
+                      <TouchableOpacity
+                        style={styles.modalPickerBtn}
+                        onPress={() => setShowEventTypePicker(true)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons
+                          name="ribbon-outline"
+                          size={16}
+                          color={bookingData.eventType ? theme.colors.primary : '#94a3b8'}
+                        />
+                        <Text style={[styles.modalPickerText, !bookingData.eventType && styles.modalPickerPlaceholder]}>
+                          {bookingData.eventType ? EVENT_TYPE_OPTIONS.find(o => o.value === bookingData.eventType)?.label : 'Select event type'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {/* Notes */}
+                  {fields.notes !== undefined && (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>Special Details / Notes</Text>
+                      <TextInput
+                        style={[styles.modalInput, styles.modalTextArea]}
+                        placeholder="Any specific requests or details..."
+                        placeholderTextColor="#94a3b8"
+                        multiline
+                        numberOfLines={4}
+                        value={bookingData.notes}
+                        onChangeText={(text) => setBookingData(prev => ({ ...prev, notes: text }))}
+                      />
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.confirmBtn, submitting && { opacity: 0.65 }]}
+                    onPress={handleBooking}
+                    disabled={submitting}
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={[theme.colors.primary, theme.colors.primaryDark]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.confirmBtnGradient}
+                    >
+                      {submitting ? (
+                        <Text style={styles.confirmBtnText}>Submitting...</Text>
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                          <Text style={styles.confirmBtnText}>Confirm Booking</Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              );
+            })()}
           </ScrollView>
         </View>
       </Modal>
@@ -1166,6 +1339,144 @@ export default function VendorDetails() {
                     }}
                   >
                     <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{item}</Text>
+                    {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Time Slot Picker (Morning / Evening) ──────── */}
+      <Modal
+        visible={showTimeSlotPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTimeSlotPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowTimeSlotPicker(false)}
+        >
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheetHandleWrap}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Morning / Evening</Text>
+              <TouchableOpacity onPress={() => setShowTimeSlotPicker(false)}>
+                <Ionicons name="close" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={TIME_SLOT_OPTIONS}
+              keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const sel = bookingData.timeSlot === item.value;
+                return (
+                  <TouchableOpacity
+                    style={[styles.timeOption, sel && styles.timeOptionSel]}
+                    onPress={() => {
+                      setBookingData(prev => ({ ...prev, timeSlot: item.value }));
+                      setShowTimeSlotPicker(false);
+                    }}
+                  >
+                    <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{item.label}</Text>
+                    {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Event Type Picker ─────────────────────────── */}
+      <Modal
+        visible={showEventTypePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEventTypePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowEventTypePicker(false)}
+        >
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheetHandleWrap}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Event Type</Text>
+              <TouchableOpacity onPress={() => setShowEventTypePicker(false)}>
+                <Ionicons name="close" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={EVENT_TYPE_OPTIONS}
+              keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const sel = bookingData.eventType === item.value;
+                return (
+                  <TouchableOpacity
+                    style={[styles.timeOption, sel && styles.timeOptionSel]}
+                    onPress={() => {
+                      setBookingData(prev => ({ ...prev, eventType: item.value }));
+                      setShowEventTypePicker(false);
+                    }}
+                  >
+                    <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{item.label}</Text>
+                    {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Venue Type Picker ─────────────────────────── */}
+      <Modal
+        visible={showVenueTypePicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowVenueTypePicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowVenueTypePicker(false)}
+        >
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheetHandleWrap}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Venue Type</Text>
+              <TouchableOpacity onPress={() => setShowVenueTypePicker(false)}>
+                <Ionicons name="close" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={VENUE_TYPE_OPTIONS}
+              keyExtractor={(item) => item.value}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const sel = bookingData.venueType === item.value;
+                return (
+                  <TouchableOpacity
+                    style={[styles.timeOption, sel && styles.timeOptionSel]}
+                    onPress={() => {
+                      setBookingData(prev => ({ ...prev, venueType: item.value }));
+                      setShowVenueTypePicker(false);
+                    }}
+                  >
+                    <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{item.label}</Text>
                     {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
                   </TouchableOpacity>
                 );
@@ -1241,6 +1552,48 @@ export default function VendorDetails() {
                 value={reviewData.comment}
                 onChangeText={(text) => setReviewData(prev => ({ ...prev, comment: text }))}
               />
+            </View>
+
+            {/* Photo picker */}
+            <View style={styles.modalSection}>
+              <Text style={styles.modalLabel}>Photos (optional, max 5)</Text>
+              <View style={styles.reviewPhotoPickerRow}>
+                {reviewPhotos.map((photo, idx) => (
+                  <View key={idx} style={styles.reviewPickerThumbWrap}>
+                    <Image source={{ uri: photo.uri }} style={styles.reviewPickerThumb} />
+                    <TouchableOpacity
+                      style={styles.reviewPickerRemove}
+                      onPress={() => setReviewPhotos(prev => prev.filter((_, i) => i !== idx))}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {reviewPhotos.length < 5 && (
+                  <TouchableOpacity
+                    style={styles.reviewPickerAdd}
+                    onPress={async () => {
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ['images'],
+                        allowsMultipleSelection: true,
+                        selectionLimit: 5 - reviewPhotos.length,
+                        quality: 0.8,
+                      });
+                      if (!result.canceled) {
+                        const newPhotos = result.assets.map(a => ({
+                          uri: a.uri,
+                          type: a.mimeType || 'image/jpeg',
+                          fileName: a.fileName || `review_${Date.now()}.jpg`,
+                        }));
+                        setReviewPhotos(prev => [...prev, ...newPhotos].slice(0, 5));
+                      }
+                    }}
+                  >
+                    <Ionicons name="camera-outline" size={24} color={theme.colors.textSecondary} />
+                    <Text style={styles.reviewPickerAddText}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             <TouchableOpacity
@@ -1548,6 +1901,60 @@ export default function VendorDetails() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Review Photo Lightbox ────────────────────── */}
+      <Modal
+        visible={reviewLightbox.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReviewLightbox(prev => ({ ...prev, visible: false }))}
+      >
+        <View style={styles.lightboxOverlay}>
+          <TouchableOpacity
+            style={styles.lightboxClose}
+            onPress={() => setReviewLightbox(prev => ({ ...prev, visible: false }))}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+
+          {reviewLightbox.photos.length > 0 && (
+            <Image
+              source={{ uri: reviewLightbox.photos[reviewLightbox.index]?.url }}
+              style={styles.lightboxImage}
+              resizeMode="contain"
+            />
+          )}
+
+          {reviewLightbox.photos.length > 1 && (
+            <>
+              <TouchableOpacity
+                style={[styles.lightboxNav, styles.lightboxNavLeft]}
+                onPress={() => setReviewLightbox(lb => ({
+                  ...lb,
+                  index: (lb.index - 1 + lb.photos.length) % lb.photos.length,
+                }))}
+              >
+                <Ionicons name="chevron-back" size={28} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.lightboxNav, styles.lightboxNavRight]}
+                onPress={() => setReviewLightbox(lb => ({
+                  ...lb,
+                  index: (lb.index + 1) % lb.photos.length,
+                }))}
+              >
+                <Ionicons name="chevron-forward" size={28} color="#fff" />
+              </TouchableOpacity>
+            </>
+          )}
+
+          <View style={styles.lightboxCaption}>
+            <Text style={styles.lightboxCaptionText}>
+              {reviewLightbox.index + 1} / {reviewLightbox.photos.length}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1846,7 +2253,7 @@ const styles = StyleSheet.create({
   },
   portfolioReportBtn: {
     position: 'absolute',
-    top: 6,
+    bottom: 6,
     right: 6,
     width: 24,
     height: 24,
@@ -2091,6 +2498,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     color: theme.colors.textSecondary,
+  },
+  reviewPhotosRow: {
+    marginTop: 10,
+  },
+  reviewPhotosContent: {
+    gap: 8,
+  },
+  reviewPhotoThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+  },
+  reviewPhotoPickerRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  reviewPickerThumbWrap: {
+    position: 'relative',
+  },
+  reviewPickerThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+  },
+  reviewPickerRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+  },
+  reviewPickerAdd: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+  },
+  reviewPickerAddText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
 
   // ── Empty State ────────────────────────

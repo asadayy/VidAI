@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -17,6 +18,7 @@ import VendorProfile from './pages/vendor/VendorProfile';
 import VendorPortfolio from './pages/vendor/VendorPortfolio';
 import VendorOnboarding from './pages/vendor/VendorOnboarding';
 import VendorMessages from './pages/vendor/VendorMessages';
+import VendorAnalytics from './pages/vendor/VendorAnalytics';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminVendors from './pages/admin/AdminVendors';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -35,10 +37,23 @@ import InvitationGenerator from './pages/user/InvitationGenerator';
 import Messages from './pages/user/Messages';
 import Profile from './pages/user/Profile';
 import Onboarding from './pages/user/Onboarding';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,      // 2 min — data considered fresh
+      gcTime: 10 * 60 * 1000,         // 10 min — keep inactive cache
+      refetchOnWindowFocus: true,      // refresh when user returns to tab
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
         <SocketProvider>
@@ -61,9 +76,11 @@ function App() {
           <Route
             path="/admin"
             element={
-              <AdminProtectedRoute>
-                <AdminLayout />
-              </AdminProtectedRoute>
+              <ErrorBoundary>
+                <AdminProtectedRoute>
+                  <AdminLayout />
+                </AdminProtectedRoute>
+              </ErrorBoundary>
             }
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -77,7 +94,7 @@ function App() {
           </Route>
 
           {/* ── User portal (guest-accessible parts) ── */}
-          <Route path="/user" element={<UserLayout />}>
+          <Route path="/user" element={<ErrorBoundary><UserLayout /></ErrorBoundary>}>
             <Route path="vendors" element={<VendorSearch />} />
             <Route path="vendors/:slug" element={<VendorDetails />} />
             <Route path="onboarding" element={<Onboarding />} />
@@ -104,9 +121,11 @@ function App() {
           <Route
             path="/vendor/onboarding"
             element={
-              <ProtectedRoute roles="vendor" redirectTo="/">
-                <VendorOnboarding />
-              </ProtectedRoute>
+              <ErrorBoundary>
+                <ProtectedRoute roles="vendor" redirectTo="/">
+                  <VendorOnboarding />
+                </ProtectedRoute>
+              </ErrorBoundary>
             }
           />
 
@@ -114,14 +133,17 @@ function App() {
           <Route
             path="/vendor"
             element={
-              <ProtectedRoute roles="vendor" redirectTo="/">
-                <VendorLayout />
-              </ProtectedRoute>
+              <ErrorBoundary>
+                <ProtectedRoute roles="vendor" redirectTo="/">
+                  <VendorLayout />
+                </ProtectedRoute>
+              </ErrorBoundary>
             }
           >
             <Route index element={<VendorDashboard />} />
             <Route path="services" element={<VendorServices />} />
             <Route path="bookings" element={<VendorBookings />} />
+            <Route path="analytics" element={<VendorAnalytics />} />
             <Route path="portfolio" element={<VendorPortfolio />} />
             <Route path="reviews" element={<VendorReviews />} />
             <Route path="messages" element={<VendorMessages />} />
@@ -134,6 +156,7 @@ function App() {
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

@@ -81,12 +81,9 @@ const getApiBaseUrl = () => {
       return process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
     }
   } else {
-    // Web - use Vite env, ngrok for deployed builds, localhost for local dev
+    // Web - use Vite env, fallback to localhost
     if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-    return isLocalhost
-      ? 'http://localhost:5000/api/v1'
-      : 'https://cyetic-feetless-bridgette.ngrok-free.dev/api/v1';
+    return 'http://localhost:5000/api/v1';
   }
 };
 

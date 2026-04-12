@@ -34,8 +34,10 @@ export function SocketProvider({ children }) {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 30000,
+      randomizationFactor: 0.3,
     });
 
     newSocket.on('connect', () => setIsConnected(true));

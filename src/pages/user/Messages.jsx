@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { chatAPI } from '../../api';
+import { useConversations } from '../../hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import ConversationList from '../../components/chat/ConversationList';
 import ChatWindow from '../../components/chat/ChatWindow';
 import ContactInfoPanel from '../../components/chat/ContactInfoPanel';
@@ -11,26 +12,22 @@ import './Messages.css';
 export default function Messages() {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: initialConversations, isLoading: loading } = useConversations();
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  // Load conversations
-  const loadConversations = useCallback(async () => {
-    try {
-      const { data } = await chatAPI.getConversations();
-      setConversations(data.data);
-    } catch (err) {
-      console.error('Failed to load conversations:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  // Sync query data into local state (for socket-driven updates)
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (initialConversations) {
+      setConversations(initialConversations);
+    }
+  }, [initialConversations]);
+
+  const loadConversations = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  }, [queryClient]);
 
   // Handle ?conversation=xxx param
   useEffect(() => {

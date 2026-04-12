@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Plus, Trash2, Edit2, Sparkles, Brain, X,
   Wallet, TrendingUp, TrendingDown, Target,
@@ -75,6 +76,37 @@ function DeleteModal({ itemName, onConfirm, onCancel }) {
           <button className="bp-btn bp-btn--ghost" onClick={onCancel}>Cancel</button>
           <button className="bp-btn bp-btn--danger" onClick={onConfirm}>Delete</button>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── Edit Total Budget Modal ── */
+function EditBudgetModal({ amount, setAmount, onSave, onClose }) {
+  return createPortal(
+    <div className="bp-overlay" onClick={onClose}>
+      <div className="bp-modal bp-modal--delete" onClick={(e) => e.stopPropagation()}>
+        <div className="bp-modal-icon" style={{ background: '#fdf2f8', color: '#D7385E' }}>
+          <Wallet size={26} />
+        </div>
+        <h3 className="bp-modal-title">Edit Total Budget</h3>
+        <p className="bp-modal-sub">Update your overall wedding budget amount.</p>
+        <form onSubmit={onSave}>
+          <input
+            type="number"
+            className="bp-input"
+            placeholder="Enter new amount (PKR)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            min="1"
+            autoFocus
+          />
+          <div className="bp-modal-row" style={{ marginTop: '1rem' }}>
+            <button type="button" className="bp-btn bp-btn--ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="bp-btn bp-btn--rose">Update</button>
+          </div>
+        </form>
       </div>
     </div>,
     document.body
@@ -304,6 +336,7 @@ function EventManagerModal({ events, totalBudget, onAddEvent, onDeleteEvent, onS
 const BudgetPlanner = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [budget, setBudget] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
@@ -326,6 +359,8 @@ const BudgetPlanner = () => {
   const [events, setEvents] = useState([]);
   const [activeEventId, setActiveEventId] = useState(null); // null = "All"
   const [showEventManager, setShowEventManager] = useState(false);
+  const [editBudgetOpen, setEditBudgetOpen] = useState(false);
+  const [editBudgetAmount, setEditBudgetAmount] = useState('');
   const [eventSaving, setEventSaving] = useState(false);
 
   useEffect(() => {
@@ -409,6 +444,8 @@ const BudgetPlanner = () => {
       const response = await budgetAPI.getMine();
       const budgetData = response.data?.data?.budget || response.data?.budget;
       setBudget(budgetData);
+      // Keep dashboard summary cache in sync
+      queryClient.invalidateQueries({ queryKey: ['budget', 'summary'] });
     } catch (error) {
       if (error.response?.status !== 404) toast.error('Failed to load budget');
       setBudget(null);
@@ -429,6 +466,22 @@ const BudgetPlanner = () => {
     } catch {
       toast.error('Failed to create budget');
       setLoading(false);
+    }
+  };
+
+  const handleUpdateBudget = async (e) => {
+    e.preventDefault();
+    if (!editBudgetAmount || isNaN(editBudgetAmount) || Number(editBudgetAmount) <= 0) {
+      toast.error('Please enter a valid amount'); return;
+    }
+    try {
+      await budgetAPI.create({ totalBudget: Number(editBudgetAmount) });
+      toast.success('Budget updated!');
+      setEditBudgetOpen(false);
+      setEditBudgetAmount('');
+      await fetchBudget();
+    } catch {
+      toast.error('Failed to update budget');
     }
   };
 
@@ -680,6 +733,13 @@ const BudgetPlanner = () => {
             <span className="bp-stat-label">Total Budget</span>
             <span className="bp-stat-value">{fmtCurrency(activeBudgetTotal)}</span>
           </div>
+          <button
+            className="bp-stat-edit"
+            title="Edit total budget"
+            onClick={() => { setEditBudgetAmount(String(budget?.totalBudget || '')); setEditBudgetOpen(true); }}
+          >
+            <Edit2 size={14} />
+          </button>
         </div>
         <div className="bp-stat bp-stat--violet">
           <div className="bp-stat-icon"><Target size={20} /></div>
@@ -988,6 +1048,14 @@ const BudgetPlanner = () => {
           itemName={deleteTarget.category}
           onConfirm={handleDeleteItem}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+      {editBudgetOpen && (
+        <EditBudgetModal
+          amount={editBudgetAmount}
+          setAmount={setEditBudgetAmount}
+          onSave={handleUpdateBudget}
+          onClose={() => { setEditBudgetOpen(false); setEditBudgetAmount(''); }}
         />
       )}
       {showEventManager && (

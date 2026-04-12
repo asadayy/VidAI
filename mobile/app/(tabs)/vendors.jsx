@@ -23,7 +23,7 @@ import Toast from 'react-native-toast-message';
 
 // -- constants --
 
-const CITIES = ['Lahore', 'Islamabad', 'Rawalpindi', 'Karachi'];
+const CITIES = ['Islamabad', 'Rawalpindi'];
 
 const CATEGORIES = [
   { value: '',              label: 'All' },
@@ -89,8 +89,10 @@ export default function Vendors() {
   const [draftCities, setDraftCities] = useState([]);
   const [draftRanges, setDraftRanges] = useState([]);
   const [draftSort, setDraftSort] = useState('');
+  const [customMinAmount, setCustomMinAmount] = useState('');
+  const [draftCustomMin, setDraftCustomMin] = useState('');
 
-  const activeFilterCount = selectedCities.length + selectedRanges.length + (sortBy ? 1 : 0);
+  const activeFilterCount = selectedCities.length + selectedRanges.length + (customMinAmount ? 1 : 0) + (sortBy ? 1 : 0);
 
   // -- data fetching --
   const fetchVendors = useCallback(async (opts = {}) => {
@@ -117,6 +119,8 @@ export default function Vendors() {
         params.minPrice = sorted[0].min;
         const last = sorted[sorted.length - 1];
         if (last.max) params.maxPrice = last.max;
+      } else if (opts.customMin && Number(opts.customMin) > 0) {
+        params.minPrice = Number(opts.customMin);
       }
 
       const response = search.trim()
@@ -180,6 +184,7 @@ export default function Vendors() {
     setDraftCities([...selectedCities]);
     setDraftRanges([...selectedRanges]);
     setDraftSort(sortBy);
+    setDraftCustomMin(customMinAmount);
     setFilterVisible(true);
   };
 
@@ -191,6 +196,7 @@ export default function Vendors() {
 
   const toggleDraftRange = (r) => {
     const key = rangeKey(r);
+    setDraftCustomMin('');
     setDraftRanges(prev =>
       prev.some(x => rangeKey(x) === key)
         ? prev.filter(x => rangeKey(x) !== key)
@@ -201,12 +207,14 @@ export default function Vendors() {
   const applyFilters = () => {
     setSelectedCities(draftCities);
     setSelectedRanges(draftRanges);
+    setCustomMinAmount(draftCustomMin);
     setSortBy(draftSort);
     setFilterVisible(false);
     fetchVendors({
       pageNum: 1,
       cities: draftCities,
       ranges: draftRanges,
+      customMin: draftCustomMin,
       sort: draftSort,
     });
   };
@@ -214,12 +222,14 @@ export default function Vendors() {
   const clearFilters = () => {
     setDraftCities([]);
     setDraftRanges([]);
+    setDraftCustomMin('');
     setDraftSort('');
     setSelectedCities([]);
     setSelectedRanges([]);
+    setCustomMinAmount('');
     setSortBy('');
     setFilterVisible(false);
-    fetchVendors({ pageNum: 1, cities: [], ranges: [], sort: '' });
+    fetchVendors({ pageNum: 1, cities: [], ranges: [], customMin: '', sort: '' });
   };
 
   // -- card renderers --
@@ -530,6 +540,19 @@ export default function Vendors() {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            {/* custom minimum amount */}
+            <Text style={[styles.modalSectionTitle, { fontSize: 12, marginTop: 4 }]}>Custom minimum</Text>
+            <View style={styles.customAmountRow}>
+              <TextInput
+                style={styles.customAmountInput}
+                placeholder="e.g. 50000"
+                placeholderTextColor="#94a3b8"
+                keyboardType="numeric"
+                value={draftCustomMin}
+                onChangeText={(val) => { setDraftCustomMin(val); if (val) setDraftRanges([]); }}
+              />
             </View>
 
             {/* sort section */}
@@ -974,6 +997,23 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: { color: '#fff' },
   budgetList: { gap: 10 },
+  customAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  customAmountInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
+  },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',

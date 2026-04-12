@@ -88,6 +88,20 @@ export const getMyEvents = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route   GET /api/v1/events/upcoming-count
+ * @desc    Count user's events with a future date
+ * @access  Private (User)
+ */
+export const getUpcomingCount = asyncHandler(async (req, res) => {
+  const count = await WeddingEvent.countDocuments({
+    user: req.user._id,
+    eventDate: { $gt: new Date() },
+  });
+
+  res.status(200).json({ success: true, data: { count } });
+});
+
+/**
  * @route   GET /api/v1/events/:id
  * @desc    Get single event details
  * @access  Private (User)

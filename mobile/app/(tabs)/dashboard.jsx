@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { bookingAPI } from '../../api/bookings.js';
 import { budgetAPI } from '../../api/budget.js';
+import { eventAPI } from '../../api/events.js';
 import Loading from '../../components/Loading';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,17 +106,20 @@ export default function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [bookings, setBookings]     = useState([]);
   const [budget, setBudget]         = useState(null);
+  const [upcomingCount, setUpcomingCount] = useState(0);
 
   const fetchData = async () => {
     try {
-      const [bkRes, bdRes] = await Promise.all([
+      const [bkRes, bdRes, ucRes] = await Promise.all([
         bookingAPI
           .getMyBookings({ limit: 4 })
           .catch(() => ({ data: { data: { bookings: [] } } })),
-        budgetAPI.getMine().catch(() => ({ data: null })),
+        budgetAPI.getSummary().catch(() => ({ data: null })),
+        eventAPI.getUpcomingCount().catch(() => ({ data: { data: { count: 0 } } })),
       ]);
       setBookings(bkRes.data.data.bookings || []);
-      setBudget(bdRes.data?.data?.budget || bdRes.data || null);
+      setBudget(bdRes.data?.data?.summary || bdRes.data || null);
+      setUpcomingCount(ucRes.data?.data?.count || 0);
     } catch (err) {
       console.error('Dashboard fetch error:', err);
     } finally {
@@ -132,12 +136,9 @@ export default function Dashboard() {
 
   /* derived */
   const totalBudget   = budget?.totalBudget || 0;
-  const totalSpent    = budget?.items?.reduce((s, i) => s + (i.spentAmount || 0), 0) || 0;
+  const totalSpent    = budget?.totalSpent || 0;
   const remaining     = totalBudget - totalSpent;
   const spentPct      = totalBudget ? Math.min((totalSpent / totalBudget) * 100, 100) : 0;
-  const upcomingCount = bookings.filter(
-    (b) => b.status === 'approved' && new Date(b.eventDate) > new Date()
-  ).length;
   const firstName  = user?.name?.split(' ')[0] || 'there';
   const hour       = new Date().getHours();
   const greeting   = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';

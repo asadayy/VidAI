@@ -135,13 +135,19 @@ Design the card as a premium, print-ready wedding invitation with a portrait asp
 
         from app.services.prompts import CHAT_SYSTEM_PROMPT
 
-        # Build system prompt
+        # Build system prompt with vendor context
         sys_prompt = CHAT_SYSTEM_PROMPT
         if vendors_context:
             sys_prompt += (
                 "\n\nHere are some vendors from our database that you can recommend if relevant "
                 f"(use them instead of making up fictional ones):\n{vendors_context}"
             )
+
+        # Create a chat-specific model with system_instruction so it's enforced on every turn
+        chat_model = genai.GenerativeModel(
+            settings.GEMINI_MODEL,
+            system_instruction=sys_prompt,
+        )
 
         # Build Gemini chat history (max last 10 messages)
         history = []
@@ -152,12 +158,11 @@ Design the card as a premium, print-ready wedding invitation with a portrait asp
             gemini_role = "model" if role == "assistant" else "user"
             history.append({"role": gemini_role, "parts": [{"text": content}]})
 
-        chat_session = self.model.start_chat(history=history)
-        full_message = f"{sys_prompt}\n\n{user_message}" if not history else user_message
+        chat_session = chat_model.start_chat(history=history)
 
         # send_message is synchronous — run in a thread pool to avoid blocking the async event loop
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, chat_session.send_message, full_message)
+        response = await loop.run_in_executor(None, chat_session.send_message, user_message)
         return response.text
 
     async def chat_stream(self, user_message: str, conversation_history: list[dict], vendors_context: str = ""):
@@ -176,6 +181,12 @@ Design the card as a premium, print-ready wedding invitation with a portrait asp
                 f"(use them instead of making up fictional ones):\n{vendors_context}"
             )
 
+        # Create a chat-specific model with system_instruction so it's enforced on every turn
+        chat_model = genai.GenerativeModel(
+            settings.GEMINI_MODEL,
+            system_instruction=sys_prompt,
+        )
+
         history = []
         for msg in conversation_history[-10:]:
             role = msg.get("role", "user")
@@ -183,12 +194,11 @@ Design the card as a premium, print-ready wedding invitation with a portrait asp
             gemini_role = "model" if role == "assistant" else "user"
             history.append({"role": gemini_role, "parts": [{"text": content}]})
 
-        chat_session = self.model.start_chat(history=history)
-        full_message = f"{sys_prompt}\n\n{user_message}" if not history else user_message
+        chat_session = chat_model.start_chat(history=history)
 
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
-            None, lambda: chat_session.send_message(full_message, stream=True)
+            None, lambda: chat_session.send_message(user_message, stream=True)
         )
 
         # Iterate synchronous Gemini stream in a thread to avoid blocking the event loop

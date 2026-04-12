@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setNavigation } from '../api/client';
 import AppSplash from '../components/AppSplash';
 import AppIntro, { INTRO_SEEN_KEY } from '../components/AppIntro';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { registerForPushNotifications } from '../utils/notifications';
 
 function NavigationSetup() {
@@ -94,11 +95,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <SocketProvider>
-            <InnerLayout />
-          </SocketProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <SocketProvider>
+              <InnerLayout />
+            </SocketProvider>
+          </AuthProvider>
+        </ErrorBoundary>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
