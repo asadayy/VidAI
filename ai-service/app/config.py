@@ -34,7 +34,7 @@ class Settings:
         origin.strip()
         for origin in os.getenv(
             "CORS_ORIGINS",
-            "http://localhost:3000,http://localhost:5000,http://localhost:5173,https://stick-hungrily-jaundice.ngrok-free.dev",
+            "http://localhost:3000,http://localhost:5000,http://localhost:5173,https://stick-hungrily-jaundice.ngrok-free.dev,https://www.vidai.live",
         ).split(",")
     ]
 
