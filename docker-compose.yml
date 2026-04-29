@@ -86,7 +86,7 @@ services:
       - "4040:4040"
     env_file:
       - ./server/.env
-    command: http backend:5000 --domain cyetic-feetless-bridgette.ngrok-free.dev
+    command: http backend:5000 --domain stick-hungrily-jaundice.ngrok-free.dev
     depends_on:
       - backend
     networks:

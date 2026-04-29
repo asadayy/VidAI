@@ -105,7 +105,7 @@ The mobile app is built with **React Native (Expo)** and requires the backend to
 3.  Locate the `"extra"` section and update `"apiUrl"`:
     ```json
     "extra": {
-      "apiUrl": "https://your-ngrok-url.ngrok-free.dev/api/v1"
+            "apiUrl": "https://stick-hungrily-jaundice.ngrok-free.dev/api/v1"
     }
     ```
     *Note: If you restart ngrok, you must update this URL and restart the Expo packager.*
