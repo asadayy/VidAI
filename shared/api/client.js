@@ -82,8 +82,14 @@ const getApiBaseUrl = () => {
     }
   } else {
     // Web - use Vite env, fallback to localhost
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    return 'http://localhost:5000/api/v1';
+    let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+    
+    // Auto-append /api/v1 if it was forgotten in the environment variable
+    if (url && !url.endsWith('/api/v1') && !url.endsWith('/api/v1/')) {
+      url = url.replace(/\/+$/, '') + '/api/v1';
+    }
+    
+    return url;
   }
 };
 
