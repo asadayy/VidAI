@@ -145,7 +145,9 @@ const AuthModal = ({ isOpen, onClose, initialMode = 'login' }) => {
 
         {/* Decorative header */}
         <div className="am-header">
-          <div className="am-rings"><IconRings /></div>
+          <div className="am-rings" style={{ marginBottom: '32px', marginTop: '16px' }}>
+            <img src="/Logos/web app logo without text.png" alt="VidAI Logo" style={{ height: '48px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'center' }} />
+          </div>
           <h2 className="am-title">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
           <p className="am-subtitle">
             {isLogin ? 'Sign in to your wedding planner' : 'Start planning your dream wedding'}

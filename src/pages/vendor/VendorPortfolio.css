@@ -11,7 +11,7 @@
 /* Reusing the same hero style as VendorProfile if possible */
 .vp-hero {
   position: relative;
-  background: linear-gradient(135deg, #f7f7ff 0%, #f4f7ff 55%, #f7fbff 100%);
+  background: linear-gradient(135deg, #fff 0%, #fdf2f8 100%);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 1.2rem;
   padding: 2.5rem 3rem;
@@ -19,7 +19,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 10px 28px -20px rgba(15, 23, 42, 0.45);
+  box-shadow: 0 4px 20px -8px rgba(215, 56, 94, 0.15);
 }
 
 .vp-hero-glow {
@@ -28,7 +28,7 @@
   left: -10%;
   width: 15rem;
   height: 15rem;
-  background: var(--primary-color, #4f46e5);
+  background: #D7385E;
   filter: blur(80px);
   opacity: 0.15;
   border-radius: 50%;
@@ -49,11 +49,11 @@
   height: 4rem;
   border-radius: 1rem;
   background: #ffffff;
-  color: var(--primary-color, #4f46e5);
+  color: #D7385E;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 24px -16px rgba(79, 70, 229, 0.7);
+  box-shadow: 0 8px 24px -12px rgba(215, 56, 94, 0.6);
 }
 
 .vp-title {
@@ -93,8 +93,8 @@
 
 .vp-summary-card:hover {
   transform: translateY(-1px);
-  border-color: #c7d2fe;
-  box-shadow: 0 8px 18px -16px rgba(30, 41, 59, 0.5);
+  border-color: #fbcfe8;
+  box-shadow: 0 8px 18px -16px rgba(215, 56, 94, 0.4);
 }
 
 .vp-summary-card-head {
@@ -108,8 +108,8 @@
   width: 1.55rem;
   height: 1.55rem;
   border-radius: 999px;
-  background: #eef2ff;
-  color: #4f46e5;
+  background: #fdf2f5;
+  color: #D7385E;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -195,7 +195,8 @@
 }
 
 .vp-caption-input:focus {
-  border-color: var(--primary-color, #4f46e5);
+  border-color: #D7385E;
+  box-shadow: 0 0 0 3px rgba(215, 56, 94, 0.1);
 }
 
 .vp-caption-input:disabled {
@@ -210,17 +211,19 @@
   gap: 0.5rem;
   min-height: 46px;
   padding: 0.78rem 1.5rem;
-  background: var(--primary-color, #4f46e5);
+  background: #D7385E;
   color: #fff;
   border: none;
   border-radius: 0.6rem;
   font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
 .vp-upload-btn:hover:not(:disabled) {
-  opacity: 0.94;
+  background: #B82A4D;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(215, 56, 94, 0.2);
 }
 
 .vp-upload-btn:disabled {
@@ -245,7 +248,7 @@
 
 .vp-progress-fill {
   height: 100%;
-  background: var(--primary-color, #4f46e5);
+  background: #D7385E;
   transition: width 0.3s ease;
 }
 
@@ -634,7 +637,7 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: var(--primary-color, #4f46e5);
+  background: #D7385E;
   color: #fff;
   display: flex;
   align-items: center;
@@ -682,7 +685,7 @@
 .vp-comments-toggle {
   border: none;
   background: transparent;
-  color: #4338ca;
+  color: #D7385E;
   font-size: 0.78rem;
   font-weight: 700;
   text-align: left;
@@ -691,7 +694,7 @@
 }
 
 .vp-comments-toggle:hover {
-  color: #312e81;
+  color: #B82A4D;
 }
 
 .vp-comments-empty {

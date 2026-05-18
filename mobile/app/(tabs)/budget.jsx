@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -896,7 +896,7 @@ export default function Budget() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 {filteredItems.length > 0 && (
                   <View style={styles.bookedCountBadge}>
-                    <Text style={styles.bookedCountText}>{filteredItems.length}</Text>
+                    <Text style={styles.bookedCountText}>{filteredItems.length} item{filteredItems.length !== 1 && 's'}</Text>
                   </View>
                 )}
                 <TouchableOpacity style={styles.bookedAddBtn} onPress={() => openItemModal()}>
@@ -909,30 +909,79 @@ export default function Budget() {
             {filteredItems.length > 0 ? (
               filteredItems.map(item => {
                 const color = catColor(item.category);
-                const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
+                const spent = item.spentAmount || 0;
+                const allocated = item.allocatedAmount || 0;
+                const overItem = spent > allocated;
+                const itemPct = allocated > 0 ? Math.min(100, (spent / allocated) * 100) : 0;
+
+                // Resolve linked event
+                const linkedEvt = item.weddingEvent
+                  ? events.find(e => e._id === item.weddingEvent || e._id === item.weddingEvent?.toString())
+                  : null;
+                const evtColor = linkedEvt
+                  ? (linkedEvt.color || EVENT_COLORS[linkedEvt.eventType] || '#64748b')
+                  : null;
+
                 return (
-                  <View key={item._id} style={[styles.bookedItem, { borderLeftColor: color }]}>
-                    <View style={[styles.bookedAvatar, { backgroundColor: color }]}>
-                      <Text style={styles.bookedAvatarText}>{catInitial(item.category)}</Text>
-                    </View>
-                    <View style={styles.bookedInfo}>
-                      <Text style={styles.bookedCat}>{item.category}</Text>
-                      {item.notes ? <Text style={styles.bookedNote} numberOfLines={1}>{item.notes}</Text> : null}
-                      <View style={styles.bookedAmounts}>
-                        <Text style={styles.bookedAmtEst}>{fmtCurrency(item.allocatedAmount)}</Text>
-                        <Text style={styles.bookedAmtSep}>{'→'}</Text>
-                        <Text style={[styles.bookedAmtSpent, overItem && styles.bookedAmtOver]}>
-                          {fmtCurrency(item.spentAmount || 0)} spent
-                        </Text>
+                  <View key={item._id} style={styles.item2Card}>
+                    <View style={[styles.item2Stripe, { backgroundColor: color }]} />
+                    <View style={styles.item2Body}>
+                      {/* Top: avatar + info + actions */}
+                      <View style={styles.item2Top}>
+                        <View style={[styles.item2Avatar, { backgroundColor: color + '18' }]}>
+                          <Text style={[styles.item2AvatarText, { color }]}>{catInitial(item.category)}</Text>
+                        </View>
+                        <View style={styles.item2Info}>
+                          <View style={styles.item2TitleRow}>
+                            <Text style={styles.item2Cat}>{item.category}</Text>
+                            {!activeEventId && linkedEvt && (
+                              <View style={[styles.item2EvtBadge, { backgroundColor: evtColor + '18', borderColor: evtColor + '30' }]}>
+                                <View style={[styles.item2EvtDot, { backgroundColor: evtColor }]} />
+                                <Text style={[styles.item2EvtText, { color: evtColor }]}>
+                                  {linkedEvt.title || EVENT_LABELS[linkedEvt.eventType] || linkedEvt.eventType}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          {item.notes ? <Text style={styles.item2Note} numberOfLines={1}>{item.notes}</Text> : null}
+                        </View>
+                        <View style={styles.item2Actions}>
+                          <TouchableOpacity style={styles.bookedBtnEdit} onPress={() => openItemModal(item)}>
+                            <Ionicons name="pencil" size={13} color={theme.colors.primary} />
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.bookedBtnDel} onPress={() => setDeleteTarget(item)}>
+                            <Ionicons name="trash" size={13} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                    </View>
-                    <View style={styles.bookedActions}>
-                      <TouchableOpacity style={styles.bookedBtnEdit} onPress={() => openItemModal(item)}>
-                        <Ionicons name="pencil" size={13} color={theme.colors.primary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.bookedBtnDel} onPress={() => setDeleteTarget(item)}>
-                        <Ionicons name="trash" size={13} color="#ef4444" />
-                      </TouchableOpacity>
+
+                      {/* Amounts row */}
+                      <View style={styles.item2Amounts}>
+                        <View style={styles.item2AmtCol}>
+                          <Text style={styles.item2AmtLabel}>ESTIMATED</Text>
+                          <Text style={styles.item2AmtVal}>{fmtCurrency(allocated)}</Text>
+                        </View>
+                        <View style={styles.item2AmtSep} />
+                        <View style={styles.item2AmtCol}>
+                          <Text style={styles.item2AmtLabel}>SPENT</Text>
+                          <Text style={[styles.item2AmtVal, { color: overItem ? '#dc2626' : '#059669' }]}>{fmtCurrency(spent)}</Text>
+                        </View>
+                        <View style={[styles.item2PctBadge, {
+                          backgroundColor: overItem ? '#fef2f2' : itemPct >= 80 ? '#fffbeb' : '#f0fdf4',
+                        }]}>
+                          <Text style={[styles.item2PctText, {
+                            color: overItem ? '#dc2626' : itemPct >= 80 ? '#d97706' : '#16a34a',
+                          }]}>{itemPct.toFixed(0)}%</Text>
+                        </View>
+                      </View>
+
+                      {/* Progress bar */}
+                      <View style={styles.item2BarTrack}>
+                        <View style={[
+                          styles.item2BarFill,
+                          { width: `${Math.min(itemPct, 100)}%`, backgroundColor: overItem ? '#ef4444' : itemPct >= 80 ? '#f59e0b' : color },
+                        ]} />
+                      </View>
                     </View>
                   </View>
                 );
@@ -972,16 +1021,10 @@ export default function Budget() {
                 value={itemForm.category}
                 onChangeText={v => setItemForm(f => ({ ...f, category: v }))}
               />
-              {events.length > 1 && (
+              {events.length > 0 ? (
                 <View>
-                  <Text style={styles.inputLabel}>Event</Text>
+                  <Text style={styles.inputLabel}>Event *</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                    <TouchableOpacity
-                      style={[styles.eventPill, !itemForm.weddingEvent && styles.eventPillActive]}
-                      onPress={() => setItemForm(f => ({ ...f, weddingEvent: '' }))}
-                    >
-                      <Text style={[styles.eventPillText, !itemForm.weddingEvent && styles.eventPillTextActive]}>General</Text>
-                    </TouchableOpacity>
                     {events.map(evt => {
                       const isSelected = itemForm.weddingEvent === evt._id;
                       return (
@@ -997,6 +1040,12 @@ export default function Budget() {
                       );
                     })}
                   </ScrollView>
+                </View>
+              ) : (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={{ fontSize: 12, color: '#94a3b8', lineHeight: 18 }}>
+                    No events created yet. Add events via the Events button to link budget items.
+                  </Text>
                 </View>
               )}
               <View style={styles.inputRow}>
@@ -1607,23 +1656,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 5,
   },
   bookedAddBtnText: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
-  bookedItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: theme.colors.white, borderRadius: 10, borderLeftWidth: 4,
-    paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8,
-    boxShadow: '0px 1px 4px rgba(0, 0, 0, 0.04)', elevation: 1,
+
+  // Redesigned item card
+  item2Card: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.white,
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  bookedAvatar: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  bookedAvatarText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  bookedInfo: { flex: 1 },
-  bookedCat: { fontSize: 13, fontWeight: '600', color: theme.colors.text, textTransform: 'capitalize' },
-  bookedNote: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 1 },
-  bookedAmounts: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 3 },
-  bookedAmtEst: { fontSize: 11, color: theme.colors.textSecondary },
-  bookedAmtSep: { fontSize: 10, color: theme.colors.border },
-  bookedAmtSpent: { fontSize: 11, fontWeight: '600', color: '#059669' },
-  bookedAmtOver: { color: '#ef4444' },
-  bookedActions: { flexDirection: 'row', gap: 6 },
+  item2Stripe: { width: 5 },
+  item2Body: { flex: 1, padding: 12, gap: 10 },
+
+  // Top row
+  item2Top: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  item2Avatar: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  item2AvatarText: { fontSize: 15, fontWeight: '800' },
+  item2Info: { flex: 1 },
+  item2TitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  item2Cat: { fontSize: 14, fontWeight: '700', color: theme.colors.text, textTransform: 'capitalize' },
+  item2Note: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 },
+  item2Actions: { flexDirection: 'row', gap: 6 },
+
+  // Event badge
+  item2EvtBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 99,
+    borderWidth: 1,
+  },
+  item2EvtDot: { width: 6, height: 6, borderRadius: 3 },
+  item2EvtText: { fontSize: 10, fontWeight: '600' },
+
+  // Amounts row
+  item2Amounts: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#f8fafc', borderRadius: 10, padding: 10,
+    borderWidth: 1, borderColor: '#f1f5f9',
+  },
+  item2AmtCol: { gap: 1 },
+  item2AmtLabel: { fontSize: 9, color: '#94a3b8', fontWeight: '500', letterSpacing: 0.5 },
+  item2AmtVal: { fontSize: 13, fontWeight: '700', color: '#334155' },
+  item2AmtSep: { width: 1, height: 24, backgroundColor: '#e2e8f0' },
+  item2PctBadge: { marginLeft: 'auto', borderRadius: 99, paddingHorizontal: 8, paddingVertical: 3 },
+  item2PctText: { fontSize: 11, fontWeight: '700' },
+
+  // Progress bar
+  item2BarTrack: { height: 4, backgroundColor: '#f1f5f9', borderRadius: 99, overflow: 'hidden' },
+  item2BarFill: { height: '100%', borderRadius: 99 },
+
+  // Keep old action button styles
   bookedBtnEdit: {
     width: 28, height: 28, borderRadius: 7, borderWidth: 1, borderColor: theme.colors.border,
     alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface,

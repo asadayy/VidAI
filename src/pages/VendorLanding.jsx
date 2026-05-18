@@ -113,9 +113,9 @@ function VendorLanding() {
 
       {/* ── HEADER ── */}
       <header className="vl-header">
-        <div className="vl-brand">
-          <span className="vl-brand-mark">VidAI</span>
-          <span className="vl-brand-tag">For Vendors</span>
+        <div className="vl-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src="/Logos/web app logo with text.png" alt="VidAI" style={{ height: '32px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center', marginLeft: '16px' }} />
+          <span className="vl-brand-tag" style={{ marginLeft: '16px' }}>For Vendors</span>
         </div>
         <nav className="vl-nav">
           <button className="vl-nav-link" type="button">Benefits</button>
@@ -289,7 +289,7 @@ function VendorLanding() {
 
       {/* ── FOOTER ── */}
       <footer className="vl-footer">
-        <span className="vl-footer-brand">VidAI</span>
+        <img src="/Logos/web app logo without text.png" alt="VidAI" className="vl-footer-brand" style={{ height: '32px', width: 'auto', objectFit: 'contain', filter: 'brightness(0) invert(1)', opacity: 0.8, transform: 'scale(2)', transformOrigin: 'center', margin: '16px auto' }} />
         <span className="vl-footer-note">© 2026 VidAI · Pakistan&apos;s AI Wedding Platform · Vendor Portal</span>
         <button className="vl-footer-link" onClick={() => navigate('/')}>Customer App ↗</button>
       </footer>

@@ -157,14 +157,18 @@ function AdminUsers() {
                 {users.map((u) => (
                   <tr key={u._id} className={!u.isActive ? 'au-row-disabled' : ''}>
                     <td>
-                      <div className="au-user-cell">
-                        <div
-                          className="au-avatar"
-                          style={{ background: stringToColor(u.name || u.email) }}
-                        >
-                          {(u.name || u.email || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
+                        <div className="au-user-cell">
+                          {u.avatar?.url ? (
+                            <img src={u.avatar.url} alt="" className="au-avatar-img" />
+                          ) : (
+                            <div
+                              className="au-avatar"
+                              style={{ background: stringToColor(u.name || u.email) }}
+                            >
+                              {(u.name || u.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
                           <span className="au-user-name">{u.name || '—'}</span>
                         </div>
                       </div>

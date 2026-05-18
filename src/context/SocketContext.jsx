@@ -36,6 +36,9 @@ export function SocketProvider({ children }) {
     const socketUrl = getSocketUrl();
     const newSocket = io(socketUrl, {
       auth: { token },
+      extraHeaders: {
+        'ngrok-skip-browser-warning': 'true',
+      },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,

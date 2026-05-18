@@ -22,6 +22,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import * as ImagePicker from 'expo-image-picker';
 import { vendorAPI } from '../../api/vendors.js';
 import { bookingAPI } from '../../api/bookings.js';
+import { eventAPI } from '../../api/events.js';
 import { reportAPI } from '../../api/reports.js';
 import { chatAPI } from '../../api/chat.js';
 import { useAuth } from '../../contexts/AuthContext';
@@ -123,6 +124,7 @@ export default function VendorDetails() {
     numberOfPeople: '',
     venueType: '',
     eventLocation: '',
+    weddingEventId: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -130,7 +132,11 @@ export default function VendorDetails() {
   const [showEventTypePicker, setShowEventTypePicker] = useState(false);
   const [showTimeSlotPicker, setShowTimeSlotPicker] = useState(false);
   const [showVenueTypePicker, setShowVenueTypePicker] = useState(false);
+  const [showEventPicker, setShowEventPicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(new Date());
+
+  // User's wedding events (for linking booking to event)
+  const [userEvents, setUserEvents] = useState([]);
 
   // Reviews
   const [reviews, setReviews] = useState([]);
@@ -189,6 +195,14 @@ export default function VendorDetails() {
   useEffect(() => {
     fetchVendor();
   }, [slug]);
+
+  useEffect(() => {
+    if (user && user.role === 'user') {
+      eventAPI.getAll()
+        .then(res => setUserEvents(res.data?.data?.events || []))
+        .catch(() => {});
+    }
+  }, [user]);
 
   const fetchVendor = async () => {
     try {
@@ -257,6 +271,7 @@ export default function VendorDetails() {
       if (bookingData.venueType) payload.venueType = bookingData.venueType;
       if (bookingData.eventLocation) payload.eventLocation = bookingData.eventLocation;
       if (bookingData.eventTime) payload.eventTime = bookingData.eventTime;
+      if (bookingData.weddingEventId) payload.weddingEventId = bookingData.weddingEventId;
 
       await bookingAPI.create(payload);
       Toast.show({ type: 'success', text1: 'Booking created successfully!' });
@@ -1256,6 +1271,44 @@ export default function VendorDetails() {
                     </View>
                   )}
 
+                  {/* Link to Wedding Event */}
+                  {userEvents.length > 0 ? (
+                    <View style={styles.modalSection}>
+                      <Text style={styles.modalLabel}>
+                        <Ionicons name="calendar-outline" size={13} color={theme.colors.primary} />{' '}
+                        Link to Event *
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.modalPickerBtn}
+                        onPress={() => setShowEventPicker(true)}
+                        activeOpacity={0.75}
+                      >
+                        <Ionicons
+                          name="calendar"
+                          size={16}
+                          color={bookingData.weddingEventId ? theme.colors.primary : '#94a3b8'}
+                        />
+                        <Text style={[styles.modalPickerText, !bookingData.weddingEventId && styles.modalPickerPlaceholder]}>
+                          {bookingData.weddingEventId
+                            ? (() => {
+                                const evt = userEvents.find(e => e._id === bookingData.weddingEventId);
+                                if (!evt) return 'Select event';
+                                const label = evt.title || (evt.eventType?.charAt(0).toUpperCase() + evt.eventType?.slice(1));
+                                const date = evt.eventDate ? ` — ${new Date(evt.eventDate).toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })}` : '';
+                                return label + date;
+                              })()
+                            : 'Select your event'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View style={styles.modalSection}>
+                      <Text style={{ fontSize: 12, color: '#94a3b8', lineHeight: 18 }}>
+                        💡 Tip: Create events in your Budget Planner to link this booking to a specific event (e.g. Mehndi, Baraat).
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Notes */}
                   {fields.notes !== undefined && (
                     <View style={styles.modalSection}>
@@ -1477,6 +1530,54 @@ export default function VendorDetails() {
                     }}
                   >
                     <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{item.label}</Text>
+                    {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Wedding Event Picker ──────────────────────── */}
+      <Modal
+        visible={showEventPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEventPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowEventPicker(false)}
+        >
+          <View style={styles.sheetContainer}>
+            <View style={styles.sheetHandleWrap}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Link to Event</Text>
+              <TouchableOpacity onPress={() => setShowEventPicker(false)}>
+                <Ionicons name="close" size={20} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={userEvents}
+              keyExtractor={(item) => item._id}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const sel = bookingData.weddingEventId === item._id;
+                const label = item.title || (item.eventType?.charAt(0).toUpperCase() + item.eventType?.slice(1));
+                const date = item.eventDate ? ` — ${new Date(item.eventDate).toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })}` : '';
+                return (
+                  <TouchableOpacity
+                    style={[styles.timeOption, sel && styles.timeOptionSel]}
+                    onPress={() => {
+                      setBookingData(prev => ({ ...prev, weddingEventId: item._id }));
+                      setShowEventPicker(false);
+                    }}
+                  >
+                    <Text style={[styles.timeOptionText, sel && styles.timeOptionTextSel]}>{label}{date}</Text>
                     {sel && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
                   </TouchableOpacity>
                 );

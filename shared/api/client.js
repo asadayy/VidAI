@@ -133,6 +133,15 @@ client.interceptors.response.use(
       !originalRequest.url.includes('/auth/refresh-token')
     ) {
       originalRequest._retry = true;
+      const isAdminRoute = originalRequest.url && originalRequest.url.startsWith('/admin');
+
+      if (isAdminRoute) {
+        // Admin dashboard is web-only. Clear auth and redirect.
+        storage.removeItem('vidai_admin_token');
+        storage.removeItem('vidai_admin_user');
+        window.location.href = '/admin/login';
+        return Promise.reject(error);
+      }
 
       try {
         const refreshToken = isReactNative 

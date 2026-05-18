@@ -133,21 +133,29 @@ function ItemModal({ editingItem, itemForm, setItemForm, onSave, onClose, events
               required
             />
           </div>
-          {events.length > 1 && (
+          {events.length > 0 ? (
             <div className="bp-form-group">
-              <label className="bp-label">Event</label>
+              <label className="bp-label">Event *</label>
               <select
                 className="bp-input"
                 value={itemForm.weddingEvent || ''}
                 onChange={(e) => setItemForm({ ...itemForm, weddingEvent: e.target.value })}
+                required
               >
-                <option value="">— General (all events) —</option>
+                <option value="" disabled>Select event</option>
                 {events.map(evt => (
                   <option key={evt._id} value={evt._id}>
                     {evt.title || EVENT_LABELS[evt.eventType] || evt.eventType}
                   </option>
                 ))}
               </select>
+            </div>
+          ) : (
+            <div className="bp-form-group">
+              <label className="bp-label">Event</label>
+              <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: 0 }}>
+                No events created yet. Add events via the <strong>Events</strong> button above to link budget items.
+              </p>
             </div>
           )}
           <div className="bp-form-group">
@@ -983,7 +991,7 @@ const BudgetPlanner = () => {
           <h2 className="bp-booked-title">Budget Items</h2>
           <div className="bp-booked-head-right">
             {filteredItems.length > 0 && (
-              <span className="bp-booked-count">{filteredItems.length}</span>
+              <span className="bp-booked-count">{filteredItems.length} item{filteredItems.length !== 1 && 's'}</span>
             )}
             <button className="bp-btn bp-btn--add bp-btn--sm" onClick={() => openModal()}>
               <Plus size={14} /> Add Item
@@ -992,33 +1000,81 @@ const BudgetPlanner = () => {
         </div>
 
         {filteredItems.length > 0 ? (
-          <div className="bp-booked-list">
+          <div className="bp-items-grid2">
             {filteredItems.map((item) => {
               const color = catColor(item.category);
-              const overItem = (item.spentAmount || 0) > (item.allocatedAmount || 0);
+              const spent = item.spentAmount || 0;
+              const allocated = item.allocatedAmount || 0;
+              const overItem = spent > allocated;
+              const itemPct = allocated > 0 ? Math.min(100, (spent / allocated) * 100) : 0;
+
+              // Resolve linked event
+              const linkedEvt = item.weddingEvent
+                ? events.find(e => e._id === item.weddingEvent || e._id === item.weddingEvent?.toString())
+                : null;
+              const evtColor = linkedEvt
+                ? (linkedEvt.color || EVENT_COLORS[linkedEvt.eventType] || '#64748b')
+                : null;
+
               return (
-                <div key={item._id} className="bp-booked-item" style={{ borderLeftColor: color }}>
-                  <div className="bp-booked-avatar" style={{ background: color }}>
-                    {catInitial(item.category)}
-                  </div>
-                  <div className="bp-booked-info">
-                    <span className="bp-booked-cat">{item.category}</span>
-                    {item.notes && <span className="bp-booked-note">{item.notes}</span>}
-                    <div className="bp-booked-amounts">
-                      <span className="bp-booked-est">{fmtCurrency(item.allocatedAmount)}</span>
-                      <span className="bp-booked-arrow">&rarr;</span>
-                      <span className={`bp-booked-spent ${overItem ? 'bp-booked-spent--over' : ''}`}>
-                        {fmtCurrency(item.spentAmount || 0)} spent
-                      </span>
+                <div key={item._id} className="bp-item2" style={{ '--item-color': color }}>
+                  <div className="bp-item2-stripe" style={{ background: color }} />
+                  <div className="bp-item2-body">
+                    {/* Top row: avatar + info + actions */}
+                    <div className="bp-item2-top">
+                      <div className="bp-item2-avatar" style={{ background: `${color}14`, color }}>
+                        {catInitial(item.category)}
+                      </div>
+                      <div className="bp-item2-info">
+                        <div className="bp-item2-title-row">
+                          <span className="bp-item2-cat">{item.category}</span>
+                          {!activeEventId && linkedEvt && (
+                            <span className="bp-item2-evt-badge" style={{ '--evt-c': evtColor }}>
+                              <span className="bp-item2-evt-dot" style={{ background: evtColor }} />
+                              {linkedEvt.title || EVENT_LABELS[linkedEvt.eventType] || linkedEvt.eventType}
+                            </span>
+                          )}
+                        </div>
+                        {item.notes && <span className="bp-item2-note">{item.notes}</span>}
+                      </div>
+                      <div className="bp-item2-actions">
+                        <button className="bp-icon-btn bp-icon-btn--edit" onClick={() => openModal(item)} title="Edit">
+                          <Edit2 size={14} />
+                        </button>
+                        <button className="bp-icon-btn bp-icon-btn--del" onClick={() => setDeleteTarget(item)} title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bp-booked-btns">
-                    <button className="bp-icon-btn bp-icon-btn--edit" onClick={() => openModal(item)}>
-                      <Edit2 size={14} />
-                    </button>
-                    <button className="bp-icon-btn bp-icon-btn--del" onClick={() => setDeleteTarget(item)}>
-                      <Trash2 size={14} />
-                    </button>
+
+                    {/* Amounts */}
+                    <div className="bp-item2-amounts">
+                      <div className="bp-item2-amt-col">
+                        <span className="bp-item2-amt-label">Estimated</span>
+                        <span className="bp-item2-amt-val">{fmtCurrency(allocated)}</span>
+                      </div>
+                      <div className="bp-item2-amt-sep" />
+                      <div className="bp-item2-amt-col">
+                        <span className="bp-item2-amt-label">Spent</span>
+                        <span className={`bp-item2-amt-val bp-item2-amt-val--spent ${overItem ? 'bp-item2-amt-val--over' : ''}`}>
+                          {fmtCurrency(spent)}
+                        </span>
+                      </div>
+                      <div className="bp-item2-pct-badge" style={{
+                        background: overItem ? '#fef2f2' : itemPct >= 80 ? '#fffbeb' : '#f0fdf4',
+                        color: overItem ? '#dc2626' : itemPct >= 80 ? '#d97706' : '#16a34a',
+                      }}>
+                        {itemPct.toFixed(0)}%
+                      </div>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="bp-item2-bar-track">
+                      <div
+                        className={`bp-item2-bar-fill ${overItem ? 'bp-item2-bar-fill--over' : itemPct >= 80 ? 'bp-item2-bar-fill--warn' : ''}`}
+                        style={{ width: `${Math.min(itemPct, 100)}%`, background: overItem ? undefined : color }}
+                      />
+                    </div>
                   </div>
                 </div>
               );

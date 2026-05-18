@@ -1,4 +1,4 @@
-﻿/* â”€â”€ Page â”€â”€ */
+/* â”€â”€ Page â”€â”€ */
 .vd-page {
   display: flex;
   flex-direction: column;
@@ -468,14 +468,14 @@
   white-space: nowrap;
 }
 
-/* â”€â”€ Package list â”€â”€ */
-.vd-pkg-list {
+/* ── Package list ── */
+.vd-dash-pkg-list {
   list-style: none;
   padding: 0.25rem 0;
   margin: 0;
 }
 
-.vd-pkg-item {
+.vd-dash-pkg-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -483,16 +483,16 @@
   border-bottom: 1px solid #fafafa;
 }
 
-.vd-pkg-item:last-child { border-bottom: none; }
+.vd-dash-pkg-item:last-child { border-bottom: none; }
 
-.vd-pkg-dot {
+.vd-dash-pkg-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.vd-pkg-name {
+.vd-dash-pkg-name {
   flex: 1;
   font-size: 0.88rem;
   font-weight: 500;
@@ -502,7 +502,7 @@
   text-overflow: ellipsis;
 }
 
-.vd-pkg-inactive {
+.vd-dash-pkg-inactive {
   font-size: 0.7rem;
   font-weight: 600;
   color: #9CA3AF;
@@ -511,20 +511,20 @@
   border-radius: 4px;
 }
 
-.vd-pkg-price {
+.vd-dash-pkg-price {
   font-size: 0.84rem;
   font-weight: 700;
   color: var(--gray-700);
   white-space: nowrap;
 }
 
-.vd-pkg-more {
+.vd-dash-pkg-more {
   padding: 0.55rem 1.25rem;
   font-size: 0.8rem;
   color: var(--gray-400);
 }
 
-/* â”€â”€ Setup screen â”€â”€ */
+/* ── Setup screen ── */
 .vd-setup {
   display: flex;
   align-items: center;

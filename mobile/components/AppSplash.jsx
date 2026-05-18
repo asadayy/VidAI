@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, StatusBar, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -18,34 +18,34 @@ export default function AppSplash({ onFinish }) {
     // 1. icon floats in
     Animated.parallel([
       Animated.timing(iconOpacity, {
-        toValue: 1, duration: 480, delay: 120, useNativeDriver: false,
+        toValue: 1, duration: 800, delay: 150, useNativeDriver: true,
       }),
       Animated.spring(iconTranslateY, {
-        toValue: 0, friction: 6, tension: 80, delay: 120, useNativeDriver: false,
+        toValue: 0, friction: 8, tension: 50, delay: 150, useNativeDriver: true,
       }),
     ]).start();
 
-    // 2. logo text fades + scales in
+    // 2. logo text fades + scales in (slower and smoother)
     Animated.parallel([
       Animated.timing(logoOpacity, {
-        toValue: 1, duration: 520, delay: 340, useNativeDriver: false,
+        toValue: 1, duration: 1500, delay: 300, useNativeDriver: true,
       }),
       Animated.spring(logoScale, {
-        toValue: 1, friction: 5, tension: 70, delay: 340, useNativeDriver: false,
+        toValue: 1, friction: 9, tension: 25, delay: 300, useNativeDriver: true,
       }),
     ]).start();
 
-    // 3. tagline fades in
+    // 3. tagline fades in smoothly
     Animated.timing(tagOpacity, {
-      toValue: 1, duration: 420, delay: 780, useNativeDriver: false,
+      toValue: 1, duration: 1000, delay: 1200, useNativeDriver: true,
     }).start();
 
-    // 4. whole screen fades out → calls onFinish
+    // 4. whole screen fades out → calls onFinish (extended hold for slow animation)
     const hold = setTimeout(() => {
       Animated.timing(screenOpacity, {
-        toValue: 0, duration: 450, useNativeDriver: false,
+        toValue: 0, duration: 600, useNativeDriver: true,
       }).start(() => onFinish && onFinish());
-    }, 2600);
+    }, 4200);
 
     return () => clearTimeout(hold);
   }, []);
@@ -66,34 +66,17 @@ export default function AppSplash({ onFinish }) {
       {/* centre content */}
       <View style={styles.centre}>
 
-        {/* icon */}
-        <Animated.View style={{
-          opacity: iconOpacity,
-          transform: [{ translateY: iconTranslateY }],
-          marginBottom: 22,
-        }}>
-          <LinearGradient
-            colors={['#D7385E', '#f472b6', '#D7385E']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={styles.iconRing}
-          >
-            <Ionicons name="diamond" size={32} color="#fff" />
-          </LinearGradient>
-        </Animated.View>
-
-        {/* VidAI wordmark */}
+        {/* App Logo */}
         <Animated.View style={{
           opacity: logoOpacity,
           transform: [{ scale: logoScale }],
           alignItems: 'center',
+          marginBottom: 24,
         }}>
-          <Text style={styles.wordmark}>
-            <Text style={styles.wordmarkVid}>Vid</Text>
-            <Text style={styles.wordmarkAI}>AI</Text>
-          </Text>
-
-          {/* thin divider line */}
-          <View style={styles.divider} />
+          <Image 
+            source={require('../assets/mobile app logo.png')} 
+            style={{ width: 150, height: 150, resizeMode: 'contain' }} 
+          />
         </Animated.View>
 
         {/* tagline */}

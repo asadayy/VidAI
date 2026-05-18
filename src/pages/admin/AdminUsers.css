@@ -230,6 +230,14 @@
   flex-shrink: 0;
 }
 
+.au-avatar-img {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .au-user-name {
   font-weight: 600;
   color: #1e293b;

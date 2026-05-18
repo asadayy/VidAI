@@ -143,11 +143,17 @@ function VendorDashboard() {
       {/* ── Hero header ── */}
       <div className="vd-header">
         <div className="vd-header-left">
-          <div className="vd-avatar-wrap">
-            {vendor.profileImage
-              ? <img src={vendor.profileImage} alt="" className="vd-avatar-img" />
-              : <span className="vd-avatar-initials">{(vendor.businessName || 'V')[0].toUpperCase()}</span>
-            }
+          <div className="vd-avatar-wrap" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {vendor.profileImage?.url || vendor.profileImage || vendor.coverImage?.url ? (
+              <img 
+                src={vendor.profileImage?.url || vendor.profileImage || vendor.coverImage?.url} 
+                alt="" 
+                className="vd-avatar-img" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span className="vd-avatar-initials">{(vendor.businessName || 'V')[0].toUpperCase()}</span>
+            )}
           </div>
           <div>
             <div className="vd-header-name-row">
@@ -254,7 +260,17 @@ function VendorDashboard() {
                   .split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
                 return (
                   <div key={b._id} className="vd-booking-row" style={{ '--row-accent': cfg.accent }}>
-                    <div className="vd-booking-avatar">{initials}</div>
+                    <div className="vd-booking-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {b.user?.avatar?.url ? (
+                        <img 
+                          src={b.user.avatar.url} 
+                          alt="" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        initials
+                      )}
+                    </div>
                     <div className="vd-booking-info">
                       <span className="vd-booking-name">{b.user?.name || b.user?.email || '—'}</span>
                       <span className="vd-booking-meta capitalize">
@@ -296,17 +312,17 @@ function VendorDashboard() {
               </Link>
             </div>
           ) : (
-            <ul className="vd-pkg-list">
+            <ul className="vd-dash-pkg-list">
               {vendor.packages.slice(0, 5).map((pkg) => (
-                <li key={pkg._id} className="vd-pkg-item">
-                  <div className="vd-pkg-dot" style={{ background: pkg.isActive ? '#10B981' : '#9CA3AF' }} />
-                  <span className="vd-pkg-name">{pkg.name}</span>
-                  {!pkg.isActive && <span className="vd-pkg-inactive">Off</span>}
-                  <span className="vd-pkg-price">{formatPrice(pkg.price)}</span>
+                <li key={pkg._id} className="vd-dash-pkg-item">
+                  <div className="vd-dash-pkg-dot" style={{ background: pkg.isActive ? '#10B981' : '#9CA3AF' }} />
+                  <span className="vd-dash-pkg-name">{pkg.name}</span>
+                  {!pkg.isActive && <span className="vd-dash-pkg-inactive">Off</span>}
+                  <span className="vd-dash-pkg-price">{formatPrice(pkg.price)}</span>
                 </li>
               ))}
               {vendor.packages.length > 5 && (
-                <li className="vd-pkg-more">
+                <li className="vd-dash-pkg-more">
                   +{vendor.packages.length - 5} more
                 </li>
               )}

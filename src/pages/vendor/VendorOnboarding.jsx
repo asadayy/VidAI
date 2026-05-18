@@ -94,9 +94,9 @@ const VendorOnboarding = () => {
     <div className="vonboarding-page">
       <div className="vonboarding-container">
         {/* Logo / Brand */}
-        <div className="vonboarding-brand">
-          <span className="vonboarding-brand-mark">VIDAI</span>
-          <span className="vonboarding-brand-sub">Vendor Setup</span>
+        <div className="vonboarding-brand" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <img src="/Logos/web app logo with text.png" alt="VidAI" style={{ height: '36px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'center', margin: '16px 0' }} />
+          <span className="vonboarding-brand-sub" style={{ marginTop: '0' }}>Vendor Setup</span>
         </div>
 
         {/* Step indicator */}

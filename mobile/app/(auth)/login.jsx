@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Image, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import Loading from '../../components/Loading';
 import { theme } from '../../constants/theme';
+
+const { width } = Dimensions.get('window');
 
 export default function Login() {
   const router = useRouter();
@@ -51,114 +53,193 @@ export default function Login() {
   };
 
   return (
-    <KeyboardAvoidingView
+    <LinearGradient
+      colors={['#FFF0F3', '#FFFDFE', '#FFFFFF']}
+      locations={[0, 0.5, 1]}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Decorative Top Blur Ornaments */}
+          <View style={styles.topOrnament} />
 
-          {errors.general && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{errors.general}</Text>
+          <View style={styles.content}>
+            {/* Optimized Logo (Static) */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/mobile app logo.png')}
+                style={styles.logo}
+              />
             </View>
-          )}
 
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            error={errors.email}
-          />
+            {/* Premium Card Container */}
+            <View style={styles.card}>
+              <Text style={styles.title}>Welcome Back</Text>
+              <Text style={styles.subtitle}>Sign in to continue planning your dream wedding</Text>
 
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Enter your password"
-            secureTextEntry
-            error={errors.password}
-          />
+              {errors.general && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{errors.general}</Text>
+                </View>
+              )}
 
-          <Button
-            title="Sign In"
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.button}
-          />
+              <Input
+                label="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="name@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                error={errors.email}
+                style={styles.inputStyle}
+              />
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <Text
-              style={styles.link}
-              onPress={() => router.push('/(auth)/register')}
-            >
-              Sign Up
-            </Text>
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                secureTextEntry
+                error={errors.password}
+                style={styles.inputStyle}
+              />
+
+              <Button
+                title="Sign In"
+                onPress={handleLogin}
+                loading={loading}
+                style={styles.button}
+              />
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Text
+                  style={styles.link}
+                  onPress={() => router.push('/(auth)/register')}
+                >
+                  Sign Up
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: theme.spacing.lg,
   },
+  topOrnament: {
+    position: 'absolute',
+    top: -100,
+    right: -100,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: '#FFE3E8',
+    opacity: 0.6,
+  },
   content: {
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
   },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  logo: {
+    width: 110,
+    height: 110,
+    resizeMode: 'contain',
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(215, 56, 94, 0.08)',
+    shadowColor: '#D7385E',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+  },
   title: {
-    ...theme.typography.h1,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1a0a10',
+    marginBottom: 6,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    ...theme.typography.body,
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 10,
+  },
+  inputStyle: {
+    borderRadius: 12,
+    borderColor: '#e8d5da',
+    backgroundColor: '#FAF7F8',
   },
   errorContainer: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: '#fff0f2',
     padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 12,
     marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   errorText: {
     color: theme.colors.danger,
-    fontSize: theme.typography.bodySmall.fontSize,
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   button: {
     marginTop: theme.spacing.md,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    height: 52,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.24,
+    shadowRadius: 12,
+    elevation: 4,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.xl,
   },
   footerText: {
-    ...theme.typography.bodySmall,
+    fontSize: 14,
     color: theme.colors.textSecondary,
   },
   link: {
-    ...theme.typography.bodySmall,
+    fontSize: 14,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

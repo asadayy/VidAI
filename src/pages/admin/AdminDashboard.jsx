@@ -131,13 +131,23 @@ function AdminDashboard() {
           <div
             className="ad-stat-card"
             key={key}
-            style={{ '--card-accent': border }}
+            style={{ '--card-color': color, '--card-bg': bg, '--card-accent': border }}
           >
-            <div className="ad-stat-icon-wrap" style={{ background: bg, color }}>
-              <StatIcon size={20} />
+            <div className="ad-stat-card-inner">
+              <div className="ad-stat-top">
+                <div className="ad-stat-icon-wrap" style={{ background: bg, color }}>
+                  <StatIcon size={22} />
+                </div>
+                <div className="ad-stat-trend">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>
+                </div>
+              </div>
+              <div className="ad-stat-bottom">
+                <div className="ad-stat-value">{data?.stats?.[key] ?? 0}</div>
+                <div className="ad-stat-label">{label}</div>
+              </div>
+              <StatIcon className="ad-stat-bg-icon" />
             </div>
-            <div className="ad-stat-value">{data?.stats?.[key] ?? 0}</div>
-            <div className="ad-stat-label">{label}</div>
           </div>
         ))}
       </div>
@@ -172,12 +182,16 @@ function AdminDashboard() {
                     <tr key={u._id}>
                       <td>
                         <div className="ad-user-cell">
-                          <div
-                            className="ad-avatar"
-                            style={{ background: stringToColor(u.name || u.email) }}
-                          >
-                            {(u.name || u.email || 'U').charAt(0).toUpperCase()}
-                          </div>
+                          {u.avatar?.url ? (
+                            <img src={u.avatar.url} alt="" className="ad-avatar-img" />
+                          ) : (
+                            <div
+                              className="ad-avatar"
+                              style={{ background: stringToColor(u.name || u.email) }}
+                            >
+                              {(u.name || u.email || 'U').charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <span className="ad-user-name">{u.name || '—'}</span>
                         </div>
                       </td>

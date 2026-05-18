@@ -12,6 +12,12 @@ const bookingSchema = new mongoose.Schema(
       ref: 'Vendor',
       required: [true, 'Vendor is required for booking'],
     },
+    // Which wedding event this booking is for
+    weddingEventId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'WeddingEvent',
+      default: null,
+    },
     // Which service package was selected (optional)
     packageId: {
       type: mongoose.Schema.Types.ObjectId,

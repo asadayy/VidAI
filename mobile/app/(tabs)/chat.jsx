@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   ScrollView,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import client from '../../api/client.js';
@@ -18,11 +19,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 const SUGGESTIONS = [
-  'What vendors do I need for my wedding?',
-  'Help me create a wedding budget plan',
-  'How do I choose the perfect venue?',
-  'Give me a wedding planning checklist',
+  { text: 'What vendors do I need for my wedding?', icon: 'storefront-outline', bg: '#fce7f3', color: '#D7385E' },
+  { text: 'Help me create a wedding budget plan', icon: 'wallet-outline', bg: '#ede9fe', color: '#7c3aed' },
+  { text: 'How do I choose the perfect venue?', icon: 'location-outline', bg: '#d1fae5', color: '#059669' },
+  { text: 'Give me a wedding planning checklist', icon: 'clipboard-outline', bg: '#fef3c7', color: '#d97706' },
 ];
 
 const INITIAL_MSG = {
@@ -68,7 +71,7 @@ function TypingDots() {
 
 const td = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4, paddingHorizontal: 2 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#94a3b8' },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D7385E' },
 });
 
 // -- Markdown renderer for AI messages --
@@ -102,8 +105,8 @@ function InlineText({ parts, baseStyle }) {
           key={i}
           style={[
             baseStyle,
-            p.bold && { fontWeight: 'bold' },
-            p.italic && { fontStyle: 'italic' },
+            p.bold && { fontWeight: 'bold', color: '#0f172a' },
+            p.italic && { fontStyle: 'italic', color: '#475569' },
           ]}
         >
           {p.text}
@@ -128,7 +131,7 @@ function MarkdownText({ content, textStyle }) {
           const headText = headingMatch[2].replace(/\*\*/g, '');
           const fontSize = level <= 2 ? 15 : 13;
           return (
-            <Text key={idx} style={[textStyle, { fontWeight: 'bold', fontSize, marginTop: 8, marginBottom: 2 }]}>
+            <Text key={idx} style={[textStyle, { fontWeight: '800', fontSize, marginTop: 8, marginBottom: 2, color: '#0f172a' }]}>
               {headText}
             </Text>
           );
@@ -140,8 +143,8 @@ function MarkdownText({ content, textStyle }) {
           const parts = parseInline(bulletMatch[1]);
           return (
             <View key={idx} style={{ flexDirection: 'row', marginTop: 3, paddingLeft: 4 }}>
-              <Text style={[textStyle, { marginRight: 6, lineHeight: 20 }]}>{'\u2022'}</Text>
-              <Text style={[textStyle, { flex: 1, lineHeight: 20 }]}>
+              <Text style={[textStyle, { marginRight: 6, lineHeight: 21, color: '#D7385E' }]}>{'\u2022'}</Text>
+              <Text style={[textStyle, { flex: 1, lineHeight: 21 }]}>
                 <InlineText parts={parts} baseStyle={textStyle} />
               </Text>
             </View>
@@ -151,7 +154,7 @@ function MarkdownText({ content, textStyle }) {
         // Regular line
         const parts = parseInline(trimmed);
         return (
-          <Text key={idx} style={[textStyle, { marginTop: 3, lineHeight: 20 }]}>
+          <Text key={idx} style={[textStyle, { marginTop: 3, lineHeight: 21 }]}>
             <InlineText parts={parts} baseStyle={textStyle} />
           </Text>
         );
@@ -204,15 +207,17 @@ export default function Chat() {
     setInput('');
   };
 
-  const showSuggestions = messages.length === 1;
+  const showWelcome = messages.length === 1;
 
-  const renderMessage = ({ item: msg }) => {
+  const renderMessage = ({ item: msg, index }) => {
     const isUser = msg.role === 'user';
+    // Hide initial greeting when welcome is shown
+    if (showWelcome && index === 0 && !isUser) return null;
     return (
       <View style={[styles.row, isUser ? styles.rowUser : styles.rowAI]}>
         {!isUser && (
           <LinearGradient colors={['#D7385E', '#f472b6']} style={styles.avatarAI}>
-            <Ionicons name="sparkles" size={14} color="#fff" />
+            <Ionicons name="sparkles" size={13} color="#fff" />
           </LinearGradient>
         )}
         <View style={[styles.bubbleWrap, isUser && styles.bubbleWrapUser]}>
@@ -229,7 +234,7 @@ export default function Chat() {
         </View>
         {isUser && (
           <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.avatarUser}>
-            <Ionicons name="person" size={14} color="#fff" />
+            <Ionicons name="person" size={13} color="#fff" />
           </LinearGradient>
         )}
       </View>
@@ -244,7 +249,7 @@ export default function Chat() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* header */}
-        <View style={styles.header}>
+        <LinearGradient colors={['#fff', '#fdf2f8']} style={styles.header}>
           <View style={styles.headerLeft}>
             <LinearGradient colors={['#D7385E', '#f472b6']} style={styles.headerAvatar}>
               <Ionicons name="sparkles" size={20} color="#fff" />
@@ -259,9 +264,9 @@ export default function Chat() {
           </View>
           <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
             <Ionicons name="refresh" size={14} color="#64748b" />
-            <Text style={styles.resetBtnText}>New chat</Text>
+            <Text style={styles.resetBtnText}>New</Text>
           </TouchableOpacity>
-        </View>
+        </LinearGradient>
 
         {/* messages */}
         <FlatList
@@ -272,11 +277,34 @@ export default function Chat() {
           contentContainerStyle={styles.listContent}
           onContentSizeChange={scrollToEnd}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            showWelcome ? (
+              <View style={styles.welcome}>
+                <LinearGradient colors={['#D7385E', '#f472b6']} style={styles.welcomeIcon}>
+                  <Ionicons name="sparkles" size={28} color="#fff" />
+                </LinearGradient>
+                <Text style={styles.welcomeTitle}>How can I help plan your wedding?</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Ask me anything about venues, budgets, vendor selection, timelines, and more.
+                </Text>
+                <View style={styles.welcomeGrid}>
+                  {SUGGESTIONS.map((s, i) => (
+                    <TouchableOpacity key={i} style={styles.welcomeCard} onPress={() => handleSend(s.text)} activeOpacity={0.75}>
+                      <View style={[styles.welcomeCardIcon, { backgroundColor: s.bg }]}>
+                        <Ionicons name={s.icon} size={18} color={s.color} />
+                      </View>
+                      <Text style={styles.welcomeCardText} numberOfLines={2}>{s.text}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : null
+          }
           ListFooterComponent={
             isTyping ? (
               <View style={[styles.row, styles.rowAI]}>
                 <LinearGradient colors={['#D7385E', '#f472b6']} style={styles.avatarAI}>
-                  <Ionicons name="sparkles" size={14} color="#fff" />
+                  <Ionicons name="sparkles" size={13} color="#fff" />
                 </LinearGradient>
                 <View style={[styles.bubble, styles.bubbleAI, styles.typingBubble]}>
                   <TypingDots />
@@ -286,13 +314,13 @@ export default function Chat() {
           }
         />
 
-        {/* suggestions */}
-        {showSuggestions && (
+        {/* suggestions (after conversation starts, first few messages) */}
+        {!showWelcome && messages.length <= 3 && (
           <View style={styles.suggestionsBar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestionsScroll}>
               {SUGGESTIONS.map((s, i) => (
-                <TouchableOpacity key={i} style={styles.chip} onPress={() => handleSend(s)}>
-                  <Text style={styles.chipText}>{s}</Text>
+                <TouchableOpacity key={i} style={styles.chip} onPress={() => handleSend(s.text)} activeOpacity={0.75}>
+                  <Text style={styles.chipText}>{s.text}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -301,17 +329,19 @@ export default function Chat() {
 
         {/* input bar */}
         <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            placeholder="Ask about venues, budget, vendors…"
-            placeholderTextColor="#94a3b8"
-            value={input}
-            onChangeText={setInput}
-            multiline
-            maxLength={500}
-            editable={!isTyping}
-            onSubmitEditing={() => handleSend()}
-          />
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              placeholder="Ask about venues, budget, vendors…"
+              placeholderTextColor="#94a3b8"
+              value={input}
+              onChangeText={setInput}
+              multiline
+              maxLength={500}
+              editable={!isTyping}
+              onSubmitEditing={() => handleSend()}
+            />
+          </View>
           <TouchableOpacity
             onPress={() => handleSend()}
             disabled={!input.trim() || isTyping}
@@ -336,28 +366,82 @@ const styles = StyleSheet.create({
   // header
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
-    boxShadow: '0px 1px 6px rgba(0, 0, 0, 0.06)', elevation: 3,
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(215,56,94,0.06)',
+    ...Platform.select({
+      ios: { shadowColor: '#D7385E', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 3 },
+    }),
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerAvatar: {
-    width: 42, height: 42, borderRadius: 13,
+    width: 42, height: 42, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#D7385E', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 4 },
+    }),
   },
-  headerTitle: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
+  headerTitle: { fontSize: 15, fontWeight: '800', color: '#1e293b', letterSpacing: -0.2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#10b981' },
-  statusText: { fontSize: 11, color: '#64748b' },
+  statusText: { fontSize: 11, color: '#64748b', fontWeight: '500' },
   resetBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
-    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0',
+    borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } },
+      android: { elevation: 1 },
+    }),
   },
   resetBtnText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
 
   // list
-  listContent: { padding: 16, paddingBottom: 8, gap: 12 },
+  listContent: { padding: 16, paddingBottom: 8, gap: 10 },
+
+  // welcome card
+  welcome: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 8,
+    gap: 10,
+  },
+  welcomeIcon: {
+    width: 60, height: 60, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#D7385E', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+      android: { elevation: 6 },
+    }),
+  },
+  welcomeTitle: {
+    fontSize: 20, fontWeight: '800', color: '#1e293b',
+    textAlign: 'center', letterSpacing: -0.3, marginTop: 4,
+  },
+  welcomeSubtitle: {
+    fontSize: 13, color: '#64748b', textAlign: 'center',
+    lineHeight: 20, maxWidth: 320,
+  },
+  welcomeGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: 8, marginTop: 10, justifyContent: 'center',
+  },
+  welcomeCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#f1f5f9',
+    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 12,
+    width: (SCREEN_WIDTH - 64) / 2,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
+  },
+  welcomeCardIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  welcomeCardText: { fontSize: 12, fontWeight: '600', color: '#334155', flex: 1, lineHeight: 17 },
 
   // rows
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, maxWidth: '85%' },
@@ -365,56 +449,73 @@ const styles = StyleSheet.create({
   rowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
 
   // avatars (small, bottom-aligned)
-  avatarAI: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  avatarUser: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarAI: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  avatarUser: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 
   // bubble wrap
   bubbleWrap: { flexDirection: 'column', gap: 3, alignItems: 'flex-start' },
   bubbleWrapUser: { alignItems: 'flex-end' },
 
   // bubbles
-  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
+  bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10 },
   bubbleAI: {
-    backgroundColor: '#fff', borderBottomLeftRadius: 4,
-    borderWidth: 1, borderColor: '#f1f5f9',
-    boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.06)', elevation: 2,
+    backgroundColor: '#fff', borderBottomLeftRadius: 6,
+    borderWidth: 1, borderColor: 'rgba(241,245,249,0.8)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+      android: { elevation: 2 },
+    }),
   },
-  bubbleUser: { borderBottomRightRadius: 4 },
+  bubbleUser: { borderBottomRightRadius: 6 },
   bubbleAIText: { fontSize: 14, color: '#1e293b', lineHeight: 21 },
   bubbleUserText: { fontSize: 14, color: '#fff', lineHeight: 21 },
 
   // typing
-  typingBubble: { paddingHorizontal: 14, paddingVertical: 8 },
+  typingBubble: { paddingHorizontal: 14, paddingVertical: 10 },
 
   // timestamps
-  time: { fontSize: 10, color: '#94a3b8', paddingHorizontal: 2 },
+  time: { fontSize: 10, color: '#94a3b8', paddingHorizontal: 2, fontWeight: '500' },
   timeUser: { textAlign: 'right' },
 
   // suggestions
   suggestionsBar: {
-    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)', borderTopWidth: 1, borderTopColor: 'rgba(241,245,249,0.6)', paddingVertical: 8,
   },
   suggestionsScroll: { paddingHorizontal: 14, gap: 8 },
   chip: {
     backgroundColor: '#fdf2f8', borderWidth: 1, borderColor: '#fce7f3',
-    borderRadius: 99, paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 99, paddingHorizontal: 14, paddingVertical: 8,
   },
-  chipText: { fontSize: 12, fontWeight: '500', color: '#B82A4D' },
+  chipText: { fontSize: 12, fontWeight: '600', color: '#B82A4D' },
 
   // input bar
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 10,
     paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f1f5f9',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderTopWidth: 1, borderTopColor: 'rgba(241,245,249,0.6)',
+  },
+  inputWrap: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
+    paddingHorizontal: 14,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   input: {
-    flex: 1, borderWidth: 1.5, borderColor: '#e2e8f0', borderRadius: 16,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: '#1e293b', backgroundColor: '#f8fafc',
+    fontSize: 14, color: '#1e293b',
     maxHeight: 100,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 8,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 14,
+    width: 46, height: 46, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#D7385E', shadowOpacity: 0.25, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+      android: { elevation: 4 },
+    }),
   },
 });

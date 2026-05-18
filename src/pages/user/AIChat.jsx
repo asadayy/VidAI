@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Bot, User, RefreshCw, ChevronDown } from 'lucide-react';
+import { Send, Sparkles, Bot, User, RefreshCw, ChevronDown, MapPin, Wallet, ClipboardCheck, Store } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
@@ -7,10 +7,10 @@ import client from '../../api/client';
 import './AIChat.css';
 
 const SUGGESTIONS = [
-  'What vendors do I need for my wedding?',
-  'Help me create a wedding budget plan',
-  'How do I choose the perfect venue?',
-  'Give me a wedding planning checklist',
+  { text: 'What vendors do I need for my wedding?', icon: Store, colorClass: 'ac-welcome-card-icon--pink' },
+  { text: 'Help me create a wedding budget plan', icon: Wallet, colorClass: 'ac-welcome-card-icon--violet' },
+  { text: 'How do I choose the perfect venue?', icon: MapPin, colorClass: 'ac-welcome-card-icon--green' },
+  { text: 'Give me a wedding planning checklist', icon: ClipboardCheck, colorClass: 'ac-welcome-card-icon--amber' },
 ];
 
 function fmtTime(date) {
@@ -168,7 +168,7 @@ const AIChat = () => {
     saveSession(fresh);
   };
 
-  const showSuggestions = messages.length === 1;
+  const showWelcome = messages.length === 1;
 
   return (
     <div className="ac-page">
@@ -195,8 +195,38 @@ const AIChat = () => {
 
       {/* Messages */}
       <div className="ac-messages" ref={listRef} onScroll={handleScroll}>
+
+        {/* Welcome state */}
+        {showWelcome && (
+          <div className="ac-welcome">
+            <div className="ac-welcome-icon">
+              <Sparkles size={28} />
+            </div>
+            <h2 className="ac-welcome-title">How can I help plan your wedding?</h2>
+            <p className="ac-welcome-subtitle">
+              I'm your AI wedding assistant. Ask me anything about venues, budgets, vendor selection, timelines, and more.
+            </p>
+            <div className="ac-welcome-grid">
+              {SUGGESTIONS.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <button key={i} className="ac-welcome-card" onClick={() => handleSend(s.text)}>
+                    <div className={`ac-welcome-card-icon ${s.colorClass}`}>
+                      <Icon size={18} />
+                    </div>
+                    <span className="ac-welcome-card-text">{s.text}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Chat messages (skip the initial assistant greeting when showing welcome) */}
         {messages.map((msg, i) => {
           const isUser = msg.role === 'user';
+          // Hide the initial greeting when welcome card is shown
+          if (showWelcome && i === 0 && !isUser) return null;
           // Hide empty assistant bubble while streaming (typing dots replace it)
           if (!isUser && !msg.content && isTyping) return null;
           return (
@@ -258,12 +288,12 @@ const AIChat = () => {
         </button>
       )}
 
-      {/* Suggestions */}
-      {showSuggestions && (
+      {/* Inline suggestions (after conversation starts) */}
+      {!showWelcome && messages.length <= 3 && (
         <div className="ac-suggestions">
           {SUGGESTIONS.map((s, i) => (
-            <button key={i} className="ac-suggestion" onClick={() => handleSend(s)}>
-              {s}
+            <button key={i} className="ac-suggestion" onClick={() => handleSend(s.text)}>
+              {s.text}
             </button>
           ))}
         </div>

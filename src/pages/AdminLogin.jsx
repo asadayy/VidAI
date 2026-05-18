@@ -86,16 +86,10 @@ function AdminLogin() {
 
       <div className="al-card">
         {/* logo */}
-        <div className="al-brand">
-          <div className="al-logo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" />
-              <path d="M2 17l10 5 10-5" />
-              <path d="M2 12l10 5 10-5" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="al-title">VidAI <span>Admin</span></h1>
+        <div className="al-brand" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <img src="/Logos/web app logo with text.png" alt="VidAI Admin" style={{ height: '48px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'center', margin: '24px 0' }} />
+          <div style={{ textAlign: 'center' }}>
+            <h1 className="al-title" style={{ fontSize: '1.2rem', marginTop: '0.2rem' }}>Admin Portal</h1>
             <p className="al-subtitle">Platform control centre</p>
           </div>
         </div>

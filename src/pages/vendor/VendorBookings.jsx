@@ -111,7 +111,17 @@ function BookingCard({ booking: b, onApprove, onReject, onCancel, onReportCustom
       <div className="vb-card-body">
         <div className="vb-card-head">
           <div className="vb-customer">
-            <div className="vb-avatar">{initials}</div>
+            <div className="vb-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {b.user?.avatar?.url ? (
+                <img 
+                  src={b.user.avatar.url} 
+                  alt="" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                initials
+              )}
+            </div>
             <div className="vb-customer-info">
               <span className="vb-customer-name">
                 {b.user?.name || b.user?.email || 'Customer'}

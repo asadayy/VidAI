@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { MapPin, Mail, Phone, Calendar, Users, Check, X, ZoomIn, ChevronLeft, ChevronRight, ArrowLeft, BadgeCheck, Flag, Heart, MessageCircle, MessageSquareDot, Play, ImagePlus } from 'lucide-react';
 import { vendorAPI } from '../../api/vendors';
-import { reportAPI, chatAPI } from '../../api';
+import { reportAPI, chatAPI, eventAPI } from '../../api';
 import client from '../../api/client';
 import Loading from '../../components/Loading';
 import AuthModal from '../../components/auth/AuthModal';
@@ -26,6 +26,9 @@ const VendorDetails = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // User's wedding events (for event selector in booking modal)
+  const [userEvents, setUserEvents] = useState([]);
 
   // Reviews State
   const [reviews, setReviews] = useState([]);
@@ -71,6 +74,7 @@ const VendorDetails = () => {
     venueType: '',
     eventLocation: '',
     eventTime: '',
+    weddingEventId: '',
   });
 
   const COMMENTS_PAGE_SIZE = 6;
@@ -99,6 +103,15 @@ const VendorDetails = () => {
     if (slug) fetchVendorDetails();
   }, [slug, fetchVendorDetails]);
 
+  // Fetch user's wedding events for the booking event selector
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'user') {
+      eventAPI.getAll()
+        .then(res => setUserEvents(res.data?.data?.events || []))
+        .catch(() => {});
+    }
+  }, [isAuthenticated, user]);
+
   const handleBookClick = (pkg) => {
     if (!isAuthenticated) {
       toast.error('Please login to book a vendor.');
@@ -112,7 +125,7 @@ const VendorDetails = () => {
   const handleModalClose = () => {
     setShowModal(false);
     setSelectedPackage(null);
-    setBookingData({ eventDate: '', eventType: 'wedding', guestCount: '', notes: '', timeSlot: '', numberOfPeople: '', venueType: '', eventLocation: '', eventTime: '' });
+    setBookingData({ eventDate: '', eventType: 'wedding', guestCount: '', notes: '', timeSlot: '', numberOfPeople: '', venueType: '', eventLocation: '', eventTime: '', weddingEventId: '' });
   };
 
   const handleInputChange = (e) => {
@@ -139,6 +152,7 @@ const VendorDetails = () => {
       if (bookingData.venueType) payload.venueType = bookingData.venueType;
       if (bookingData.eventLocation) payload.eventLocation = bookingData.eventLocation;
       if (bookingData.eventTime) payload.eventTime = bookingData.eventTime;
+      if (bookingData.weddingEventId) payload.weddingEventId = bookingData.weddingEventId;
 
       await client.post('/bookings', payload);
       toast.success('Booking request sent successfully!');
@@ -1048,6 +1062,33 @@ const VendorDetails = () => {
                             <option key={o.value} value={o.value}>{o.label}</option>
                           ))}
                         </select>
+                      </div>
+                    )}
+
+                    {/* Wedding Event selector */}
+                    {userEvents.length > 0 ? (
+                      <div className="vd-field">
+                        <label><Calendar size={12} style={{ marginRight: 4 }} />Link to Event *</label>
+                        <select
+                          name="weddingEventId"
+                          value={bookingData.weddingEventId}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="" disabled>Select your event</option>
+                          {userEvents.map(evt => (
+                            <option key={evt._id} value={evt._id}>
+                              {evt.title || evt.eventType.charAt(0).toUpperCase() + evt.eventType.slice(1)}
+                              {evt.eventDate ? ` — ${new Date(evt.eventDate).toLocaleDateString('en-PK', { month: 'short', day: 'numeric' })}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="vd-field">
+                        <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: '0.25rem 0 0' }}>
+                          💡 <strong>Tip:</strong> Create events in your <em>Budget Planner</em> to link this booking to a specific event (e.g. Mehndi, Baraat).
+                        </p>
                       </div>
                     )}
 

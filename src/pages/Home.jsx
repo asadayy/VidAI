@@ -132,7 +132,7 @@ const Home = () => {
       {/* ── NAVBAR ── */}
       <nav className="home-nav">
         <div className="home-nav-inner">
-          <span className="home-nav-brand">💍 VidAI</span>
+          <img src="/Logos/web app logo with text.png" alt="VidAI" className="home-nav-brand" style={{ height: '36px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center', marginLeft: '16px' }} />
           <div className="home-nav-actions">
             {isAuthenticated ? (
               <Link to={dashboardPath} className="nav-btn nav-btn-primary">Dashboard</Link>

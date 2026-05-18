@@ -38,6 +38,7 @@ export function setupSocket(httpServer) {
           'http://localhost:8081',
           'http://10.1.146.230:5173',
           'http://192.168.2.102:5173',
+          'https://www.vidai.live',
         ];
         if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL);
         if (allowedOrigins.includes(origin)) return callback(null, true);

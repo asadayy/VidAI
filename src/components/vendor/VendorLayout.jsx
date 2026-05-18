@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { vendorAPI } from '../../api/vendors';
 import {
   LayoutDashboard,
   Package,
@@ -32,6 +33,19 @@ function VendorLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [vendor, setVendor] = useState(null);
+
+  useEffect(() => {
+    const fetchVendor = async () => {
+      try {
+        const { data } = await vendorAPI.getMyProfile();
+        setVendor(data.data.vendor);
+      } catch (err) {
+        console.error("Failed to load vendor profile for sidebar", err);
+      }
+    };
+    fetchVendor();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -41,16 +55,18 @@ function VendorLayout() {
   return (
     <div className={`vendor-layout ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="vendor-sidebar">
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-text">
-            <span className="sidebar-brand-mark">{collapsed ? 'V' : 'VIDAI'}</span>
-            {!collapsed && <span className="sidebar-brand-sub">Vendor Portal</span>}
-          </div>
+        <div className="sidebar-brand" style={{ position: 'relative', padding: '0.85rem 0', justifyContent: collapsed ? 'center' : 'flex-end' }}>
+          {!collapsed && (
+            <div className="sidebar-brand-text" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+              <img src="/Logos/web app logo with text.png" alt="VidAI Vendor" style={{ height: '32px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'center' }} />
+            </div>
+          )}
           <button
             type="button"
             className="sidebar-toggle"
             onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={!collapsed ? { position: 'absolute', right: '0.75rem' } : undefined}
           >
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
@@ -76,8 +92,16 @@ function VendorLayout() {
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <div className="sidebar-user-avatar">
-              {(user?.name || user?.email || 'V').charAt(0).toUpperCase()}
+            <div className="sidebar-user-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {vendor?.profileImage?.url || vendor?.profileImage || vendor?.coverImage?.url || user?.avatar?.url ? (
+                <img 
+                  src={vendor?.profileImage?.url || vendor?.profileImage || vendor?.coverImage?.url || user?.avatar?.url} 
+                  alt="Profile" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                (vendor?.businessName || user?.name || user?.email || 'V').charAt(0).toUpperCase()
+              )}
             </div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{user?.name || 'Vendor'}</span>

@@ -35,7 +35,7 @@ export const createBooking = asyncHandler(async (req, res) => {
   const {
     vendorId, packageId, eventType, eventDate, eventEndDate,
     eventLocation, guestCount, notes, timeSlot, numberOfPeople,
-    venueType, eventTime,
+    venueType, eventTime, weddingEventId,
   } = req.body;
 
   // Verify vendor exists and is approved
@@ -130,6 +130,7 @@ export const createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.create({
     user: req.user._id,
     vendor: vendorId,
+    weddingEventId: weddingEventId || null,
     packageId,
     packageName,
     eventType,
@@ -382,6 +383,7 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
           spentAmount: booking.agreedPrice || 0,
           vendorId: vendor._id,
           bookingId: booking._id,
+          weddingEvent: booking.weddingEventId || null,
         });
         await userBudget.save();
       }

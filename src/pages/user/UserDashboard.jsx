@@ -71,7 +71,17 @@ const UserDashboard = () => {
       <div className="ud-hero">
         <div className="ud-hero-glow" />
         <div className="ud-hero-body">
-          <div className="ud-avatar">{getInitials(user?.name)}</div>
+          <div className="ud-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {user?.avatar?.url ? (
+              <img 
+                src={user.avatar.url} 
+                alt="Profile" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            ) : (
+              getInitials(user?.name)
+            )}
+          </div>
           <div>
             <p className="ud-greeting">{greeting} 👋</p>
             <h1 className="ud-hero-title">{firstName}</h1>

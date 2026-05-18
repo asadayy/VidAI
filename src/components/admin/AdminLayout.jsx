@@ -35,12 +35,9 @@ function AdminLayout() {
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
-        <div className="admin-sidebar-brand">
-          <Shield size={20} className="admin-brand-icon" />
-          <div>
-            <span className="admin-brand-mark">VIDAI</span>
-            <span className="admin-brand-sub">Admin Panel</span>
-          </div>
+        <div className="admin-sidebar-brand" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+          <img src="/Logos/web app logo with text.png" alt="VidAI" style={{ height: '32px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center', marginLeft: '10px' }} />
+          <span className="admin-brand-sub" style={{ paddingLeft: '4px' }}>Admin Panel</span>
         </div>
 
         <nav className="admin-sidebar-nav">

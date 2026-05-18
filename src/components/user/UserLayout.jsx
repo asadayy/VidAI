@@ -78,8 +78,8 @@ function UserLayout() {
       <header className="user-navbar">
         <div className="user-navbar-container">
           {/* Logo / Brand */}
-          <div className="user-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
-            <span className="user-brand-text">VIDAI</span>
+          <div className="user-brand" onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', marginRight: '64px' }}>
+            <img src="/Logos/web app logo with text.png" alt="VidAI" className="user-brand-logo" style={{ height: '28px', width: 'auto', objectFit: 'contain', transform: 'scale(2)', transformOrigin: 'left center' }} />
           </div>
 
           {/* Desktop Navigation */}

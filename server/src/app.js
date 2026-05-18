@@ -29,6 +29,9 @@ const app = express();
 
 // --------------- SECURITY MIDDLEWARE ---------------
 
+// Trust proxy - needed for ngrok and reverse proxies (X-Forwarded-For header)
+app.set('trust proxy', 1);
+
 // Set security HTTP headers
 app.use(helmet());
 
@@ -40,9 +43,12 @@ const allowedOrigins = [
   'http://localhost:8081',
   'http://10.1.146.230:5173',
   'http://192.168.2.102:5173',
+  'https://www.vidai.live',
 ];
 if (process.env.CLIENT_URL) {
-  allowedOrigins.push(process.env.CLIENT_URL);
+  // Support comma-separated URLs
+  const clientUrls = process.env.CLIENT_URL.split(',').map(url => url.trim());
+  allowedOrigins.push(...clientUrls);
 }
 
 app.use(cors({
